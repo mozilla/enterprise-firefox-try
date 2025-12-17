@@ -58,6 +58,7 @@ only-for-build-platforms:
     - linux64-aarch64-enterprise-shippable/opt
     - macosx64-enterprise-shippable/opt
     - win64-enterprise-shippable/opt
+    - win64-aarch64-enterprise-shippable/opt
 
 tasks:
     linux64-enterprise-shippable:
@@ -80,3 +81,8 @@ tasks:
             platform: windows2012-64-enterprise-shippable/opt
         attributes:
             build_platform: win64-enterprise-shippable
+    win64-aarch64-enterprise-shippable:
+        treeherder:
+            platform: windows2012-aarch64-enterprise-shippable/opt
+        attributes:
+            build_platform: win64-aarch64-enterprise-shippable

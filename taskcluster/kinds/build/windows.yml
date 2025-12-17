@@ -589,6 +589,175 @@ win64-enterprise/opt:
             - onnxruntime-x86_64-windows-msvc
             - winappsdk-x86_64-pc-windows-msvc
 
+win64-aarch64-enterprise/opt:
+    description: "AArch64 Win64 Enterprise"
+    index:
+        product: firefox
+        job-name: win64-aarch64-enterprise-opt
+    attributes:
+        enable-full-crashsymbols: true
+    shipping-phase: build
+    shipping-product: firefox-enterprise
+    treeherder:
+        platform: windows2012-aarch64-enterprise/opt
+        symbol: Bpgo(Bent)
+        tier: 1
+    run-on-projects: ["enterprise-firefox"]
+    run-on-repo-type: ["git"]
+    worker-type: b-linux-docker-xlarge-amd
+    worker:
+        max-run-time: 10800
+        env:
+            PERFHERDER_EXTRA_OPTIONS: enterprise
+            # MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    run:
+        actions: [get-secrets, build]
+        options: [append-env-variables-from-configs]
+        script: mozharness/scripts/fx_desktop_build.py
+        secrets: true
+        config:
+            - builds/releng_base_firefox.py
+            - builds/releng_base_linux_64_builds.py
+        extra-config:
+            stage_platform: win64-aarch64
+            mozconfig_platform: win64-aarch64
+            max_build_output_timeout: 3600
+    use-sccache: true
+    fetches:
+        toolchain:
+            - linux64-7zz
+            - linux64-clang
+            - linux64-rust-cross
+            - linux64-rust-size
+            - linux64-nasm
+            - linux64-node
+            - linux64-cbindgen
+            - linux64-dump_syms
+            - linux64-sccache
+            - linux64-upx
+            - linux64-wine
+            - linux64-winchecksec
+            - nsis
+            - sysroot-x86_64-linux-gnu
+            - sysroot-wasm32-wasi
+            - vs
+            - dxc-aarch64-pc-windows-msvc
+            - winappsdk-aarch64-pc-windows-msvc
+
+win64-aarch64-enterprise/debug:
+    description: "AArch64 Win64 Enterprise Debug"
+    index:
+        product: firefox
+        job-name: win64-aarch64-enterprise-debug
+    attributes:
+        enable-full-crashsymbols: true
+    shipping-phase: build
+    shipping-product: firefox-enterprise
+    treeherder:
+        platform: windows2012-aarch64-enterprise/debug
+        symbol: Bpgo(Bent)
+        tier: 1
+    run-on-projects: ["enterprise-firefox"]
+    run-on-repo-type: ["git"]
+    worker-type: b-linux-docker-xlarge-amd
+    worker:
+        max-run-time: 10800
+        env:
+            PERFHERDER_EXTRA_OPTIONS: enterprise
+            # MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    run:
+        actions: [get-secrets, build]
+        options: [append-env-variables-from-configs]
+        script: mozharness/scripts/fx_desktop_build.py
+        secrets: true
+        config:
+            - builds/releng_base_firefox.py
+            - builds/releng_base_linux_64_builds.py
+        mozconfig-variant: debug-enterprise
+        extra-config:
+            stage_platform: win64-aarch64
+            mozconfig_platform: win64-aarch64
+            max_build_output_timeout: 3600
+    use-sccache: true
+    fetches:
+        toolchain:
+            - linux64-7zz
+            - linux64-clang
+            - linux64-rust-cross
+            - linux64-rust-size
+            - linux64-nasm
+            - linux64-node
+            - linux64-cbindgen
+            - linux64-dump_syms
+            - linux64-sccache
+            - linux64-upx
+            - linux64-wine
+            - linux64-winchecksec
+            - nsis
+            - sysroot-x86_64-linux-gnu
+            - sysroot-wasm32-wasi
+            - vs
+            - dxc-aarch64-pc-windows-msvc
+            - winappsdk-aarch64-pc-windows-msvc
+
+win64-aarch64-enterprise-shippable/opt:
+    description: "AArch64 Win64 Enterprise Shippable"
+    use-pgo: win64-shippable/opt
+    index:
+        product: firefox
+        job-name: win64-aarch64-enterprise-opt
+        type: shippable
+    attributes:
+        shippable: true
+        enable-build-signing: true
+        enable-full-crashsymbols: true
+    shipping-phase: build
+    shipping-product: firefox-enterprise
+    treeherder:
+        platform: windows2012-aarch64-enterprise-shippable/opt
+        symbol: Bpgo(Bent)
+        tier: 1
+    run-on-projects: ["enterprise-firefox"]
+    run-on-repo-type: ["git"]
+    worker-type: b-linux-docker-xlarge-amd
+    worker:
+        max-run-time: 10800
+        env:
+            PERFHERDER_EXTRA_OPTIONS: enterprise
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    run:
+        actions: [get-secrets, build]
+        options: [append-env-variables-from-configs]
+        script: mozharness/scripts/fx_desktop_build.py
+        secrets: true
+        config:
+            - builds/releng_base_firefox.py
+            - builds/releng_base_linux_64_builds.py
+        extra-config:
+            stage_platform: win64-aarch64
+            mozconfig_platform: win64-aarch64
+            max_build_output_timeout: 3600
+    use-sccache: false
+    fetches:
+        toolchain:
+            - linux64-7zz
+            - linux64-clang
+            - linux64-rust-cross
+            - linux64-rust-size
+            - linux64-nasm
+            - linux64-node
+            - linux64-cbindgen
+            - linux64-dump_syms
+            - linux64-upx
+            - linux64-wine
+            - linux64-winchecksec
+            - nsis
+            - sysroot-x86_64-linux-gnu
+            - sysroot-wasm32-wasi
+            - vs
+            - dxc-aarch64-pc-windows-msvc
+            - winappsdk-aarch64-pc-windows-msvc
+
 win64-plain/opt:
     description: "Win64 Opt Plain"
     index:

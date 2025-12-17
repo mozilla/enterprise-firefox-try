@@ -22,6 +22,7 @@ only-for-build-platforms:
     - win64-aarch64-shippable/opt
     - win64-aarch64-devedition/opt
     - win64-enterprise-shippable/opt
+    - win64-aarch64-enterprise-shippable/opt
 
 tasks:
     repackage-signing:

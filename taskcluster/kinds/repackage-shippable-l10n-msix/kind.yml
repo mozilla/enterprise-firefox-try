@@ -67,6 +67,7 @@ tasks:
                     devedition: aurora
                     default:
                         by-release-type:
+                            nightly-enterprise: firefoxenterprise
                             beta.*: beta
                             release: official
                             esr.*: official
@@ -81,12 +82,14 @@ tasks:
                         by-package-format:
                             msix:
                                 by-release-type:
+                                    nightly-enterprise: firefoxenterprise
                                     beta.*: MozillaFirefoxBeta
                                     release: MozillaFirefox
                                     esr.*: MozillaFirefox
                                     default: MozillaFirefoxNightly
                             msix-store:
                                 by-release-type:
+                                    nightly-enterprise: firefoxenterprise
                                     beta.*: FirefoxBeta
                                     release: Firefox
                                     esr.*: Firefox

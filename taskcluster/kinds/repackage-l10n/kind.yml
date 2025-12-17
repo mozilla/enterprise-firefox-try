@@ -33,6 +33,7 @@ only-for-build-platforms:
     - win64-shippable/opt
     - win64-enterprise-shippable/opt
     - win64-aarch64-shippable/opt
+    - win64-aarch64-enterprise-shippable/opt
     - linux64-devedition/opt
     - linux64-aarch64-devedition/opt
     - macosx64-devedition/opt
@@ -73,16 +74,21 @@ tasks:
                         - repackage/base.py
                         - repackage/win32_sfx_stub.py
                         - repackage/win32_signed.py
-                    win64(?!-aarch64)-enterprise\b.*:
+                    win64-enterprise\b.*:
                         - repackage/base.py
                         - repackage/base_enterprise.py
                         - repackage/win32_sfx_stub.py
+                        - repackage/win64_signed.py
+                    win64-aarch64-enterprise\b.*:
+                        - repackage/base.py
+                        - repackage/base_enterprise.py
+                        - repackage/win64-aarch64_sfx_stub.py
                         - repackage/win64_signed.py
                     win64(?!-aarch64)(?!-enterprise)\b.*:
                         - repackage/base.py
                         - repackage/win32_sfx_stub.py
                         - repackage/win64_signed.py
-                    win64-aarch64\b.*:
+                    win64-aarch64(?!-enterprise)\b.*:
                         - repackage/base.py
                         - repackage/win64-aarch64_sfx_stub.py
                         - repackage/win64_signed.py

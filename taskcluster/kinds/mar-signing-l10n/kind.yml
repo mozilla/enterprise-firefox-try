@@ -30,6 +30,7 @@ only-for-build-platforms:
     - linux64-aarch64-enterprise-shippable/opt
     - macosx64-enterprise-shippable/opt
     - win64-enterprise-shippable/opt
+    - win64-aarch64-enterprise-shippable/opt
 
 tasks:
     mar-signing-l10n:

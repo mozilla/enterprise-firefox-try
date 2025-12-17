@@ -41,10 +41,6 @@ tasks:
                         - repackage/base.py
                         - repackage/win32_sfx_stub.py
                         - repackage/win64_signed.py
-                    win64-aarch64\b.*:
-                        - repackage/base.py
-                        - repackage/win64-aarch64_sfx_stub.py
-                        - repackage/win64_signed.py
         msi:
             display-name:
                 by-shipping-product:

@@ -28,6 +28,7 @@ only-for-build-platforms:
     - linux64-aarch64-enterprise-shippable/opt
     - macosx64-enterprise-shippable/opt
     - win64-enterprise-shippable/opt
+    - win64-aarch64-enterprise-shippable/opt
 
 tasks:
     enterprise-repack-repackage:
@@ -52,6 +53,11 @@ tasks:
                         - repackage/base_enterprise.py
                         - repackage/win32_sfx_stub.py
                         - repackage/win64_partner.py
+                        - repackage/enterprise_partner.py
+                    win64-aarch64\b.*:
+                        - repackage/base.py
+                        - repackage/win64-aarch64_sfx_stub.py
+                        - repackage/win64_signed.py
                         - repackage/enterprise_partner.py
                     linux64.*:
                         - repackage/base.py

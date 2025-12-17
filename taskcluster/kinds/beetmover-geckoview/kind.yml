@@ -34,6 +34,7 @@ not-for-build-platforms:
     - win64-enterprise/opt
     - win64-enterprise-shippable/opt
     - win64-aarch64-shippable/opt
+    - win64-aarch64-enterprise-shippable/opt
     - win64-nightlyasrelease/opt
     - linux64-devedition/opt
     - linux64-aarch64-devedition/opt
