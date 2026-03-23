@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import json
 import re
 from pathlib import Path
 
@@ -384,6 +385,97 @@ def glean_source(command_context, cargo_toml, content, patch=None):
     run_mach(
         command_context, "vendor", subcommand="rust", force=True, ignore_modified=True
     )
+
+
+@SubCommand(
+    "glean",
+    "export",
+    description="Export all Glean metrics and pings as a single JSON snapshot.",
+)
+@CommandArgument(
+    "--output-file",
+    type=Path,
+    default=None,
+    help="File path to write glean-probes.json into. Prints to stdout if omitted.",
+)
+@CommandArgument(
+    "--pretty",
+    action="store_true",
+    help="Pretty print the resulting bundle",
+)
+def glean_export(command_context, output_file, pretty):
+    from buildconfig import topsrcdir
+    from glean_parser import parser
+
+    topsrcdir = Path(topsrcdir)
+
+    def load_index(rel_path):
+        with open(topsrcdir / rel_path) as f:
+            index_src = f.read()
+        namespace = {}
+        exec(index_src, namespace)
+        return namespace
+
+    def get_version():
+        try:
+            moz_app_version = (
+                (topsrcdir / "browser" / "config" / "version.txt").read_text().strip()
+            )
+        except OSError:
+            moz_app_version = "1"
+        return moz_app_version.split(".", 1)[0]
+
+    def parse_metrics(index):
+        metric_files = [topsrcdir / x for x in index["metrics_yamls"]]
+
+        results = parser.parse_objects(
+            metric_files,
+            {"expire_by_version": int(get_version()), "interesting": metric_files},
+        )
+
+        errors = [err for err in results]
+
+        return results.value.items()
+
+    def parse_pings(index):
+        ping_files = [topsrcdir / x for x in index["pings_yamls"]]
+
+        results = parser.parse_objects(
+            ping_files,
+            {"expire_by_version": int(get_version()), "interesting": ping_files},
+        )
+
+        errors = [err for err in results]
+
+        return results.value.items()
+
+    index = load_index(
+        topsrcdir / "toolkit" / "components" / "glean" / "metrics_index.py"
+    )
+
+    metrics = parse_metrics(index)
+    pings = parse_pings(index)
+
+    bundle = {
+        "metrics": {
+            metric.identifier(): metric.serialize()
+            for _, probes in metrics
+            for _, metric in probes.items()
+        },
+        "pings": {
+            ping_name: ping_data.serialize()
+            for _, pings in pings
+            for ping_name, ping_data in pings.items()
+        },
+    }
+
+    indent = 4 if pretty else None
+    if output_file:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w") as f:
+            json.dump(bundle, f, indent=indent)
+    else:
+        print(json.dumps(bundle, indent=indent))
 
 
 def run_mach(command_context, cmd, **kwargs):
