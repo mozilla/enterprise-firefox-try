@@ -1007,3 +1007,9 @@ Mac notarization of customized versions of releases for enterprises.
 enterprise-repack-mac-signing
 ----------------------------------
 Mac signature of customized versions of releases for enterprises.
+
+glean
+-----
+Tasks that run ``./mach glean`` utilities. The ``probes`` task produces a
+static JSON snapshot of the Glean metric, ping and tag definitions of Firefox
+Desktop, as a shippable alternative to the probe-scraper API.

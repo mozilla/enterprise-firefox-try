@@ -192,6 +192,20 @@ test_metrics = [
     "toolkit/components/telemetry/tests/test_metrics.yaml",
 ]
 
+# Map of app ids to lists of metrics files for that app.
+# Necessary to know which metrics an app can actually record.
+# Use the app id conjugation passed to initializeFOG (dotted.case).
+metrics_by_app_or_lib_id = {
+    "firefox.desktop": gecko_metrics + firefox_desktop_metrics + test_metrics,
+    "firefox.desktop.background.update": gecko_metrics
+    + background_update_metrics
+    + test_metrics,
+    "firefox.desktop.background.tasks": gecko_metrics + background_tasks_metrics,
+    # Not an _actual_ app ID in use,
+    # but needed to differentiate metric registration in geckoview builds
+    "gecko": gecko_metrics + test_metrics,
+}
+
 # The list of all Glean metrics.yaml files, relative to the top src dir.
 # ONLY TO BE MODIFIED BY FOG PEERS!
 metrics_yamls = sorted(

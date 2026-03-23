@@ -1,0 +1,41 @@
+---
+loader: taskgraph.loader.transform:loader
+
+transforms:
+    - gecko_taskgraph.transforms.job:transforms
+    - gecko_taskgraph.transforms.task:transforms
+
+tasks:
+    probes:
+        description: >-
+            Export a static JSON snapshot of the Glean metric, ping and tag
+            definitions of Firefox Desktop. The resulting glean-probes.json is a
+            shippable alternative to the probe-scraper API, consumed by the
+            `moa generate release` tool.
+        run-on-projects: ["enterprise-firefox"]
+        run-on-repo-type: ["git"]
+        worker-type: b-linux
+        worker:
+            docker-image: {in-tree: "lint"}
+            max-run-time: 1800
+            artifacts:
+                - type: file
+                  name: public/glean-probes.json
+                  path: /builds/worker/artifacts/glean-probes.json
+        run:
+            using: mach
+            mach: "glean probes -o /builds/worker/artifacts/glean-probes.json"
+            use-caches: [checkout, pip, uv]
+        attributes:
+            shippable: true
+        shipping-phase: build
+        shipping-product: firefox-enterprise
+        index:
+            product: firefox
+            job-name: glean-probes
+            type: shippable
+        treeherder:
+            symbol: Glean(probes)
+            kind: build
+            platform: linux64/opt
+            tier: 1

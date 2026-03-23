@@ -386,6 +386,99 @@ def glean_source(command_context, cargo_toml, content, patch=None):
     )
 
 
+@SubCommand(
+    "glean",
+    "probes",
+    description="Collect the Glean metrics, pings and tags of an application "
+    "as a single JSON snapshot.",
+)
+@CommandArgument(
+    "--output-file",
+    "-o",
+    type=Path,
+    default=None,
+    help="File path to write the JSON snapshot into. Prints to stdout if omitted.",
+)
+@CommandArgument(
+    "--pretty",
+    action="store_true",
+    help="Pretty print the resulting bundle",
+)
+@CommandArgument(
+    "--application",
+    type=str,
+    default="firefox.desktop",
+    help="Id of the application (as passed to initializeFOG) to collect probes for",
+)
+def glean_collect_probes(command_context, output_file, pretty, application):
+    import json
+    import sys
+
+    topsrcdir = Path(command_context.topsrcdir)
+    fog_root = topsrcdir / "toolkit" / "components" / "glean"
+    sys.path.append(str(fog_root))
+    sys.path.append(str(fog_root / "build_scripts" / "glean_parser_ext"))
+
+    import metrics_index
+    import run_glean_parser
+    from glean_parser import parser, util
+
+    applications = metrics_index.metrics_by_app_or_lib_id
+    if application not in applications:
+        print(
+            f"Unknown application '{application}'. "
+            f"Valid ids are: {', '.join(sorted(applications))}",
+            file=sys.stderr,
+        )
+        return 1
+
+    excluded_yamls = set(metrics_index.test_metrics + metrics_index.test_pings)
+    input_files = [
+        topsrcdir / yaml
+        for yaml in applications[application]
+        + metrics_index.pings_by_app_or_lib_id[application]
+        + metrics_index.tags_yamls
+        if yaml not in excluded_yamls
+    ]
+
+    app_version = (topsrcdir / "browser" / "config" / "version.txt").read_text()
+    options = run_glean_parser.get_parser_options(app_version.strip(), False)
+    options["do_not_disable_expired"] = True
+
+    all_objects = parser.parse_objects(input_files, options)
+    if util.report_validation_errors(all_objects):
+        return 1
+
+    def serialize(obj):
+        serialized = obj.serialize()
+        defined_in = serialized.get("defined_in")
+        if defined_in:
+            filepath = Path(defined_in["filepath"]).relative_to(topsrcdir)
+            serialized["defined_in"] = dict(defined_in, filepath=filepath.as_posix())
+        return serialized
+
+    categories = dict(all_objects.value)
+    pings = categories.pop("pings", {})
+    tags = categories.pop("tags", {})
+
+    bundle = {
+        "metrics": {
+            metric.identifier(): serialize(metric)
+            for probes in categories.values()
+            for metric in probes.values()
+        },
+        "pings": {name: serialize(ping) for name, ping in pings.items()},
+        "tags": {name: serialize(tag) for name, tag in tags.items()},
+    }
+
+    snapshot = json.dumps(bundle, indent=4 if pretty else None, sort_keys=True)
+    if output_file:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(snapshot)
+    else:
+        print(snapshot)
+
+
 def run_mach(command_context, cmd, **kwargs):
     return command_context._mach_context.commands.dispatch(
         cmd, command_context._mach_context, **kwargs
