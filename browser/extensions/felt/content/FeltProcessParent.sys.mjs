@@ -671,7 +671,7 @@ export class FeltProcessParent extends JSProcessActorParent {
     }
 
     // Clear the queue
-    gFeltPendingURLs.length = 0;
+    gFeltPendingURLs.clear();
   }
 
   /**

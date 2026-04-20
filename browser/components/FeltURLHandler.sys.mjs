@@ -14,6 +14,10 @@ ChromeUtils.defineLazyGetter(
     )
 );
 
+ChromeUtils.defineESModuleGetters(lazy, {
+  JSONFile: "resource://gre/modules/JSONFile.sys.mjs",
+});
+
 export const FELT_OPEN_WINDOW_DISPOSITION = {
   DEFAULT: 0,
   NEW_WINDOW: 1,
@@ -23,7 +27,57 @@ export const FELT_OPEN_WINDOW_DISPOSITION = {
 // Queue for Felt external link handling
 // URL requests are stored here when they arrive via command line (before Felt extension loads)
 // FeltProcessParent imports this module and manages forwarding from this queue
-export let gFeltPendingURLs = [];
+export const gFeltPendingURLs = {
+  _pendingURLs: [],
+  _pendingFilePath: PathUtils.join(
+    Services.dirsvc.get("ProfD", Ci.nsIFile).path,
+    "pendingURLs.json"
+  ),
+  _ready: false,
+
+  async init() {
+    if (this._ready) {
+      return;
+    }
+
+    this._storage = new lazy.JSONFile({
+      path: this._pendingFilePath,
+    });
+    await this._storage.load();
+
+    if (this._storage.data?.pendingURLs) {
+      this._pendingURLs = this._storage.data?.pendingURLs;
+    }
+
+    this._ready = true;
+  },
+
+  [Symbol.iterator]() {
+    return this._pendingURLs[Symbol.iterator]();
+  },
+
+  async push(payload) {
+    await this.init();
+    const rv = this._pendingURLs.push(payload);
+    this._storage.data.pendingURLs = this._pendingURLs;
+    this._storage.saveSoon();
+    return rv;
+  },
+
+  get length() {
+    return this._pendingURLs.length;
+  },
+
+  clear() {
+    this._pendingURLs = [];
+    this._storage.data.pendingURLs = [];
+    this._storage.saveSoon();
+  },
+};
+
+if (Services.felt?.isFeltUI()) {
+  gFeltPendingURLs.init();
+}
 
 let lastNotificationShown = 0;
 let gFeltFirefoxReadyNotified = false;

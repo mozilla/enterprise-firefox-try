@@ -349,6 +349,12 @@ function GetProfileDir() {
   return profileDir;
 }
 
+function GetUserAppDataDir() {
+  // get userAppData directory
+  let userAppDataDir = Services.dirsvc.get("UAppData", Ci.nsIFile);
+  return userAppDataDir;
+}
+
 function GetHomeDir() {
   // get home directory
   let homeDir = Services.dirsvc.get("Home", Ci.nsIFile);
