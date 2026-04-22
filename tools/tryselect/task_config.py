@@ -414,7 +414,7 @@ class Rebuild(TryConfig):
             {
                 "action": RangeAction,
                 "min": 1,
-                "max": 20,
+                "max": 100,
                 "default": None,
                 "type": int,
                 "help": "Rebuild all selected tasks the specified number of times.",
@@ -426,6 +426,7 @@ class Rebuild(TryConfig):
         if not rebuild:
             return
 
+        """
         if not kwargs.get("new_test_config", False):
             if rebuild == 1:
                 print(
@@ -437,6 +438,7 @@ class Rebuild(TryConfig):
                     "Use custom push actions to add more."
                 )
                 rebuild = 3
+        """
 
         return {
             "rebuild": rebuild,
