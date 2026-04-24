@@ -6,6 +6,8 @@ const lazy = {};
 const PREF_APP_UPDATE_COMPULSORY_RESTART = "app.update.compulsory_restart";
 let deferredRestartTasks = null;
 
+const postWakeRestartDeferralMilliseconds = 5 * 60 * 1000; // 5 minutes
+
 ChromeUtils.defineESModuleGetters(lazy, {
   ScheduledTask: "resource://gre/modules/ScheduledTask.sys.mjs",
   InfoBar: "resource:///modules/asrouter/InfoBar.sys.mjs",
@@ -161,7 +163,8 @@ export function createScheduledRestartTasks(
   }, notificationZonedDateTime.epochMilliseconds);
   const restartTask = new lazy.ScheduledTask(
     forceRestart,
-    restartZonedDateTime.epochMilliseconds
+    restartZonedDateTime.epochMilliseconds,
+    postWakeRestartDeferralMilliseconds
   );
   notificationTask.arm();
   restartTask.arm();

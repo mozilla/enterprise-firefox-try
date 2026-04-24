@@ -7,6 +7,7 @@
  * If the computer goes to sleep, the task will be run as soon as possible
  * after the computer wakes again.
  */
+
 const topics = ["wake_notification", "sleep_notification"];
 
 export class ScheduledTask {
@@ -18,12 +19,16 @@ export class ScheduledTask {
    *  Function to execute at or after the specified time
    * @param {number} epochMilliseconds
    *  The time (in milliseconds since the Unix epoch) to execute the specified function
+   * @param {number} postWakeDeferralMilliseconds
+   *  (optional) If the process goes to sleep and then wakes up after the specified
+   *     epochMilliseconds, wait for the specified interval before executing the task
    */
-  constructor(callback, epochMilliseconds) {
+  constructor(callback, epochMilliseconds, postWakeDeferralMilliseconds = 0) {
     this.epochMilliseconds = epochMilliseconds;
     this.armed = false;
     this.timer = null;
     this.callback = callback;
+    this.postWakeDeferralMilliseconds = postWakeDeferralMilliseconds;
     this.promise = Promise.resolve();
   }
 
@@ -39,22 +44,21 @@ export class ScheduledTask {
   }
 
   _createTimer() {
-    const delay = this.epochMilliseconds - Date.now();
-    if (delay >= 0) {
-      const newTimer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-      newTimer.initWithCallback(
-        () => {
-          this._callbackHandler();
-        },
-        delay,
-        Ci.nsITimer.TYPE_ONE_SHOT
-      );
-      return newTimer;
+    let delay = this.epochMilliseconds - Date.now();
+    if (delay < 0) {
+      // We're already past the scheduled time.
+      delay = this.postWakeDeferralMilliseconds;
+      this.postWakeDeferralMilliseconds = 0;
     }
-    ChromeUtils.idleDispatch(() => {
-      this._callbackHandler();
-    });
-    return null;
+    const newTimer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+    newTimer.initWithCallback(
+      () => {
+        this._callbackHandler();
+      },
+      delay,
+      Ci.nsITimer.TYPE_ONE_SHOT
+    );
+    return newTimer;
   }
 
   _destroyTimer() {
