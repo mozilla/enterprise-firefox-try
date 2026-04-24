@@ -1,0 +1,22 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-mac-signing-macosx64-enterprise-shippable/opt",
+                "build-mac-signing-macosx64-enterprise/debug",
+                "build-mac-signing-macosx64-enterprise/opt",
+                "build-signing-linux64-aarch64-enterprise-shippable/opt",
+                "build-signing-linux64-enterprise-shippable/opt",
+                "build-signing-win64-enterprise-shippable/opt",
+                "build-signing-win64-enterprise/debug",
+                "build-signing-win64-enterprise/opt",
+                "shippable-l10n-mac-signing-macosx64-enterprise-shippable-1/opt"
+            ]
+        }
+    },
+    "version": 2
+}
