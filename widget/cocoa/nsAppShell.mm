@@ -154,6 +154,8 @@ void OnUncaughtException(NSException* aException) {
 // when an Objective C exception propagates up into the native event loop. It is
 // possible that it is also called in other cases.
 - (void)reportException:(NSException*)aException {
+  VTDump(aException);
+
   if (ShouldIgnoreObjCException(aException)) {
     return;
   }

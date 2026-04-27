@@ -39,8 +39,17 @@ enum VibrancyTraceEvent {
   VT_SET_DRAWS_INTO_FRAME_CHANGED = 11,
   VT_SHOW_ENTER = 12,
   VT_CREATE_ADD_CHILDVIEW = 13,
+  VT_TOOLBAR_INIT_ADD_SUBVIEW = 14,
+  VT_RECREATE_REMOVE_SUBVIEW = 15,
+  VT_RECREATE_ADD_SUBVIEW = 16,
+  VT_DRAWS_FRAME_REMOVE_CHILD = 17,
+  VT_DRAWS_FRAME_ADD_CHILD = 18,
+  VT_DRAWS_FRAME_SET_CONTENT = 19,
+  VT_DELAYED_TEARDOWN = 20,
+  VT_OFF_MAIN_THREAD = 128,
 };
 void VTRecord(int event);
+void VTDump(NSException* exception);
 
 namespace mozilla {
 enum class NativeKeyBindingsType : uint8_t;

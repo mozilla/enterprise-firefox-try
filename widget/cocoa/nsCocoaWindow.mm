@@ -110,11 +110,14 @@ static volatile int sVibrancyTrace[kVibrancyTraceSize];
 static volatile int sVibrancyTracePos = 0;
 
 void VTRecord(int event) {
+  if (![NSThread isMainThread]) {
+    event |= VT_OFF_MAIN_THREAD;
+  }
   int pos = __sync_fetch_and_add(&sVibrancyTracePos, 1) % kVibrancyTraceSize;
   sVibrancyTrace[pos] = event;
 }
 
-static void VibrancyExceptionHandler(NSException* exception) {
+void VTDump(NSException* exception) {
   int pos = sVibrancyTracePos;
   int count = pos < kVibrancyTraceSize ? pos : kVibrancyTraceSize;
   int start = pos < kVibrancyTraceSize ? 0 : pos % kVibrancyTraceSize;
@@ -124,10 +127,6 @@ static void VibrancyExceptionHandler(NSException* exception) {
     fprintf(stderr, "%d ", sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
   }
   fprintf(stderr, "\n");
-}
-
-__attribute__((constructor)) static void InstallVibrancyExceptionHandler() {
-  NSSetUncaughtExceptionHandler(VibrancyExceptionHandler);
 }
 
 // defined in nsMenuBarX.mm
@@ -1679,6 +1678,7 @@ NSEvent* gLastDragMouseDownEvent = nil;  // [strong]
       mVibrancyViewsContainer.autoresizingMask =
           NSViewWidthSizable | NSViewHeightSizable;
 
+  VTRecord(VT_TOOLBAR_INIT_ADD_SUBVIEW);
   [self addSubview:mNonDraggableViewsContainer];
   [self addSubview:mVibrancyViewsContainer];
 
@@ -3597,6 +3597,7 @@ static gfx::IntPoint GetIntegerDeltaForEvent(NSEvent* aEvent) {
 - (void)delayedTearDown {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
+  VTRecord(VT_DELAYED_TEARDOWN);
   [self removeFromSuperview];
   [self release];
 
@@ -5805,6 +5806,7 @@ void nsCocoaWindow::HideWindowChrome(bool aShouldHide) {
 
   // Remove the views in the old window's content view.
   // The NSArray is autoreleased and retains its NSViews.
+  VTRecord(VT_RECREATE_REMOVE_SUBVIEW);
   NSArray<NSView*>* contentViewContents = [mWindow contentViewContents];
   for (NSView* view in contentViewContents) {
     [view removeFromSuperviewWithoutNeedingDisplay];
@@ -5826,6 +5828,7 @@ void nsCocoaWindow::HideWindowChrome(bool aShouldHide) {
   [mWindow importState:state];
 
   // Add the old content view subviews to the new window's content view.
+  VTRecord(VT_RECREATE_ADD_SUBVIEW);
   for (NSView* view in contentViewContents) {
     [[mWindow contentView] addSubview:view];
   }
@@ -7749,9 +7752,12 @@ static NSImage* GetMenuMaskImage() {
   // Swap out our content view by the new view. Setting .contentView releases
   // the old view.
   NSView* childView = [self.mainChildView retain];
+  VTRecord(VT_DRAWS_FRAME_REMOVE_CHILD);
   [childView removeFromSuperview];
+  VTRecord(VT_DRAWS_FRAME_ADD_CHILD);
   [wrapper addSubview:childView];
   [childView release];
+  VTRecord(VT_DRAWS_FRAME_SET_CONTENT);
   super.contentView = wrapper;
   [wrapper release];
 }
