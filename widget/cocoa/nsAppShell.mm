@@ -9,6 +9,10 @@
 
 #import <Cocoa/Cocoa.h>
 
+@interface NSApplication (Private)
+- (void)_crashOnException:(NSException*)exception;
+@end
+
 #include <dlfcn.h>
 
 #include "mozilla/AvailableMemoryWatcher.h"
@@ -166,6 +170,11 @@ void OnUncaughtException(NSException* aException) {
   MOZ_CRASH("Uncaught Objective C exception from -[GeckoNSApplication "
             "reportException:]");
 #endif
+}
+
+- (void)_crashOnException:(NSException*)aException {
+  VTDump(aException);
+  [super _crashOnException:aException];
 }
 
 - (void)run {

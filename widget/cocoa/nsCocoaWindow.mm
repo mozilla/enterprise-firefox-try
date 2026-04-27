@@ -105,8 +105,15 @@ using namespace mozilla;
 BOOL sTouchBarIsInitialized = NO;
 
 // Event trace ring buffer for diagnosing NSViewUpdateVibrancyForSubtree crash.
+#include <mach/mach_time.h>
+
+struct VTEntry {
+  int event;
+  uint64_t timestamp;
+};
+
 static const int kVibrancyTraceSize = 128;
-static volatile int sVibrancyTrace[kVibrancyTraceSize];
+static volatile VTEntry sVibrancyTrace[kVibrancyTraceSize];
 static volatile int sVibrancyTracePos = 0;
 
 void VTRecord(int event) {
@@ -114,17 +121,28 @@ void VTRecord(int event) {
     event |= VT_OFF_MAIN_THREAD;
   }
   int pos = __sync_fetch_and_add(&sVibrancyTracePos, 1) % kVibrancyTraceSize;
-  sVibrancyTrace[pos] = event;
+  sVibrancyTrace[pos] = {event, mach_absolute_time()};
 }
 
 void VTDump(NSException* exception) {
+  mach_timebase_info_data_t info;
+  mach_timebase_info(&info);
+
   int pos = sVibrancyTracePos;
   int count = pos < kVibrancyTraceSize ? pos : kVibrancyTraceSize;
   int start = pos < kVibrancyTraceSize ? 0 : pos % kVibrancyTraceSize;
+
+  uint64_t firstTs = count > 0
+      ? sVibrancyTrace[start % kVibrancyTraceSize].timestamp : 0;
+
   fprintf(stderr, "FELT_VIBRANCY_TRACE exception=%s count=%d: ",
           exception.reason.UTF8String, count);
   for (int i = 0; i < count; i++) {
-    fprintf(stderr, "%d ", sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
+    VTEntry e = const_cast<VTEntry&>(
+        sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
+    uint64_t usec = (e.timestamp - firstTs) * info.numer
+        / info.denom / 1000;
+    fprintf(stderr, "%d@%llu ", e.event, usec);
   }
   fprintf(stderr, "\n");
 }
