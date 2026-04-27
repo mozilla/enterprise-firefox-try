@@ -10,6 +10,7 @@
 using namespace mozilla;
 
 ViewRegion::~ViewRegion() {
+  VTRecord(VT_VIEW_REGION_DESTRUCTOR);
   for (NSView* view : mViews) {
     [view removeFromSuperview];
     [view release];

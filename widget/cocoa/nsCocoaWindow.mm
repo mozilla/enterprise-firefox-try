@@ -121,7 +121,8 @@ void VTRecord(int event) {
     event |= VT_OFF_MAIN_THREAD;
   }
   int pos = __sync_fetch_and_add(&sVibrancyTracePos, 1) % kVibrancyTraceSize;
-  sVibrancyTrace[pos] = {event, mach_absolute_time()};
+  sVibrancyTrace[pos].event = event;
+  sVibrancyTrace[pos].timestamp = mach_absolute_time();
 }
 
 void VTDump(NSException* exception) {
@@ -1763,6 +1764,7 @@ NSEvent* gLastDragMouseDownEvent = nil;  // [strong]
   [mClickThroughMouseDownEvent release];
   ChildViewMouseTracker::OnDestroyView(self);
 
+  VTRecord(VT_TOOLBAR_DEALLOC_REMOVE);
   [mVibrancyViewsContainer removeFromSuperview];
   [mVibrancyViewsContainer release];
   [mNonDraggableViewsContainer removeFromSuperview];
