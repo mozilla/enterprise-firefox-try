@@ -545,7 +545,7 @@ window.addEventListener(
     listenFormEmailSubmission();
     focusEmailOnLoginVisible();
     informAboutPotentialStartupFailure();
-    macosActivateApplication();
+    // macosActivateApplication();
   },
   true
 );
