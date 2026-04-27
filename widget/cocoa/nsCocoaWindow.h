@@ -25,6 +25,23 @@ class nsChildView;
 class nsMenuBarX;
 @class ChildView;
 
+enum VibrancyTraceEvent {
+  VT_DISPLAY_IF_NEEDED_ENTER = 1,
+  VT_DISPLAY_IF_NEEDED_EXIT = 2,
+  VT_UPDATE_VIBRANCY_ENTER = 3,
+  VT_UPDATE_VIBRANCY_EXIT = 4,
+  VT_UPDATE_VIBRANCY_CHANGED = 5,
+  VT_VIEW_REGION_ENTER = 6,
+  VT_VIEW_REGION_ADD_SUBVIEW = 7,
+  VT_VIEW_REGION_REMOVE_SUBVIEW = 8,
+  VT_VIEW_REGION_EXIT = 9,
+  VT_SET_DRAWS_INTO_FRAME_ENTER = 10,
+  VT_SET_DRAWS_INTO_FRAME_CHANGED = 11,
+  VT_SHOW_ENTER = 12,
+  VT_CREATE_ADD_CHILDVIEW = 13,
+};
+void VTRecord(int event);
+
 namespace mozilla {
 enum class NativeKeyBindingsType : uint8_t;
 class VibrancyManager;

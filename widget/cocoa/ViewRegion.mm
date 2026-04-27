@@ -24,6 +24,8 @@ bool ViewRegion::UpdateRegion(const LayoutDeviceIntRegion& aRegion,
     return false;
   }
 
+  VTRecord(VT_VIEW_REGION_ENTER);
+
   // We need to construct the required region using as many EffectViews
   // as necessary. We try to update the geometry of existing views if
   // possible, or create new ones or remove old ones if the number of
@@ -40,6 +42,7 @@ bool ViewRegion::UpdateRegion(const LayoutDeviceIntRegion& aRegion,
       view = viewsToRecycle[viewsRecycled++];
     } else {
       view = aViewCreationCallback();
+      VTRecord(VT_VIEW_REGION_ADD_SUBVIEW);
       [aContainerView addSubview:view];
     }
     if (!NSEqualRects(rect, view.frame)) {
@@ -52,10 +55,12 @@ bool ViewRegion::UpdateRegion(const LayoutDeviceIntRegion& aRegion,
     // Our new region is made of fewer rects than the old region, so we can
     // remove this view. Remove it from its superview and also remove our
     // reference to it.
+    VTRecord(VT_VIEW_REGION_REMOVE_SUBVIEW);
     [view removeFromSuperview];
     [view release];
   }
 
+  VTRecord(VT_VIEW_REGION_EXIT);
   mRegion = aRegion;
   return true;
 }

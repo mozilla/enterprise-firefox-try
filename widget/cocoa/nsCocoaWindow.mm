@@ -104,6 +104,32 @@ using namespace mozilla;
 
 BOOL sTouchBarIsInitialized = NO;
 
+// Event trace ring buffer for diagnosing NSViewUpdateVibrancyForSubtree crash.
+static const int kVibrancyTraceSize = 128;
+static volatile int sVibrancyTrace[kVibrancyTraceSize];
+static volatile int sVibrancyTracePos = 0;
+
+void VTRecord(int event) {
+  int pos = __sync_fetch_and_add(&sVibrancyTracePos, 1) % kVibrancyTraceSize;
+  sVibrancyTrace[pos] = event;
+}
+
+static void VibrancyExceptionHandler(NSException* exception) {
+  int pos = sVibrancyTracePos;
+  int count = pos < kVibrancyTraceSize ? pos : kVibrancyTraceSize;
+  int start = pos < kVibrancyTraceSize ? 0 : pos % kVibrancyTraceSize;
+  fprintf(stderr, "FELT_VIBRANCY_TRACE exception=%s count=%d: ",
+          exception.reason.UTF8String, count);
+  for (int i = 0; i < count; i++) {
+    fprintf(stderr, "%d ", sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
+  }
+  fprintf(stderr, "\n");
+}
+
+__attribute__((constructor)) static void InstallVibrancyExceptionHandler() {
+  NSSetUncaughtExceptionHandler(VibrancyExceptionHandler);
+}
+
 // defined in nsMenuBarX.mm
 extern NSMenu* sApplicationMenu;  // Application menu shared by all menubars
 extern BOOL gSomeMenuBarPainted;
@@ -1242,6 +1268,7 @@ static void MakeRegionsNonOverlapping(Span<LayoutDeviceIntRegion> aRegions) {
 
 void nsCocoaWindow::UpdateVibrancy(
     const nsTArray<ThemeGeometry>& aThemeGeometries) {
+  VTRecord(VT_UPDATE_VIBRANCY_ENTER);
   auto regions = GatherVibrantRegions(aThemeGeometries);
   MakeRegionsNonOverlapping(regions);
 
@@ -1257,8 +1284,10 @@ void nsCocoaWindow::UpdateVibrancy(
   }
 
   if (changed) {
+    VTRecord(VT_UPDATE_VIBRANCY_CHANGED);
     SuspendAsyncCATransactions();
   }
+  VTRecord(VT_UPDATE_VIBRANCY_EXIT);
 }
 
 mozilla::VibrancyManager& nsCocoaWindow::EnsureVibrancyManager() {
@@ -4823,6 +4852,7 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, const DesktopIntRect& aRect,
 
   // Link mChildView into the native NSView hierarchy only after
   // mNativeLayerRoot is initialized. This resolves bug 1986701.
+  VTRecord(VT_CREATE_ADD_CHILDVIEW);
   [contentView addSubview:mChildView];
 
   [WindowDataMap.sharedWindowDataMap ensureDataForWindow:mWindow];
@@ -5215,6 +5245,7 @@ bool nsCocoaWindow::IsRunningAppModal() { return [NSApp _isRunningAppModal]; }
 // Hide or show this window
 void nsCocoaWindow::Show(bool aState) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
+  VTRecord(VT_SHOW_ENTER);
 
   if (!mWindow) {
     return;
@@ -7803,8 +7834,10 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 
 - (void)setDrawsContentsIntoWindowFrame:(BOOL)aState {
   bool changed = aState != mDrawsIntoWindowFrame;
+  VTRecord(VT_SET_DRAWS_INTO_FRAME_ENTER);
   mDrawsIntoWindowFrame = aState;
   if (changed) {
+    VTRecord(VT_SET_DRAWS_INTO_FRAME_CHANGED);
     [self reflowTitlebarElements];
     [self updateTitlebarTransparency];
   }
@@ -7920,6 +7953,12 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
     [super _setNeedsDisplayInRect:aRect];
     mDirtyRect = NSUnionRect(mDirtyRect, aRect);
   }
+}
+
+- (void)displayIfNeeded {
+  VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
+  [super displayIfNeeded];
+  VTRecord(VT_DISPLAY_IF_NEEDED_EXIT);
 }
 
 - (NSRect)getAndResetNativeDirtyRect {
