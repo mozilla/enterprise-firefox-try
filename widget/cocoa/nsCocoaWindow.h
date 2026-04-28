@@ -65,6 +65,7 @@ enum VibrancyTraceEvent {
   VT_HIDE_TITLEBAR_SEPARATOR = 37,
   VT_ORDER_FRONT = 38,
   VT_SET_FRAME = 39,
+  VT_FULLSCREEN_BUTTON_ADDED = 40,
   VT_OFF_MAIN_THREAD = 128,
 };
 void VTRecord(int event);

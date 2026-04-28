@@ -106,21 +106,28 @@ BOOL sTouchBarIsInitialized = NO;
 
 // Event trace ring buffer for diagnosing NSViewUpdateVibrancyForSubtree crash.
 #include <mach/mach_time.h>
+#include <objc/runtime.h>
 
 struct VTEntry {
   int event;
   uint64_t timestamp;
 };
 
-static const int kVibrancyTraceSize = 128;
+static const int kVibrancyTraceSize = 512;
 static volatile VTEntry sVibrancyTrace[kVibrancyTraceSize];
 static volatile int sVibrancyTracePos = 0;
 
 void VTRecord(int event) {
+  if (sVibrancyTracePos >= kVibrancyTraceSize) {
+    return;
+  }
   if (![NSThread isMainThread]) {
     event |= VT_OFF_MAIN_THREAD;
   }
-  int pos = __sync_fetch_and_add(&sVibrancyTracePos, 1) % kVibrancyTraceSize;
+  int pos = __sync_fetch_and_add(&sVibrancyTracePos, 1);
+  if (pos >= kVibrancyTraceSize) {
+    return;
+  }
   sVibrancyTrace[pos].event = event;
   sVibrancyTrace[pos].timestamp = mach_absolute_time();
 }
@@ -150,6 +157,38 @@ void VTSnapshotTitlebar(NSWindow* window) {
     pos += snprintf(sTitlebarBefore + pos, sizeof(sTitlebarBefore) - pos,
                     "%s(%p) ", [v className].UTF8String, v);
   }
+}
+
+// Swizzle titlebar's addSubview: to detect _NSThemeFullScreenButton insertion.
+static IMP sOriginalTitlebarAddSubview = nil;
+static BOOL sTitlebarSwizzled = NO;
+
+static void SwizzledTitlebarAddSubview(id self, SEL _cmd, NSView* view) {
+  if ([[view className] isEqualToString:@"_NSThemeFullScreenButton"]) {
+    VTRecord(VT_FULLSCREEN_BUTTON_ADDED);
+    fprintf(stderr, "FELT_FULLSCREEN_BUTTON_ADDED view=%p to=%s(%p)\n",
+            view, [self className].UTF8String, self);
+    NSArray* symbols = [NSThread callStackSymbols];
+    fprintf(stderr, "FELT_FULLSCREEN_BUTTON_STACK:\n");
+    for (NSString* s in symbols) {
+      fprintf(stderr, "  %s\n", s.UTF8String);
+    }
+  }
+  ((void(*)(id, SEL, NSView*))sOriginalTitlebarAddSubview)(self, _cmd, view);
+}
+
+static void VTSwizzleTitlebar(NSWindow* window) {
+  if (sTitlebarSwizzled) return;
+  NSView* titlebar = GetTitlebarView(window);
+  if (!titlebar) return;
+  Class titlebarClass = [titlebar class];
+  Method m = class_getInstanceMethod(titlebarClass, @selector(addSubview:));
+  if (!m) return;
+  sOriginalTitlebarAddSubview = method_getImplementation(m);
+  method_setImplementation(m, (IMP)SwizzledTitlebarAddSubview);
+  sTitlebarSwizzled = YES;
+  fprintf(stderr, "FELT_SWIZZLED_TITLEBAR class=%s\n",
+          NSStringFromClass(titlebarClass).UTF8String);
 }
 
 static const char* VTEventName(int event) {
@@ -193,6 +232,7 @@ static const char* VTEventName(int event) {
     case VT_HIDE_TITLEBAR_SEPARATOR: return "nsCocoaWindow::SetHideTitlebarSeparator";
     case VT_ORDER_FRONT: return "nsCocoaWindow::Show.orderFront";
     case VT_SET_FRAME: return "[NSWindow setFrame]";
+    case VT_FULLSCREEN_BUTTON_ADDED: return "TITLEBAR.addSubview(_NSThemeFullScreenButton)";
     default: return "?";
   }
 }
@@ -203,16 +243,13 @@ void VTDump(NSException* exception) {
 
   int pos = sVibrancyTracePos;
   int count = pos < kVibrancyTraceSize ? pos : kVibrancyTraceSize;
-  int start = pos < kVibrancyTraceSize ? 0 : pos % kVibrancyTraceSize;
 
-  uint64_t firstTs = count > 0
-      ? sVibrancyTrace[start % kVibrancyTraceSize].timestamp : 0;
+  uint64_t firstTs = count > 0 ? sVibrancyTrace[0].timestamp : 0;
 
   fprintf(stderr, "FELT_VIBRANCY_TRACE exception=%s count=%d: ",
           exception.reason.UTF8String, count);
   for (int i = 0; i < count; i++) {
-    VTEntry e = const_cast<VTEntry&>(
-        sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
+    VTEntry e = const_cast<VTEntry&>(sVibrancyTrace[i]);
     uint64_t usec = (e.timestamp - firstTs) * info.numer
         / info.denom / 1000;
     fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
@@ -248,15 +285,12 @@ void VTDumpNoException() {
 
   int pos = sVibrancyTracePos;
   int count = pos < kVibrancyTraceSize ? pos : kVibrancyTraceSize;
-  int start = pos < kVibrancyTraceSize ? 0 : pos % kVibrancyTraceSize;
 
-  uint64_t firstTs = count > 0
-      ? sVibrancyTrace[start % kVibrancyTraceSize].timestamp : 0;
+  uint64_t firstTs = count > 0 ? sVibrancyTrace[0].timestamp : 0;
 
   fprintf(stderr, "FELT_VIBRANCY_TRACE_HEALTHY count=%d: ", count);
   for (int i = 0; i < count; i++) {
-    VTEntry e = const_cast<VTEntry&>(
-        sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
+    VTEntry e = const_cast<VTEntry&>(sVibrancyTrace[i]);
     uint64_t usec = (e.timestamp - firstTs) * info.numer
         / info.denom / 1000;
     fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
@@ -8121,6 +8155,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 
 - (void)displayIfNeeded {
   VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
+  VTSwizzleTitlebar(self);
   VTSnapshotTitlebar(self);
   [super displayIfNeeded];
   VTRecord(VT_DISPLAY_IF_NEEDED_EXIT);
@@ -8373,6 +8408,7 @@ static bool MaybeDropEventForModalWindow(NSEvent* aEvent, id aDelegate) {
                                styleMask:aStyle
                                  backing:aBufferingType
                                    defer:aFlag])) {
+    VTSwizzleTitlebar(self);
     mWindowButtonsRect = NSZeroRect;
 
     mFullscreenTitlebarTracker = [[FullscreenTitlebarTracker alloc] init];
