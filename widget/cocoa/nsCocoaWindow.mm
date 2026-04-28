@@ -870,6 +870,7 @@ void nsCocoaWindow::PaintWindowInContentLayer() {
 }
 
 void nsCocoaWindow::HandleMainThreadCATransaction() {
+  VTRecord(VT_HANDLE_CA_TRANSACTION_ENTER);
   AUTO_PROFILER_MARKER("HandleMainThreadCATransaction", GRAPHICS);
 
   if (GetWindowRenderer()->GetBackendType() == LayersBackend::LAYERS_NONE) {
@@ -895,6 +896,7 @@ void nsCocoaWindow::HandleMainThreadCATransaction() {
   }
 
   MaybeScheduleUnsuspendAsyncCATransactions();
+  VTRecord(VT_HANDLE_CA_TRANSACTION_EXIT);
 }
 
 void nsCocoaWindow::CreateCompositor(int aWidth, int aHeight) {
@@ -1704,6 +1706,7 @@ NSEvent* gLastDragMouseDownEvent = nil;  // [strong]
   mPixelHostingView = [[PixelHostingView alloc] initWithFrame:bounds];
   mPixelHostingView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
+  VTRecord(VT_TOOLBAR_INIT_ADD_PIXEL);
   [self addSubview:mPixelHostingView];
 
   mRootCALayer = [[CALayer layer] retain];
@@ -1905,12 +1908,14 @@ NSEvent* gLastDragMouseDownEvent = nil;  // [strong]
 }
 
 - (void)updateRootCALayer {
+  VTRecord(VT_UPDATE_ROOT_CA_ENTER);
   if (NS_IsMainThread() && mGeckoChild) {
     MOZ_RELEASE_ASSERT(!mIsUpdatingLayer, "Re-entrant layer display?");
     mIsUpdatingLayer = YES;
     mGeckoChild->HandleMainThreadCATransaction();
     mIsUpdatingLayer = NO;
   }
+  VTRecord(VT_UPDATE_ROOT_CA_EXIT);
 }
 
 - (CALayer*)rootCALayer {
@@ -5045,6 +5050,7 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
   NSRect wantedFrame = [mWindow frameRectForChildViewRect:contentRect];
   if (!NSEqualRects(mWindow.frame, wantedFrame)) {
     // This can happen when the window is not on the primary screen.
+    VTRecord(VT_SET_FRAME);
     [mWindow setFrame:wantedFrame display:NO];
   }
   UpdateBounds();
@@ -5055,6 +5061,7 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
 
   if (mWindowType == WindowType::Popup) {
     SetPopupWindowLevel();
+    VTRecord(VT_SET_OPAQUE);
     mWindow.backgroundColor = NSColor.clearColor;
     mWindow.opaque = NO;
 
@@ -5066,6 +5073,7 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
                                  NSWindowCollectionBehaviorMoveToActiveSpace;
   } else {
     // Non-popup windows are always opaque.
+    VTRecord(VT_SET_OPAQUE);
     mWindow.opaque = YES;
   }
 
@@ -5078,6 +5086,7 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
 
   // Make the window use CoreAnimation from the start, so that we don't
   // switch from a non-CA window to a CA-window in the middle.
+  VTRecord(VT_CONTENT_VIEW_WANTS_LAYER);
   mWindow.contentView.wantsLayer = YES;
 
   [mWindow createTrackingArea];
@@ -5325,6 +5334,7 @@ void nsCocoaWindow::Show(bool aState) {
       NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
       mWindow.contentView.needsDisplay = YES;
       if (!nativeParentWindow || mPopupLevel != PopupLevel::Parent) {
+        VTRecord(VT_ORDER_FRONT);
         [mWindow orderFront:nil];
       }
       NS_OBJC_END_TRY_IGNORE_BLOCK;
@@ -5371,6 +5381,7 @@ void nsCocoaWindow::Show(bool aState) {
       // We don't want most alwaysontop / alert windows to pull focus when
       // they're opened, as these tend to be for peripheral indicators and
       // displays.
+      VTRecord(VT_ORDER_FRONT);
       if ((mAlwaysOnTop && mPiPType != PiPType::DocumentPiP) || mIsAlert) {
         [mWindow orderFront:nil];
       } else {
@@ -5474,6 +5485,7 @@ void nsCocoaWindow::SetTransparencyMode(TransparencyMode aMode) {
   if (isTransparent == currentTransparency) {
     return;
   }
+  VTRecord(VT_SET_OPAQUE);
   mWindow.opaque = !isTransparent;
   mWindow.backgroundColor =
       isTransparent ? NSColor.clearColor : NSColor.whiteColor;
@@ -6435,6 +6447,7 @@ void nsCocoaWindow::DoResize(double aX, double aY, double aWidth,
   // We ignore aRepaint -- we have to call display:YES, otherwise the
   // title bar doesn't immediately get repainted and is displayed in
   // the wrong place, leading to a visual jump.
+  VTRecord(VT_SET_FRAME);
   [mWindow setFrame:newFrame display:YES];
 
   NS_OBJC_END_TRY_IGNORE_BLOCK;
@@ -6597,6 +6610,7 @@ int32_t nsCocoaWindow::RoundsWidgetCoordinatesTo() {
 
 nsresult nsCocoaWindow::SetTitle(const nsAString& aTitle) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
+  VTRecord(VT_SET_TITLE);
 
   if (!mWindow) {
     return NS_OK;
@@ -6916,6 +6930,7 @@ void nsCocoaWindow::SetWindowOpacity(float aOpacity) {
 
 void nsCocoaWindow::SetColorScheme(const Maybe<ColorScheme>& aScheme) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
+  VTRecord(VT_SET_COLOR_SCHEME);
 
   if (!mWindow) {
     return;
@@ -6923,6 +6938,7 @@ void nsCocoaWindow::SetColorScheme(const Maybe<ColorScheme>& aScheme) {
   NSAppearance* appearance =
       aScheme ? NSAppearanceForColorScheme(*aScheme) : nil;
   if (mWindow.appearance != appearance) {
+    VTRecord(VT_SET_COLOR_SCHEME_CHANGED);
     mWindow.appearance = appearance;
   }
   NS_OBJC_END_TRY_IGNORE_BLOCK;
@@ -7062,6 +7078,7 @@ void nsCocoaWindow::SetWindowAnimationType(
 
 void nsCocoaWindow::SetHideTitlebarSeparator(bool aHide) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
+  VTRecord(VT_HIDE_TITLEBAR_SEPARATOR);
 
   if (@available(macOS 11.0, *)) {
     mWindow.titlebarSeparatorStyle = aHide ? NSTitlebarSeparatorStyleNone
@@ -7995,6 +8012,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 
 // Possibly move the titlebar buttons.
 - (void)reflowTitlebarElements {
+  VTRecord(VT_REFLOW_TITLEBAR);
   NSView* frameView = self.contentView.superview;
   if ([frameView respondsToSelector:@selector(_tileTitlebarAndRedisplay:)]) {
     [frameView _tileTitlebarAndRedisplay:NO];
@@ -8002,6 +8020,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 }
 
 - (void)updateTitlebarTransparency {
+  VTRecord(VT_UPDATE_TITLEBAR_TRANSPARENCY);
   if (self.drawsContentsIntoWindowFrame) {
     // Hide the titlebar if we are drawing into it
     self.titlebarAppearsTransparent = true;
@@ -8023,6 +8042,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 }
 
 - (void)setTitlebarSeparatorStyle:(NSTitlebarSeparatorStyle)aStyle {
+  VTRecord(VT_SET_TITLEBAR_SEPARATOR);
   [super setTitlebarSeparatorStyle:aStyle];
   [self updateTitlebarTransparency];
 }
@@ -8365,6 +8385,7 @@ static CGFloat DefaultTitlebarHeight() {
   BOOL stateChanged = self.drawsContentsIntoWindowFrame != aState;
   [super setDrawsContentsIntoWindowFrame:aState];
   if (stateChanged && [self.delegate isKindOfClass:[WindowDelegate class]]) {
+    VTRecord(VT_SET_TITLE_VISIBILITY);
     self.titleVisibility = aState ? NSWindowTitleHidden : NSWindowTitleVisible;
 
     // Here we extend / shrink our mainChildView.

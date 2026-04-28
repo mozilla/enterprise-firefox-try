@@ -174,6 +174,33 @@ void OnUncaughtException(NSException* aException) {
 
 - (void)_crashOnException:(NSException*)aException {
   VTDump(aException);
+
+  // Try to extract and dump the mutated array from the exception reason.
+  // Reason format: "*** Collection <__NSArrayM: 0x15fca4d30> was mutated..."
+  NSString* reason = aException.reason;
+  if (reason) {
+    NSRange range = [reason rangeOfString:@"0x"];
+    if (range.location != NSNotFound) {
+      unsigned long long addr = 0;
+      NSScanner* scanner =
+          [NSScanner scannerWithString:
+              [reason substringFromIndex:range.location]];
+      if ([scanner scanHexLongLong:&addr] && addr != 0) {
+        @try {
+          NSArray* array = (__bridge NSArray*)(void*)addr;
+          fprintf(stderr, "FELT_MUTATED_ARRAY count=%lu classes: ",
+                  (unsigned long)[array count]);
+          for (id obj in array) {
+            fprintf(stderr, "%s ", [[obj className] UTF8String]);
+          }
+          fprintf(stderr, "\n");
+        } @catch (NSException*) {
+          fprintf(stderr, "FELT_MUTATED_ARRAY failed to dump\n");
+        }
+      }
+    }
+  }
+
   [super _crashOnException:aException];
 }
 
