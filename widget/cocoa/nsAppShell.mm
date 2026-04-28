@@ -188,10 +188,10 @@ void OnUncaughtException(NSException* aException) {
       if ([scanner scanHexLongLong:&addr] && addr != 0) {
         @try {
           NSArray* array = (__bridge NSArray*)(void*)addr;
-          fprintf(stderr, "FELT_MUTATED_ARRAY count=%lu classes: ",
+          fprintf(stderr, "FELT_MUTATED_ARRAY count=%lu: ",
                   (unsigned long)[array count]);
           for (id obj in array) {
-            fprintf(stderr, "%s ", [[obj className] UTF8String]);
+            fprintf(stderr, "%s(%p) ", [[obj className] UTF8String], obj);
           }
           fprintf(stderr, "\n");
         } @catch (NSException*) {
@@ -280,6 +280,7 @@ nsAppShell::nsAppShell()
 nsAppShell::~nsAppShell() {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
+  VTDumpNoException();
   hal::Shutdown();
 
   if (mMemoryPressureSource) {
@@ -1115,6 +1116,7 @@ void nsAppShell::OnMemoryPressureChanged(
 - (void)applicationWillTerminate:(NSNotification*)aNotification {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
+  VTDumpNoException();
   mAppShell->WillTerminate();
 
   NS_OBJC_END_TRY_IGNORE_BLOCK;

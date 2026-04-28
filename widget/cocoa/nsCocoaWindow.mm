@@ -152,6 +152,51 @@ void VTSnapshotTitlebar(NSWindow* window) {
   }
 }
 
+static const char* VTEventName(int event) {
+  switch (event & ~VT_OFF_MAIN_THREAD) {
+    case VT_DISPLAY_IF_NEEDED_ENTER: return "[BaseWindow displayIfNeeded]+";
+    case VT_DISPLAY_IF_NEEDED_EXIT: return "[BaseWindow displayIfNeeded]-";
+    case VT_UPDATE_VIBRANCY_ENTER: return "nsCocoaWindow::UpdateVibrancy+";
+    case VT_UPDATE_VIBRANCY_EXIT: return "nsCocoaWindow::UpdateVibrancy-";
+    case VT_UPDATE_VIBRANCY_CHANGED: return "nsCocoaWindow::UpdateVibrancy=";
+    case VT_VIEW_REGION_ENTER: return "ViewRegion::UpdateRegion+";
+    case VT_VIEW_REGION_ADD_SUBVIEW: return "ViewRegion::UpdateRegion.addSubview";
+    case VT_VIEW_REGION_REMOVE_SUBVIEW: return "ViewRegion::UpdateRegion.removeFromSuperview";
+    case VT_VIEW_REGION_EXIT: return "ViewRegion::UpdateRegion-";
+    case VT_SET_DRAWS_INTO_FRAME_ENTER: return "[BaseWindow setDrawsContentsIntoWindowFrame]+";
+    case VT_SET_DRAWS_INTO_FRAME_CHANGED: return "[BaseWindow setDrawsContentsIntoWindowFrame]=";
+    case VT_SHOW_ENTER: return "nsCocoaWindow::Show";
+    case VT_CREATE_ADD_CHILDVIEW: return "nsCocoaWindow::Create.addSubview";
+    case VT_TOOLBAR_INIT_ADD_SUBVIEW: return "[ToolbarWindow initWithContentRect].addSubview";
+    case VT_RECREATE_REMOVE_SUBVIEW: return "nsCocoaWindow::RecreateWindow.removeFromSuperview";
+    case VT_RECREATE_ADD_SUBVIEW: return "nsCocoaWindow::RecreateWindow.addSubview";
+    case VT_DRAWS_FRAME_REMOVE_CHILD: return "[BaseWindow setEffectViewWrapper].removeFromSuperview";
+    case VT_DRAWS_FRAME_ADD_CHILD: return "[BaseWindow setEffectViewWrapper].addSubview";
+    case VT_DRAWS_FRAME_SET_CONTENT: return "[BaseWindow setEffectViewWrapper].setContentView";
+    case VT_DELAYED_TEARDOWN: return "[ChildView delayedTearDown]";
+    case VT_TOOLBAR_DEALLOC_REMOVE: return "[ChildView dealloc].removeFromSuperview";
+    case VT_VIEW_REGION_DESTRUCTOR: return "ViewRegion::~ViewRegion";
+    case VT_UPDATE_ROOT_CA_ENTER: return "[ChildView updateRootCALayer]+";
+    case VT_UPDATE_ROOT_CA_EXIT: return "[ChildView updateRootCALayer]-";
+    case VT_HANDLE_CA_TRANSACTION_ENTER: return "nsCocoaWindow::HandleMainThreadCATransaction+";
+    case VT_HANDLE_CA_TRANSACTION_EXIT: return "nsCocoaWindow::HandleMainThreadCATransaction-";
+    case VT_TOOLBAR_INIT_ADD_PIXEL: return "[ToolbarWindow initWithContentRect].addPixelHostingView";
+    case VT_SET_TITLE: return "nsCocoaWindow::SetTitle";
+    case VT_REFLOW_TITLEBAR: return "[ToolbarWindow reflowTitlebarElements]";
+    case VT_UPDATE_TITLEBAR_TRANSPARENCY: return "[ToolbarWindow updateTitlebarTransparency]";
+    case VT_SET_TITLEBAR_SEPARATOR: return "[ToolbarWindow setTitlebarSeparatorStyle]";
+    case VT_SET_COLOR_SCHEME: return "nsCocoaWindow::SetColorScheme";
+    case VT_SET_COLOR_SCHEME_CHANGED: return "nsCocoaWindow::SetColorScheme.changed";
+    case VT_SET_TITLE_VISIBILITY: return "[FullscreenToolbarWindow setDrawsContents].titleVisibility";
+    case VT_CONTENT_VIEW_WANTS_LAYER: return "nsCocoaWindow::Create.contentView.wantsLayer";
+    case VT_SET_OPAQUE: return "nsCocoaWindow::Create.setOpaque";
+    case VT_HIDE_TITLEBAR_SEPARATOR: return "nsCocoaWindow::SetHideTitlebarSeparator";
+    case VT_ORDER_FRONT: return "nsCocoaWindow::Show.orderFront";
+    case VT_SET_FRAME: return "[NSWindow setFrame]";
+    default: return "?";
+  }
+}
+
 void VTDump(NSException* exception) {
   mach_timebase_info_data_t info;
   mach_timebase_info(&info);
@@ -170,7 +215,8 @@ void VTDump(NSException* exception) {
         sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
     uint64_t usec = (e.timestamp - firstTs) * info.numer
         / info.denom / 1000;
-    fprintf(stderr, "%d@%llu ", e.event, usec);
+    fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
+            (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", usec);
   }
   fprintf(stderr, "\n");
 
@@ -192,6 +238,34 @@ void VTDump(NSException* exception) {
     } @catch (NSException*) {
       fprintf(stderr, "FELT_TITLEBAR_AFTER  failed to read\n");
     }
+  }
+}
+
+void VTDumpNoException() {
+  if (sVibrancyTracePos == 0) return;
+  mach_timebase_info_data_t info;
+  mach_timebase_info(&info);
+
+  int pos = sVibrancyTracePos;
+  int count = pos < kVibrancyTraceSize ? pos : kVibrancyTraceSize;
+  int start = pos < kVibrancyTraceSize ? 0 : pos % kVibrancyTraceSize;
+
+  uint64_t firstTs = count > 0
+      ? sVibrancyTrace[start % kVibrancyTraceSize].timestamp : 0;
+
+  fprintf(stderr, "FELT_VIBRANCY_TRACE_HEALTHY count=%d: ", count);
+  for (int i = 0; i < count; i++) {
+    VTEntry e = const_cast<VTEntry&>(
+        sVibrancyTrace[(start + i) % kVibrancyTraceSize]);
+    uint64_t usec = (e.timestamp - firstTs) * info.numer
+        / info.denom / 1000;
+    fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
+            (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", usec);
+  }
+  fprintf(stderr, "\n");
+
+  if (sTitlebarBefore[0]) {
+    fprintf(stderr, "FELT_TITLEBAR_HEALTHY %s\n", sTitlebarBefore);
   }
 }
 

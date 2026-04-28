@@ -69,6 +69,7 @@ enum VibrancyTraceEvent {
 };
 void VTRecord(int event);
 void VTDump(NSException* exception);
+void VTDumpNoException();
 
 namespace mozilla {
 enum class NativeKeyBindingsType : uint8_t;
