@@ -125,6 +125,33 @@ void VTRecord(int event) {
   sVibrancyTrace[pos].timestamp = mach_absolute_time();
 }
 
+// Snapshot of titlebar subviews as a string, taken at displayIfNeeded entry.
+static char sTitlebarBefore[1024] = {0};
+static NSWindow* sTitlebarSnapshotWindow = nil;
+
+static NSView* GetTitlebarView(NSWindow* window) {
+  NSView* frameView = window.contentView.superview;
+  if ([frameView respondsToSelector:@selector(titlebarView)]) {
+    return [frameView performSelector:@selector(titlebarView)];
+  }
+  return nil;
+}
+
+void VTSnapshotTitlebar(NSWindow* window) {
+  NSView* titlebar = GetTitlebarView(window);
+  if (!titlebar) return;
+  sTitlebarSnapshotWindow = window;
+  int pos = 0;
+  NSArray* subs = titlebar.subviews;
+  pos += snprintf(sTitlebarBefore + pos, sizeof(sTitlebarBefore) - pos,
+                  "count=%lu: ", (unsigned long)subs.count);
+  for (NSView* v in subs) {
+    if (pos >= (int)sizeof(sTitlebarBefore) - 40) break;
+    pos += snprintf(sTitlebarBefore + pos, sizeof(sTitlebarBefore) - pos,
+                    "%s(%p) ", [v className].UTF8String, v);
+  }
+}
+
 void VTDump(NSException* exception) {
   mach_timebase_info_data_t info;
   mach_timebase_info(&info);
@@ -146,6 +173,26 @@ void VTDump(NSException* exception) {
     fprintf(stderr, "%d@%llu ", e.event, usec);
   }
   fprintf(stderr, "\n");
+
+  // Dump titlebar snapshot (at displayIfNeeded entry) vs current state.
+  if (sTitlebarBefore[0]) {
+    fprintf(stderr, "FELT_TITLEBAR_BEFORE %s\n", sTitlebarBefore);
+
+    @try {
+      NSView* titlebar = GetTitlebarView(sTitlebarSnapshotWindow);
+      if (titlebar) {
+        NSArray* current = titlebar.subviews;
+        fprintf(stderr, "FELT_TITLEBAR_AFTER  count=%lu: ",
+                (unsigned long)current.count);
+        for (NSView* v in current) {
+          fprintf(stderr, "%s(%p) ", [v className].UTF8String, v);
+        }
+        fprintf(stderr, "\n");
+      }
+    } @catch (NSException*) {
+      fprintf(stderr, "FELT_TITLEBAR_AFTER  failed to read\n");
+    }
+  }
 }
 
 // defined in nsMenuBarX.mm
@@ -8000,6 +8047,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 
 - (void)displayIfNeeded {
   VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
+  VTSnapshotTitlebar(self);
   [super displayIfNeeded];
   VTRecord(VT_DISPLAY_IF_NEEDED_EXIT);
 }
