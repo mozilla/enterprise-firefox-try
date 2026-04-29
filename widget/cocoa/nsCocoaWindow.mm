@@ -5074,11 +5074,17 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, const DesktopIntRect& aRect,
 
   [mWindow makeFirstResponder:mChildView];
 
-  // Bug 2031249: Force AppKit to cache _effectiveCollectionBehavior after the
-  // window is fully set up. Without this, the lazy evaluation during
-  // NSViewUpdateVibrancyForSubtree can trigger _updateButtons which adds a
-  // deprecated _NSThemeFullScreenButton mid-enumeration.
-  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
+  // Bug 2031249: Force AppKit to run _updateButtons before the first
+  // displayIfNeeded. Without this, _effectiveCollectionBehavior is lazily
+  // evaluated during NSViewUpdateVibrancyForSubtree which triggers
+  // _updateButtons mid-enumeration, adding a deprecated
+  // _NSThemeFullScreenButton and crashing with "Collection was mutated while
+  // being enumerated". Setting a different collectionBehavior value forces
+  // _cacheAndSetPropertiesForCollectionBehavior past its bail-out check,
+  // ensuring _updateButtons runs safely here.
+  NSWindowCollectionBehavior saved = [mWindow collectionBehavior];
+  [mWindow setCollectionBehavior:saved | NSWindowCollectionBehaviorFullScreenNone];
+  [mWindow setCollectionBehavior:saved];
   LogEffectiveCB(mWindow, "Create.afterFlush");
 
   return NS_OK;
