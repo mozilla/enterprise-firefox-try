@@ -109,6 +109,18 @@ BOOL sTouchBarIsInitialized = NO;
 #include <objc/runtime.h>
 #include <objc/message.h>
 
+static void LogEffectiveCB(NSWindow* window, const char* label) {
+  NSWindowCollectionBehavior cb = [window collectionBehavior];
+  NSInteger effectiveCB = 0;
+  if ([window respondsToSelector:@selector(_effectiveCollectionBehavior)]) {
+    effectiveCB = ((NSInteger(*)(id, SEL))objc_msgSend)(
+        window, @selector(_effectiveCollectionBehavior));
+  }
+  fprintf(stderr, "FELT_ECB %-45s window=%p cb=0x%lx ecb=0x%lx %s\n",
+          label, window, (unsigned long)cb, (unsigned long)effectiveCB,
+          (effectiveCB & 0x80) ? "HAS_PRIMARY" : "no_primary");
+}
+
 struct VTEntry {
   int event;
   uint64_t timestamp;
@@ -5062,6 +5074,13 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, const DesktopIntRect& aRect,
 
   [mWindow makeFirstResponder:mChildView];
 
+  // Bug 2031249: Force AppKit to cache _effectiveCollectionBehavior after the
+  // window is fully set up. Without this, the lazy evaluation during
+  // NSViewUpdateVibrancyForSubtree can trigger _updateButtons which adds a
+  // deprecated _NSThemeFullScreenButton mid-enumeration.
+  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
+  LogEffectiveCB(mWindow, "Create.afterFlush");
+
   return NS_OK;
 
   NS_OBJC_END_TRY_BLOCK_RETURN(NS_ERROR_FAILURE);
@@ -5219,6 +5238,7 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
   // setup our notification delegate. Note that setDelegate: does NOT retain.
   mDelegate = [[WindowDelegate alloc] initWithGeckoWindow:this];
   mWindow.delegate = mDelegate;
+  LogEffectiveCB(mWindow, "CreateNativeWindow.afterDelegate");
 
   // Make sure that the content rect we gave has been honored.
   NSRect wantedFrame = [mWindow frameRectForChildViewRect:contentRect];
@@ -5271,12 +5291,7 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
 
   [WindowDataMap.sharedWindowDataMap ensureDataForWindow:mWindow];
   mWindowMadeHere = true;
-
-  // Bug 2031249: Force AppKit to cache _effectiveCollectionBehavior after all
-  // collectionBehavior modifications are done. Without this, the lazy
-  // evaluation during NSViewUpdateVibrancyForSubtree can trigger _updateButtons
-  // which adds a deprecated _NSThemeFullScreenButton mid-enumeration.
-  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
+  LogEffectiveCB(mWindow, "CreateNativeWindow.end");
 
   return NS_OK;
 
@@ -5456,6 +5471,9 @@ bool nsCocoaWindow::IsRunningAppModal() { return [NSApp _isRunningAppModal]; }
 void nsCocoaWindow::Show(bool aState) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
   VTRecord(VT_SHOW_ENTER);
+  if (mWindow) {
+    LogEffectiveCB(mWindow, "Show.enter");
+  }
 
   if (!mWindow) {
     return;
@@ -7235,6 +7253,9 @@ void nsCocoaWindow::SetSupportsNativeFullscreen(
   VTRecord(aSupportsNativeFullscreen ? VT_SET_SUPPORTS_FULLSCREEN_TRUE
                                      : VT_SET_SUPPORTS_FULLSCREEN_FALSE);
   if (mWindow) {
+    LogEffectiveCB(mWindow, aSupportsNativeFullscreen
+                       ? "SetSupportsNativeFullscreen(true).before"
+                       : "SetSupportsNativeFullscreen(false).before");
     // This determines whether we tell cocoa that the window supports native
     // full screen. If we do so, and another window is in native full screen,
     // this window will also appear in native full screen. We generally only
@@ -8182,6 +8203,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 
 - (void)displayIfNeeded {
   VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
+  LogEffectiveCB(self, "displayIfNeeded.enter");
   VTSwizzleTitlebar(self);
   VTSnapshotTitlebar(self);
   [super displayIfNeeded];
@@ -8450,6 +8472,7 @@ static bool MaybeDropEventForModalWindow(NSEvent* aEvent, id aDelegate) {
     // when the user mouses to the top of the screen in fullscreen.
     [(NSWindow*)self
         addTitlebarAccessoryViewController:mFullscreenTitlebarTracker];
+    LogEffectiveCB(self, "initWithContentRect.end");
   }
   return self;
 
