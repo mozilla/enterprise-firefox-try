@@ -107,6 +107,7 @@ BOOL sTouchBarIsInitialized = NO;
 // Event trace ring buffer for diagnosing NSViewUpdateVibrancyForSubtree crash.
 #include <mach/mach_time.h>
 #include <objc/runtime.h>
+#include <objc/message.h>
 
 struct VTEntry {
   int event;
@@ -166,8 +167,24 @@ static BOOL sTitlebarSwizzled = NO;
 static void SwizzledTitlebarAddSubview(id self, SEL _cmd, NSView* view) {
   if ([[view className] isEqualToString:@"_NSThemeFullScreenButton"]) {
     VTRecord(VT_FULLSCREEN_BUTTON_ADDED);
-    fprintf(stderr, "FELT_FULLSCREEN_BUTTON_ADDED view=%p to=%s(%p)\n",
-            view, [self className].UTF8String, self);
+    NSWindow* window = [self window];
+    NSWindowCollectionBehavior cb = [window collectionBehavior];
+    BOOL hasPrimary = (cb & NSWindowCollectionBehaviorFullScreenPrimary) != 0;
+    BOOL hasNone = (cb & NSWindowCollectionBehaviorFullScreenNone) != 0;
+    NSInteger effectiveCB = 0;
+    if ([window respondsToSelector:@selector(_effectiveCollectionBehavior)]) {
+      effectiveCB = ((NSInteger(*)(id, SEL))objc_msgSend)(
+          window, @selector(_effectiveCollectionBehavior));
+    }
+    fprintf(stderr,
+            "FELT_FULLSCREEN_BUTTON_ADDED view=%p to=%s(%p) "
+            "window=%p collectionBehavior=0x%lx "
+            "hasPrimary=%d hasNone=%d "
+            "_effectiveCB=0x%lx delegate=%s\n",
+            view, [self className].UTF8String, self, window,
+            (unsigned long)cb, hasPrimary, hasNone,
+            (unsigned long)effectiveCB,
+            window.delegate ? NSStringFromClass([(NSObject*)window.delegate class]).UTF8String : "nil");
     NSArray* symbols = [NSThread callStackSymbols];
     fprintf(stderr, "FELT_FULLSCREEN_BUTTON_STACK:\n");
     for (NSString* s in symbols) {
@@ -5254,6 +5271,12 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
 
   [WindowDataMap.sharedWindowDataMap ensureDataForWindow:mWindow];
   mWindowMadeHere = true;
+
+  // Bug 2031249: Force AppKit to cache _effectiveCollectionBehavior after all
+  // collectionBehavior modifications are done. Without this, the lazy
+  // evaluation during NSViewUpdateVibrancyForSubtree can trigger _updateButtons
+  // which adds a deprecated _NSThemeFullScreenButton mid-enumeration.
+  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
 
   return NS_OK;
 
