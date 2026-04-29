@@ -233,6 +233,8 @@ static const char* VTEventName(int event) {
     case VT_ORDER_FRONT: return "nsCocoaWindow::Show.orderFront";
     case VT_SET_FRAME: return "[NSWindow setFrame]";
     case VT_FULLSCREEN_BUTTON_ADDED: return "TITLEBAR.addSubview(_NSThemeFullScreenButton)";
+    case VT_SET_SUPPORTS_FULLSCREEN_TRUE: return "SetSupportsNativeFullscreen(true)";
+    case VT_SET_SUPPORTS_FULLSCREEN_FALSE: return "SetSupportsNativeFullscreen(false)";
     default: return "?";
   }
 }
@@ -7207,6 +7209,8 @@ void nsCocoaWindow::SetSupportsNativeFullscreen(
     bool aSupportsNativeFullscreen) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
+  VTRecord(aSupportsNativeFullscreen ? VT_SET_SUPPORTS_FULLSCREEN_TRUE
+                                     : VT_SET_SUPPORTS_FULLSCREEN_FALSE);
   if (mWindow) {
     // This determines whether we tell cocoa that the window supports native
     // full screen. If we do so, and another window is in native full screen,
