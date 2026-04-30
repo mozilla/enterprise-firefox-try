@@ -5074,22 +5074,6 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, const DesktopIntRect& aRect,
 
   [mWindow makeFirstResponder:mChildView];
 
-  // Bug 2031249: Force AppKit to run _updateButtons before the first
-  // displayIfNeeded. Without this, _effectiveCollectionBehavior is lazily
-  // evaluated during NSViewUpdateVibrancyForSubtree which triggers
-  // _updateButtons mid-enumeration, adding a deprecated
-  // _NSThemeFullScreenButton and crashing with "Collection was mutated while
-  // being enumerated". Setting a different collectionBehavior value forces
-  // _cacheAndSetPropertiesForCollectionBehavior past its bail-out check,
-  // ensuring _updateButtons runs safely here.
-  NSWindowStyleMask mask = [mWindow styleMask];
-  [mWindow setStyleMask:mask & ~NSWindowStyleMaskResizable];
-  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
-  LogEffectiveCB(mWindow, "Create.betweenFlush");
-  [mWindow setStyleMask:mask];
-  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
-  LogEffectiveCB(mWindow, "Create.afterFlush");
-
   return NS_OK;
 
   NS_OBJC_END_TRY_BLOCK_RETURN(NS_ERROR_FAILURE);
@@ -8211,6 +8195,23 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 }
 
 - (void)displayIfNeeded {
+  // Bug 2031249: On the first display cycle, force AppKit to run _updateButtons
+  // before NSViewUpdateVibrancyForSubtree enumerates subviews. Toggling
+  // NSWindowStyleMaskResizable changes bit 0x8000 in _effectiveCollectionBehavior,
+  // which is in the 0x8280 mask that gates the _updateButtons call inside
+  // _cacheAndSetPropertiesForCollectionBehavior:. This creates the deprecated
+  // _NSThemeFullScreenButton safely, preventing a "Collection was mutated while
+  // being enumerated" crash when it would otherwise be created mid-enumeration.
+  if (!mDidFlushCollectionBehavior) {
+    mDidFlushCollectionBehavior = YES;
+    NSWindowStyleMask mask = self.styleMask;
+    [self setStyleMask:mask & ~NSWindowStyleMaskResizable];
+    [self setCollectionBehavior:[self collectionBehavior]];
+    [self setStyleMask:mask];
+    [self setCollectionBehavior:[self collectionBehavior]];
+    LogEffectiveCB(self, "displayIfNeeded.afterFlush");
+  }
+
   VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
   LogEffectiveCB(self, "displayIfNeeded.enter");
   VTSwizzleTitlebar(self);

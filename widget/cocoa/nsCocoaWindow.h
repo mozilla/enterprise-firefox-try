@@ -105,6 +105,7 @@ class TextInputHandler;
 
   BOOL mBeingShown;
   BOOL mIsAnimationSuppressed;
+  BOOL mDidFlushCollectionBehavior;
 
   nsTouchBar* mTouchBar;
 }
