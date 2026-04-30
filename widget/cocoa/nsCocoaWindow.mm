@@ -5082,9 +5082,12 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, const DesktopIntRect& aRect,
   // being enumerated". Setting a different collectionBehavior value forces
   // _cacheAndSetPropertiesForCollectionBehavior past its bail-out check,
   // ensuring _updateButtons runs safely here.
-  NSWindowCollectionBehavior saved = [mWindow collectionBehavior];
-  [mWindow setCollectionBehavior:saved | NSWindowCollectionBehaviorFullScreenNone];
-  [mWindow setCollectionBehavior:saved];
+  NSWindowStyleMask mask = [mWindow styleMask];
+  [mWindow setStyleMask:mask & ~NSWindowStyleMaskResizable];
+  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
+  LogEffectiveCB(mWindow, "Create.betweenFlush");
+  [mWindow setStyleMask:mask];
+  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
   LogEffectiveCB(mWindow, "Create.afterFlush");
 
   return NS_OK;
@@ -8634,7 +8637,7 @@ static CGFloat DefaultTitlebarHeight() {
 // Returning YES here makes the setShowsToolbarButton method work even though
 // the window doesn't contain an NSToolbar.
 - (BOOL)_hasToolbar {
-  return YES;
+  return NO;
 }
 
 // Dispatch a toolbar pill button clicked message to Gecko.
