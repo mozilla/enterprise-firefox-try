@@ -264,6 +264,7 @@ static const char* VTEventName(int event) {
     case VT_FULLSCREEN_BUTTON_ADDED: return "TITLEBAR.addSubview(_NSThemeFullScreenButton)";
     case VT_SET_SUPPORTS_FULLSCREEN_TRUE: return "SetSupportsNativeFullscreen(true)";
     case VT_SET_SUPPORTS_FULLSCREEN_FALSE: return "SetSupportsNativeFullscreen(false)";
+    case VT_SHOWS_FULLSCREEN_BUTTON: return "showsFullScreenButton=NO";
     default: return "?";
   }
 }
@@ -8195,6 +8196,7 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
 }
 
 - (BOOL)showsFullScreenButton {
+  VTRecord(VT_SHOWS_FULLSCREEN_BUTTON);
   return NO;
 }
 
