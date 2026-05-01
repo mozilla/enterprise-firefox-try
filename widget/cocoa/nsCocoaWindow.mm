@@ -8194,24 +8194,11 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
   }
 }
 
-- (void)displayIfNeeded {
-  // Bug 2031249: On the first display cycle, force AppKit to run _updateButtons
-  // before NSViewUpdateVibrancyForSubtree enumerates subviews. Toggling
-  // NSWindowStyleMaskResizable changes bit 0x8000 in _effectiveCollectionBehavior,
-  // which is in the 0x8280 mask that gates the _updateButtons call inside
-  // _cacheAndSetPropertiesForCollectionBehavior:. This creates the deprecated
-  // _NSThemeFullScreenButton safely, preventing a "Collection was mutated while
-  // being enumerated" crash when it would otherwise be created mid-enumeration.
-  if (!mDidFlushCollectionBehavior) {
-    mDidFlushCollectionBehavior = YES;
-    NSWindowStyleMask mask = self.styleMask;
-    [self setStyleMask:mask & ~NSWindowStyleMaskResizable];
-    [self setCollectionBehavior:[self collectionBehavior]];
-    [self setStyleMask:mask];
-    [self setCollectionBehavior:[self collectionBehavior]];
-    LogEffectiveCB(self, "displayIfNeeded.afterFlush");
-  }
+- (BOOL)showsFullScreenButton {
+  return NO;
+}
 
+- (void)displayIfNeeded {
   VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
   LogEffectiveCB(self, "displayIfNeeded.enter");
   VTSwizzleTitlebar(self);
