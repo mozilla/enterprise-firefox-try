@@ -241,9 +241,30 @@ static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
 }
 
 static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
+  NSWindow* win = (NSWindow*)self;
+  BOOL isSheet = [win isSheet];
+  id parentWin = [win parentWindow];
+  NSInteger level = [win level];
+  BOOL wasModal = ((BOOL(*)(id, SEL))objc_msgSend)(self, NSSelectorFromString(@"_wasModalAtSometime"));
+  BOOL isTitled = ((BOOL(*)(id, SEL))objc_msgSend)(self, NSSelectorFromString(@"_isTitledWindow"));
+  BOOL isResizable = ((BOOL(*)(id, SEL))objc_msgSend)(self, NSSelectorFromString(@"isResizable"));
+  id screen = [win screen];
+  NSRect frame = [win frame];
+  int aux105bits = -1;
+  Ivar auxIvar = class_getInstanceVariable([NSWindow class], "_auxiliaryStorage");
+  if (auxIvar) {
+    void* auxPtr = *(void**)((uint8_t*)(__bridge void*)win + ivar_getOffset(auxIvar));
+    if (auxPtr) {
+      aux105bits = ((uint8_t*)auxPtr)[0x105] & 3;
+    }
+  }
   BOOL result = ((BOOL(*)(id, SEL))sOrigImplicitlyAllowsFSPrimary)(self, _cmd);
   VTRecord(VT_IMPLICITLY_ALLOWS_FS_PRIMARY);
-  fprintf(stderr, "FELT_IMPLICITLY_ALLOWS_FS_PRIMARY window=%p result=%d\n", self, result);
+  fprintf(stderr, "FELT_IMPLICITLY_ALLOWS_FS_PRIMARY window=%p result=%d "
+          "isSheet=%d parent=%p level=%ld wasModal=%d isTitled=%d isResizable=%d "
+          "screen=%p frame=%.0fx%.0f aux105=%d\n",
+          self, result, isSheet, parentWin, (long)level, wasModal, isTitled,
+          isResizable, screen, frame.size.width, frame.size.height, aux105bits);
   return result;
 }
 
