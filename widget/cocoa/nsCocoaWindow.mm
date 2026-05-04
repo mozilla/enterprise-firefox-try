@@ -223,6 +223,7 @@ static IMP sOrigZoomIsFS = nil;
 static IMP sOrigShowsFS = nil;
 static IMP sOrigCacheAndSetCB = nil;
 static IMP sOrigCurrentlyAllowsFS = nil;
+static IMP sOrigImplicitlyAllowsFSPrimary = nil;
 static BOOL sWindowFSSwizzled = NO;
 
 static BOOL SwizzledZoomButtonIsFullScreenButton(id self, SEL _cmd) {
@@ -236,6 +237,13 @@ static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigShowsFS)(self, _cmd);
   VTRecord(VT_SHOWS_FS_BUTTON);
   fprintf(stderr, "FELT_SHOWS_FS window=%p result=%d\n", self, result);
+  return result;
+}
+
+static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
+  BOOL result = ((BOOL(*)(id, SEL))sOrigImplicitlyAllowsFSPrimary)(self, _cmd);
+  VTRecord(VT_IMPLICITLY_ALLOWS_FS_PRIMARY);
+  fprintf(stderr, "FELT_IMPLICITLY_ALLOWS_FS_PRIMARY window=%p result=%d\n", self, result);
   return result;
 }
 
@@ -291,6 +299,7 @@ static void VTSwizzleTitlebar(NSWindow* window) {
     Method sm = class_getInstanceMethod(winClass, NSSelectorFromString(@"showsFullScreenButton"));
     Method cm = class_getInstanceMethod(winClass, NSSelectorFromString(@"_cacheAndSetPropertiesForCollectionBehavior:"));
     Method am = class_getInstanceMethod(winClass, NSSelectorFromString(@"_currentlyAllowsFullScreenMode"));
+    Method im = class_getInstanceMethod(winClass, NSSelectorFromString(@"_implicitlyAllowsFullScreenPrimary"));
     if (zm && sm && cm) {
       sOrigZoomIsFS = method_getImplementation(zm);
       method_setImplementation(zm, (IMP)SwizzledZoomButtonIsFullScreenButton);
@@ -302,9 +311,13 @@ static void VTSwizzleTitlebar(NSWindow* window) {
         sOrigCurrentlyAllowsFS = method_getImplementation(am);
         method_setImplementation(am, (IMP)SwizzledCurrentlyAllowsFullScreenMode);
       }
+      if (im) {
+        sOrigImplicitlyAllowsFSPrimary = method_getImplementation(im);
+        method_setImplementation(im, (IMP)SwizzledImplicitlyAllowsFSPrimary);
+      }
       sWindowFSSwizzled = YES;
-      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s currentlyAllows=%d\n",
-              NSStringFromClass(winClass).UTF8String, am != nil);
+      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s currentlyAllows=%d implicitlyAllows=%d\n",
+              NSStringFromClass(winClass).UTF8String, am != nil, im != nil);
     }
   }
 }
@@ -359,6 +372,7 @@ static const char* VTEventName(int event) {
     case VT_SHOWS_FS_BUTTON: return "showsFullScreenButton";
     case VT_CACHE_AND_SET_CB: return "_cacheAndSetPropertiesForCollectionBehavior:";
     case VT_CURRENTLY_ALLOWS_FS: return "_currentlyAllowsFullScreenMode";
+    case VT_IMPLICITLY_ALLOWS_FS_PRIMARY: return "_implicitlyAllowsFullScreenPrimary";
     default: return "?";
   }
 }
