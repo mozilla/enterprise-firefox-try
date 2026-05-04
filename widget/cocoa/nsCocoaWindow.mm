@@ -116,9 +116,10 @@ static void LogEffectiveCB(NSWindow* window, const char* label) {
     effectiveCB = ((NSInteger(*)(id, SEL))objc_msgSend)(
         window, @selector(_effectiveCollectionBehavior));
   }
-  fprintf(stderr, "FELT_ECB %-45s window=%p cb=0x%lx ecb=0x%lx %s\n",
+  fprintf(stderr, "FELT_ECB %-45s window=%p cb=0x%lx ecb=0x%lx %s transparent=%d\n",
           label, window, (unsigned long)cb, (unsigned long)effectiveCB,
-          (effectiveCB & 0x80) ? "HAS_PRIMARY" : "no_primary");
+          (effectiveCB & 0x80) ? "HAS_PRIMARY" : "no_primary",
+          window.titlebarAppearsTransparent);
 }
 
 struct VTEntry {
@@ -192,10 +193,11 @@ static void SwizzledTitlebarAddSubview(id self, SEL _cmd, NSView* view) {
             "FELT_FULLSCREEN_BUTTON_ADDED view=%p to=%s(%p) "
             "window=%p collectionBehavior=0x%lx "
             "hasPrimary=%d hasNone=%d "
-            "_effectiveCB=0x%lx delegate=%s\n",
+            "_effectiveCB=0x%lx transparent=%d delegate=%s\n",
             view, [self className].UTF8String, self, window,
             (unsigned long)cb, hasPrimary, hasNone,
             (unsigned long)effectiveCB,
+            window.titlebarAppearsTransparent,
             window.delegate ? NSStringFromClass([(NSObject*)window.delegate class]).UTF8String : "nil");
     NSArray* symbols = [NSThread callStackSymbols];
     fprintf(stderr, "FELT_FULLSCREEN_BUTTON_STACK:\n");
@@ -213,6 +215,40 @@ static BOOL sUpdateButtonsSwizzled = NO;
 static void SwizzledUpdateButtons(id self, SEL _cmd) {
   VTRecord(VT_UPDATE_BUTTONS);
   ((void(*)(id, SEL))sOrigUpdateButtons)(self, _cmd);
+}
+
+// Swizzle NSWindow's _zoomButtonIsFullScreenButton and showsFullScreenButton
+// to trace their return values and detect disagreement.
+static IMP sOrigZoomIsFS = nil;
+static IMP sOrigShowsFS = nil;
+static IMP sOrigCacheAndSetCB = nil;
+static BOOL sWindowFSSwizzled = NO;
+
+static BOOL SwizzledZoomButtonIsFullScreenButton(id self, SEL _cmd) {
+  BOOL result = ((BOOL(*)(id, SEL))sOrigZoomIsFS)(self, _cmd);
+  VTRecord(VT_ZOOM_IS_FS_BUTTON);
+  fprintf(stderr, "FELT_ZOOM_IS_FS window=%p result=%d ecb=0x%lx\n",
+          self, result,
+          (unsigned long)((NSUInteger(*)(id, SEL))objc_msgSend)(
+              self, NSSelectorFromString(@"_effectiveCollectionBehavior")));
+  return result;
+}
+
+static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
+  BOOL result = ((BOOL(*)(id, SEL))sOrigShowsFS)(self, _cmd);
+  VTRecord(VT_SHOWS_FS_BUTTON);
+  fprintf(stderr, "FELT_SHOWS_FS window=%p result=%d ecb=0x%lx\n",
+          self, result,
+          (unsigned long)((NSUInteger(*)(id, SEL))objc_msgSend)(
+              self, NSSelectorFromString(@"_effectiveCollectionBehavior")));
+  return result;
+}
+
+static void SwizzledCacheAndSetCB(id self, SEL _cmd, NSUInteger cb) {
+  VTRecord(VT_CACHE_AND_SET_CB);
+  fprintf(stderr, "FELT_CACHE_SET_CB window=%p cb=0x%lx windowNum=%ld\n",
+          self, (unsigned long)cb, (long)[(NSWindow*)self windowNumber]);
+  ((void(*)(id, SEL, NSUInteger))sOrigCacheAndSetCB)(self, _cmd, cb);
 }
 
 static void VTSwizzleTitlebar(NSWindow* window) {
@@ -240,6 +276,24 @@ static void VTSwizzleTitlebar(NSWindow* window) {
         fprintf(stderr, "FELT_SWIZZLED_UPDATE_BUTTONS class=%s\n",
                 NSStringFromClass(frameClass).UTF8String);
       }
+    }
+  }
+
+  if (!sWindowFSSwizzled) {
+    Class winClass = [window class];
+    Method zm = class_getInstanceMethod(winClass, NSSelectorFromString(@"_zoomButtonIsFullScreenButton"));
+    Method sm = class_getInstanceMethod(winClass, NSSelectorFromString(@"showsFullScreenButton"));
+    Method cm = class_getInstanceMethod(winClass, NSSelectorFromString(@"_cacheAndSetPropertiesForCollectionBehavior:"));
+    if (zm && sm && cm) {
+      sOrigZoomIsFS = method_getImplementation(zm);
+      method_setImplementation(zm, (IMP)SwizzledZoomButtonIsFullScreenButton);
+      sOrigShowsFS = method_getImplementation(sm);
+      method_setImplementation(sm, (IMP)SwizzledShowsFullScreenButton);
+      sOrigCacheAndSetCB = method_getImplementation(cm);
+      method_setImplementation(cm, (IMP)SwizzledCacheAndSetCB);
+      sWindowFSSwizzled = YES;
+      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s\n",
+              NSStringFromClass(winClass).UTF8String);
     }
   }
 }
@@ -290,6 +344,9 @@ static const char* VTEventName(int event) {
     case VT_SET_SUPPORTS_FULLSCREEN_FALSE: return "SetSupportsNativeFullscreen(false)";
     case VT_SHOWS_FULLSCREEN_BUTTON: return "showsFullScreenButton=NO";
     case VT_UPDATE_BUTTONS: return "[NSThemeFrame _updateButtons]";
+    case VT_ZOOM_IS_FS_BUTTON: return "_zoomButtonIsFullScreenButton";
+    case VT_SHOWS_FS_BUTTON: return "showsFullScreenButton";
+    case VT_CACHE_AND_SET_CB: return "_cacheAndSetPropertiesForCollectionBehavior:";
     default: return "?";
   }
 }
