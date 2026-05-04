@@ -73,6 +73,7 @@ enum VibrancyTraceEvent {
   VT_ZOOM_IS_FS_BUTTON = 45,
   VT_SHOWS_FS_BUTTON = 46,
   VT_CACHE_AND_SET_CB = 47,
+  VT_CURRENTLY_ALLOWS_FS = 48,
   VT_OFF_MAIN_THREAD = 128,
 };
 void VTRecord(int event);

@@ -222,25 +222,31 @@ static void SwizzledUpdateButtons(id self, SEL _cmd) {
 static IMP sOrigZoomIsFS = nil;
 static IMP sOrigShowsFS = nil;
 static IMP sOrigCacheAndSetCB = nil;
+static IMP sOrigCurrentlyAllowsFS = nil;
 static BOOL sWindowFSSwizzled = NO;
 
 static BOOL SwizzledZoomButtonIsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigZoomIsFS)(self, _cmd);
   VTRecord(VT_ZOOM_IS_FS_BUTTON);
-  fprintf(stderr, "FELT_ZOOM_IS_FS window=%p result=%d ecb=0x%lx\n",
-          self, result,
-          (unsigned long)((NSUInteger(*)(id, SEL))objc_msgSend)(
-              self, NSSelectorFromString(@"_effectiveCollectionBehavior")));
+  fprintf(stderr, "FELT_ZOOM_IS_FS window=%p result=%d\n", self, result);
   return result;
 }
 
 static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigShowsFS)(self, _cmd);
   VTRecord(VT_SHOWS_FS_BUTTON);
-  fprintf(stderr, "FELT_SHOWS_FS window=%p result=%d ecb=0x%lx\n",
-          self, result,
-          (unsigned long)((NSUInteger(*)(id, SEL))objc_msgSend)(
-              self, NSSelectorFromString(@"_effectiveCollectionBehavior")));
+  fprintf(stderr, "FELT_SHOWS_FS window=%p result=%d\n", self, result);
+  return result;
+}
+
+static BOOL SwizzledCurrentlyAllowsFullScreenMode(id self, SEL _cmd) {
+  BOOL result = ((BOOL(*)(id, SEL))sOrigCurrentlyAllowsFS)(self, _cmd);
+  VTRecord(VT_CURRENTLY_ALLOWS_FS);
+  NSWindow* win = (NSWindow*)self;
+  id sheet = [win attachedSheet];
+  NSArray* sheets = [win valueForKey:@"sheets"];
+  fprintf(stderr, "FELT_CURRENTLY_ALLOWS_FS window=%p result=%d attachedSheet=%p sheets.count=%lu\n",
+          self, result, sheet, (unsigned long)(sheets ? [sheets count] : 0));
   return result;
 }
 
@@ -284,6 +290,7 @@ static void VTSwizzleTitlebar(NSWindow* window) {
     Method zm = class_getInstanceMethod(winClass, NSSelectorFromString(@"_zoomButtonIsFullScreenButton"));
     Method sm = class_getInstanceMethod(winClass, NSSelectorFromString(@"showsFullScreenButton"));
     Method cm = class_getInstanceMethod(winClass, NSSelectorFromString(@"_cacheAndSetPropertiesForCollectionBehavior:"));
+    Method am = class_getInstanceMethod(winClass, NSSelectorFromString(@"_currentlyAllowsFullScreenMode"));
     if (zm && sm && cm) {
       sOrigZoomIsFS = method_getImplementation(zm);
       method_setImplementation(zm, (IMP)SwizzledZoomButtonIsFullScreenButton);
@@ -291,9 +298,13 @@ static void VTSwizzleTitlebar(NSWindow* window) {
       method_setImplementation(sm, (IMP)SwizzledShowsFullScreenButton);
       sOrigCacheAndSetCB = method_getImplementation(cm);
       method_setImplementation(cm, (IMP)SwizzledCacheAndSetCB);
+      if (am) {
+        sOrigCurrentlyAllowsFS = method_getImplementation(am);
+        method_setImplementation(am, (IMP)SwizzledCurrentlyAllowsFullScreenMode);
+      }
       sWindowFSSwizzled = YES;
-      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s\n",
-              NSStringFromClass(winClass).UTF8String);
+      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s currentlyAllows=%d\n",
+              NSStringFromClass(winClass).UTF8String, am != nil);
     }
   }
 }
@@ -347,6 +358,7 @@ static const char* VTEventName(int event) {
     case VT_ZOOM_IS_FS_BUTTON: return "_zoomButtonIsFullScreenButton";
     case VT_SHOWS_FS_BUTTON: return "showsFullScreenButton";
     case VT_CACHE_AND_SET_CB: return "_cacheAndSetPropertiesForCollectionBehavior:";
+    case VT_CURRENTLY_ALLOWS_FS: return "_currentlyAllowsFullScreenMode";
     default: return "?";
   }
 }
@@ -5367,16 +5379,6 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
 
   [WindowDataMap.sharedWindowDataMap ensureDataForWindow:mWindow];
   mWindowMadeHere = true;
-
-  // Pre-populate AppKit's _effectiveCollectionBehavior cache so that the first
-  // displayIfNeeded doesn't see a cache transition during the vibrancy subview
-  // walk. Temporarily clear titlebarAppearsTransparent so the implicit
-  // fullscreen heuristic hits the stable (!transparent && titled) path instead
-  // of depending on button existence. See bug 2031249.
-  BOOL savedTransparent = mWindow.titlebarAppearsTransparent;
-  mWindow.titlebarAppearsTransparent = NO;
-  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
-  mWindow.titlebarAppearsTransparent = savedTransparent;
 
   LogEffectiveCB(mWindow, "CreateNativeWindow.end");
 
