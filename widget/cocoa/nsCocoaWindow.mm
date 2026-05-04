@@ -206,6 +206,15 @@ static void SwizzledTitlebarAddSubview(id self, SEL _cmd, NSView* view) {
   ((void(*)(id, SEL, NSView*))sOriginalTitlebarAddSubview)(self, _cmd, view);
 }
 
+// Swizzle NSThemeFrame's _updateButtons to trace when it fires.
+static IMP sOrigUpdateButtons = nil;
+static BOOL sUpdateButtonsSwizzled = NO;
+
+static void SwizzledUpdateButtons(id self, SEL _cmd) {
+  VTRecord(VT_UPDATE_BUTTONS);
+  ((void(*)(id, SEL))sOrigUpdateButtons)(self, _cmd);
+}
+
 static void VTSwizzleTitlebar(NSWindow* window) {
   if (sTitlebarSwizzled) return;
   NSView* titlebar = GetTitlebarView(window);
@@ -218,6 +227,21 @@ static void VTSwizzleTitlebar(NSWindow* window) {
   sTitlebarSwizzled = YES;
   fprintf(stderr, "FELT_SWIZZLED_TITLEBAR class=%s\n",
           NSStringFromClass(titlebarClass).UTF8String);
+
+  if (!sUpdateButtonsSwizzled) {
+    NSView* frameView = window.contentView.superview;
+    if (frameView) {
+      Class frameClass = [frameView class];
+      Method um = class_getInstanceMethod(frameClass, NSSelectorFromString(@"_updateButtons"));
+      if (um) {
+        sOrigUpdateButtons = method_getImplementation(um);
+        method_setImplementation(um, (IMP)SwizzledUpdateButtons);
+        sUpdateButtonsSwizzled = YES;
+        fprintf(stderr, "FELT_SWIZZLED_UPDATE_BUTTONS class=%s\n",
+                NSStringFromClass(frameClass).UTF8String);
+      }
+    }
+  }
 }
 
 static const char* VTEventName(int event) {
@@ -265,6 +289,7 @@ static const char* VTEventName(int event) {
     case VT_SET_SUPPORTS_FULLSCREEN_TRUE: return "SetSupportsNativeFullscreen(true)";
     case VT_SET_SUPPORTS_FULLSCREEN_FALSE: return "SetSupportsNativeFullscreen(false)";
     case VT_SHOWS_FULLSCREEN_BUTTON: return "showsFullScreenButton=NO";
+    case VT_UPDATE_BUTTONS: return "[NSThemeFrame _updateButtons]";
     default: return "?";
   }
 }
@@ -5285,6 +5310,17 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
 
   [WindowDataMap.sharedWindowDataMap ensureDataForWindow:mWindow];
   mWindowMadeHere = true;
+
+  // Pre-populate AppKit's _effectiveCollectionBehavior cache so that the first
+  // displayIfNeeded doesn't see a cache transition during the vibrancy subview
+  // walk. Temporarily clear titlebarAppearsTransparent so the implicit
+  // fullscreen heuristic hits the stable (!transparent && titled) path instead
+  // of depending on button existence. See bug 2031249.
+  BOOL savedTransparent = mWindow.titlebarAppearsTransparent;
+  mWindow.titlebarAppearsTransparent = NO;
+  [mWindow setCollectionBehavior:[mWindow collectionBehavior]];
+  mWindow.titlebarAppearsTransparent = savedTransparent;
+
   LogEffectiveCB(mWindow, "CreateNativeWindow.end");
 
   return NS_OK;
@@ -8195,10 +8231,6 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
   }
 }
 
-- (BOOL)showsFullScreenButton {
-  VTRecord(VT_SHOWS_FULLSCREEN_BUTTON);
-  return NO;
-}
 
 - (void)displayIfNeeded {
   VTRecord(VT_DISPLAY_IF_NEEDED_ENTER);
