@@ -5392,6 +5392,12 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
     // Non-popup windows are always opaque.
     VTRecord(VT_SET_OPAQUE);
     mWindow.opaque = YES;
+
+    if (mWindowType == WindowType::TopLevel &&
+        (features & NSWindowStyleMaskTitled)) {
+      mWindow.collectionBehavior = mWindow.collectionBehavior |
+                                   NSWindowCollectionBehaviorFullScreenPrimary;
+    }
   }
 
   if (mAlwaysOnTop || mIsAlert) {
