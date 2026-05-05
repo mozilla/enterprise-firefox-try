@@ -230,6 +230,7 @@ static IMP sOrigShowsFS = nil;
 static IMP sOrigCacheAndSetCB = nil;
 static IMP sOrigCurrentlyAllowsFS = nil;
 static IMP sOrigImplicitlyAllowsFSPrimary = nil;
+static IMP sOrigValidSizeForFS = nil;
 static BOOL sWindowFSSwizzled = NO;
 
 static BOOL SwizzledZoomButtonIsFullScreenButton(id self, SEL _cmd) {
@@ -246,6 +247,17 @@ static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
   return result;
 }
 
+
+static NSSize SwizzledValidSizeForFS(id self, SEL _cmd, NSSize* size, BOOL forFullScreen, BOOL force) {
+  NSSize result = ((NSSize(*)(id, SEL, NSSize*, BOOL, BOOL))sOrigValidSizeForFS)(self, _cmd, size, forFullScreen, force);
+  VTRecordWin(VT_VALID_SIZE_FOR_FS, (__bridge void*)self);
+  NSSize inputSize = size ? *size : NSZeroSize;
+  fprintf(stderr, "FELT_VALID_SIZE_FOR_FS window=%p validSize=%.0fx%.0f inputSize=%.0fx%.0f equal=%d forFS=%d force=%d\n",
+          self, result.width, result.height, inputSize.width, inputSize.height,
+          (int)NSEqualSizes(result, inputSize), forFullScreen, force);
+  return result;
+}
+
 static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
   NSWindow* win = (NSWindow*)self;
   BOOL isSheet = [win isSheet];
@@ -257,20 +269,23 @@ static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
   id screen = [win screen];
   NSRect frame = [win frame];
   int aux105bits = -1;
+  int aux102bits = -1;
   Ivar auxIvar = class_getInstanceVariable([NSWindow class], "_auxiliaryStorage");
   if (auxIvar) {
     void* auxPtr = *(void**)((uint8_t*)(__bridge void*)win + ivar_getOffset(auxIvar));
     if (auxPtr) {
       aux105bits = ((uint8_t*)auxPtr)[0x105] & 3;
+      aux102bits = (*(uint16_t*)((uint8_t*)auxPtr + 0x102)) & 0x180;
     }
   }
   BOOL result = ((BOOL(*)(id, SEL))sOrigImplicitlyAllowsFSPrimary)(self, _cmd);
   VTRecordWin(VT_IMPLICITLY_ALLOWS_FS_PRIMARY, (__bridge void*)self);
   fprintf(stderr, "FELT_IMPLICITLY_ALLOWS_FS_PRIMARY window=%p result=%d "
           "isSheet=%d parent=%p level=%ld wasModal=%d isTitled=%d isResizable=%d "
-          "screen=%p frame=%.0fx%.0f aux105=%d\n",
+          "screen=%p frame=%.0fx%.0f aux105=%d aux102=0x%x\n",
           self, result, isSheet, parentWin, (long)level, wasModal, isTitled,
-          isResizable, screen, frame.size.width, frame.size.height, aux105bits);
+          isResizable, screen, frame.size.width, frame.size.height, aux105bits,
+          aux102bits);
   return result;
 }
 
@@ -342,9 +357,14 @@ static void VTSwizzleTitlebar(NSWindow* window) {
         sOrigImplicitlyAllowsFSPrimary = method_getImplementation(im);
         method_setImplementation(im, (IMP)SwizzledImplicitlyAllowsFSPrimary);
       }
+      Method vm = class_getInstanceMethod(winClass, NSSelectorFromString(@"_validSize:forFullScreen:force:"));
+      if (vm) {
+        sOrigValidSizeForFS = method_getImplementation(vm);
+        method_setImplementation(vm, (IMP)SwizzledValidSizeForFS);
+      }
       sWindowFSSwizzled = YES;
-      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s currentlyAllows=%d implicitlyAllows=%d\n",
-              NSStringFromClass(winClass).UTF8String, am != nil, im != nil);
+      fprintf(stderr, "FELT_SWIZZLED_WINDOW_FS class=%s currentlyAllows=%d implicitlyAllows=%d validSize=%d\n",
+              NSStringFromClass(winClass).UTF8String, am != nil, im != nil, vm != nil);
     }
   }
 }
@@ -400,6 +420,7 @@ static const char* VTEventName(int event) {
     case VT_CACHE_AND_SET_CB: return "_cacheAndSetPropertiesForCollectionBehavior:";
     case VT_CURRENTLY_ALLOWS_FS: return "_currentlyAllowsFullScreenMode";
     case VT_IMPLICITLY_ALLOWS_FS_PRIMARY: return "_implicitlyAllowsFullScreenPrimary";
+    case VT_VALID_SIZE_FOR_FS: return "_validSize:forFullScreen:force:";
     default: return "?";
   }
 }

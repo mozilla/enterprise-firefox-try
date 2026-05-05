@@ -75,6 +75,7 @@ enum VibrancyTraceEvent {
   VT_CACHE_AND_SET_CB = 47,
   VT_CURRENTLY_ALLOWS_FS = 48,
   VT_IMPLICITLY_ALLOWS_FS_PRIMARY = 49,
+  VT_VALID_SIZE_FOR_FS = 50,
   VT_OFF_MAIN_THREAD = 128,
 };
 void VTRecord(int event);
