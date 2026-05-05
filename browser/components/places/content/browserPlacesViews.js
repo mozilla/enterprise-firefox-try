@@ -170,7 +170,10 @@ class PlacesViewBase {
     // parent node. We don't want to allow removing a node when the
     // selection is not explicit.
     let popupNode = PlacesUIUtils.lastContextMenuTriggerNode;
-    if (popupNode && (popupNode == "menupopup" || !popupNode._placesNode)) {
+    if (
+      popupNode &&
+      (popupNode.localName == "menupopup" || !popupNode._placesNode)
+    ) {
       return [];
     }
 
@@ -235,6 +238,18 @@ class PlacesViewBase {
   }
 
   buildContextMenu(aPopup) {
+    // When right-clicking on the gutter of a non-empty folder popup, don't
+    // show any context menu.
+    let triggerNode = aPopup.triggerNode;
+    // childCount > 0 distinguishes non-empty folders (suppress menu) from
+    // empty ones (show folder options).
+    if (
+      triggerNode?.localName == "menupopup" &&
+      triggerNode._placesNode?.childCount > 0
+    ) {
+      return false;
+    }
+
     this._contextMenuShown = aPopup;
     window.updateCommands("places");
 

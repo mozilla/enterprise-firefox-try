@@ -222,7 +222,7 @@ void HTMLOptionElement::GetText(nsAString& aText) {
 
   // XXX No CompressWhitespace for nsAString.  Sad.
   text.CompressWhitespace(true, true);
-  aText = text;
+  aText = std::move(text);
 }
 
 void HTMLOptionElement::SetText(const nsAString& aText, ErrorResult& aRv) {

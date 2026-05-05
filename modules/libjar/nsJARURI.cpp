@@ -637,7 +637,7 @@ nsJARURI::GetRelativeSpec(nsIURI* uriToCompare, nsACString& relativeSpec) {
 
   if (!StringBeginsWith(relativeEntrySpec, NS_BOGUS_ENTRY_SCHEME)) {
     // An actual relative spec!
-    relativeSpec = relativeEntrySpec;
+    relativeSpec = std::move(relativeEntrySpec);
   }
   return rv;
 }

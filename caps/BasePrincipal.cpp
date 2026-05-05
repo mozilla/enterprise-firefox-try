@@ -1432,7 +1432,7 @@ BasePrincipal::GetLocalStorageQuotaKey(nsACString& aKey) {
     nsAutoCString eTLDplusOne;
     rv = eTLDService->GetBaseDomain(uri, 0, eTLDplusOne);
     if (NS_SUCCEEDED(rv)) {
-      baseDomain = eTLDplusOne;
+      baseDomain = std::move(eTLDplusOne);
     } else if (rv == NS_ERROR_HOST_IS_IP_ADDRESS ||
                rv == NS_ERROR_INSUFFICIENT_DOMAIN_LEVELS) {
       rv = NS_OK;

@@ -1846,6 +1846,8 @@ function assertBreakpointSnippet(dbg, index, expectedSnippet) {
 
 const selectors = {
   callStackBody: ".call-stack-pane .pane",
+  domMutationEmpty: ".dom-mutation-empty",
+  domMutationEmptyOpenInspectorButton: ".dom-mutation-empty button",
   domMutationItem: ".dom-mutation-list li",
   expressionNode: i =>
     `.expressions-list .expression-container:nth-child(${i}) .object-label`,

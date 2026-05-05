@@ -21,6 +21,7 @@ import org.mozilla.fenix.tabstray.redux.state.TabGroupFormState
 import org.mozilla.fenix.tabstray.redux.state.TabsTrayState
 import org.mozilla.fenix.tabstray.redux.state.TabsTrayState.Mode
 import org.mozilla.fenix.tabstray.redux.state.initializeTabGroupForm
+import kotlin.test.assertEquals
 
 class TabGroupReducerTest {
     @Test
@@ -64,6 +65,35 @@ class TabGroupReducerTest {
         )
         val initialState = TabsTrayState(
             mode = Mode.Select(selectedTabs = setOf()),
+            tabGroupState = TabsTrayState.TabGroupState(
+                formState = formState,
+            ),
+            backStack = listOf(
+                TabsTrayState().backStack.first(),
+                AddToTabGroup,
+                EditTabGroup,
+            ),
+        )
+
+        val resultState = TabGroupActionReducer.reduce(initialState, TabGroupAction.SaveClicked)
+
+        val expectedState = initialState.copy(
+            mode = Mode.Normal,
+            backStack = TabsTrayState().backStack,
+        )
+
+        assertEquals(expectedState, resultState)
+    }
+
+    @Test
+    fun `WHEN SaveClicked THEN drag and drop mode is exited and the tab group flow is closed`() {
+        val formState = TabGroupFormState(
+            tabGroupId = null,
+            name = "Tab Group 1",
+            edited = true,
+        )
+        val initialState = TabsTrayState(
+            mode = Mode.DragAndDrop(sourceId = "12345", destinationId = "54321"),
             tabGroupState = TabsTrayState.TabGroupState(
                 formState = formState,
             ),
@@ -407,7 +437,7 @@ class TabGroupReducerTest {
                 mode = Mode.Select(),
                 backStack = TabsTrayState().backStack + AddToTabGroup,
             ),
-            action = TabGroupAction.TabsAddedToGroup(groupId = "12345"),
+            action = TabGroupAction.SelectedTabsAddedToGroup(groupId = "12345"),
         )
         val expectedState = TabsTrayState(
             mode = Mode.Normal,
@@ -580,5 +610,43 @@ class TabGroupReducerTest {
         )
 
         assertEquals(expectedState, resultState)
+    }
+
+    @Test
+    fun `WHEN the user completes a drag and drop action then the state is unchanged`() {
+        val initialState = TabsTrayState()
+        val resultState = TabGroupActionReducer.reduce(
+            state = TabsTrayState(),
+            action = TabGroupAction.DragAndDropCompleted(sourceId = "54321", destinationId = "12345"),
+        )
+        assertEquals(expected = initialState, actual = resultState)
+    }
+
+    @Test
+    fun `WHEN the user performs a drag and drop with two tabs THEN the state is updated with the drag and drop information`() {
+        val draggedId = "54321"
+        val destinationId = "12345"
+        val initialState = TabsTrayState()
+        val expectedState = initialState.copy(
+            tabGroupState = initialState.tabGroupState.copy(
+                formState = TabGroupFormState(
+                    tabGroupId = null,
+                    name = "",
+                    nextTabGroupNumber = 1,
+                    theme = TabGroupTheme.Yellow,
+                    edited = false,
+                ),
+            ),
+            backStack = listOf(TabManagerNavDestination.Root, EditTabGroup),
+            mode = Mode.DragAndDrop(
+                sourceId = draggedId,
+                destinationId = destinationId,
+            ),
+        )
+        val resultState = TabGroupActionReducer.reduce(
+            state = initialState,
+            action = TabGroupAction.DragAndDropTwoTabs(sourceTabId = draggedId, destinationTabId = destinationId),
+        )
+        assertEquals(expected = expectedState, actual = resultState)
     }
 }

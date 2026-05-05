@@ -6,6 +6,10 @@ package mozilla.components.lib.bookmarks.file
 
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import mozilla.components.concept.bookmark.parser.BookmarksFileParser
 import mozilla.components.concept.bookmarks.file.BookmarksFileImporter
 import mozilla.components.concept.bookmarks.file.BookmarksFileImporter.ImportResult
@@ -25,9 +29,10 @@ fun BookmarksFileImporter.Companion.htmlImporter(
     parentGuid: String,
     parser: BookmarksFileParser,
     inserter: BookmarkInserter,
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ): BookmarksFileImporter = HtmlBookmarksFileImporter(
     parentGuid = parentGuid,
-    uriOpener = UriOpener.make(context),
+    uriOpener = UriOpener.make(context, ioDispatcher),
     parser = parser,
     inserter = inserter,
 )
@@ -46,9 +51,14 @@ internal fun interface UriOpener {
         /**
          * Creates a [UriOpener] that uses the [Context.getContentResolver] to open the [Uri].
          */
-        fun make(context: Context) = UriOpener { uri ->
-            runCatching { requireNotNull(context.contentResolver.openInputStream(uri)) }
-        }
+        fun make(context: Context, ioDispatcher: CoroutineDispatcher) =
+            UriOpener { uri ->
+                withContext(ioDispatcher) {
+                    runCatching {
+                        requireNotNull(context.contentResolver.openInputStream(uri))
+                    }
+                }
+            }
     }
 }
 
@@ -66,5 +76,7 @@ internal class HtmlBookmarksFileImporter(
             val guid = inserter.insertTree(tree).getOrThrow()
 
             ImportResult(guid, parseResult.bookmarksCount)
+    }.onFailure {
+        if (it is CancellationException) throw it
     }
 }

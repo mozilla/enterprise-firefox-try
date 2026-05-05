@@ -71,7 +71,9 @@ void ChromiumCDMProxy::Init(PromiseId aPromiseId, const nsAString& aOrigin,
   nsCString keySystem = NS_ConvertUTF16toUTF8(mKeySystem);
   RefPtr<Runnable> task(NS_NewRunnableFunction(
       "ChromiumCDMProxy::Init",
-      [self, nodeIdParts, helper, aPromiseId, thread, keySystem]() -> void {
+      [self, nodeIdParts = std::move(nodeIdParts), helper = std::move(helper),
+       aPromiseId, thread = std::move(thread),
+       keySystem = std::move(keySystem)]() -> void {
         MOZ_ASSERT(self->IsOnOwnerThread());
 
         RefPtr<gmp::GeckoMediaPluginService> service =

@@ -3,7 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { useSelector, batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { useIntersectionObserver } from "../../../lib/utils";
@@ -20,22 +20,6 @@ const USER_ACTION_TYPES = {
 const PREF_NOVA_ENABLED = "nova.enabled";
 const PREF_SPORTS_WIDGET_SIZE = "widgets.sportsWidget.size";
 const PREF_SPORTS_WIDGET_LIVE_ENABLED = "widgets.sportsWidget.live.enabled";
-
-// June 11, 2026, midnight CST (UTC-6)
-const WORLD_CUP_KICKOFF = new Date("2026-06-11T06:00:00Z");
-
-export const calculateCountdown = targetDate => {
-  const diff = targetDate.getTime() - Date.now();
-  if (diff <= 0) {
-    return null;
-  }
-  const totalSeconds = Math.floor(diff / 1000);
-  return {
-    days: Math.floor(totalSeconds / 86400),
-    hours: Math.floor((totalSeconds % 86400) / 3600),
-    minutes: Math.floor((totalSeconds % 3600) / 60),
-  };
-};
 
 function SportsWidget({ dispatch, handleUserInteraction }) {
   const prefs = useSelector(state => state.Prefs.values);
@@ -69,20 +53,18 @@ function SportsWidget({ dispatch, handleUserInteraction }) {
     [handleUserInteraction]
   );
 
-  function handleFollowTeams() {
-    batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: {
-            widget_name: "sports_widget",
-            widget_source: "context_menu",
-            user_action: USER_ACTION_TYPES.FOLLOW_TEAMS,
-            widget_size: widgetSize,
-          },
-        })
-      );
-    });
+  function handleFollowTeams(widgetSource) {
+    dispatch(
+      ac.OnlyToMain({
+        type: at.WIDGETS_USER_EVENT,
+        data: {
+          widget_name: "sports_widget",
+          widget_source: widgetSource,
+          user_action: USER_ACTION_TYPES.FOLLOW_TEAMS,
+          widget_size: widgetSize,
+        },
+      })
+    );
     handleInteraction();
   }
 
@@ -184,29 +166,14 @@ function SportsWidget({ dispatch, handleUserInteraction }) {
     return () => el.removeEventListener("click", listener);
   }, [handleChangeSize]);
 
-  function handleCountdownViewSchedule() {
+  function handleViewSchedule() {
     dispatch(
       ac.OnlyToMain({
         type: at.WIDGETS_USER_EVENT,
         data: {
           widget_name: "sports_widget",
-          widget_source: "countdown",
+          widget_source: "widget",
           user_action: USER_ACTION_TYPES.VIEW_SCHEDULE,
-          widget_size: widgetSize,
-        },
-      })
-    );
-    handleInteraction();
-  }
-
-  function handleCountdownFollowTeams() {
-    dispatch(
-      ac.OnlyToMain({
-        type: at.WIDGETS_USER_EVENT,
-        data: {
-          widget_name: "sports_widget",
-          widget_source: "countdown",
-          user_action: USER_ACTION_TYPES.FOLLOW_TEAMS,
           widget_size: widgetSize,
         },
       })
@@ -239,8 +206,6 @@ function SportsWidget({ dispatch, handleUserInteraction }) {
     });
   }
 
-  const countdownActive = calculateCountdown(WORLD_CUP_KICKOFF);
-
   // @nova-cleanup(remove-gate): Remove this guard and PREF_NOVA_ENABLED after Nova ships
   if (!prefs[PREF_NOVA_ENABLED]) {
     return null;
@@ -248,37 +213,35 @@ function SportsWidget({ dispatch, handleUserInteraction }) {
 
   return (
     <article
-      className={`sports-widget widget col-4 ${widgetSize}-widget`}
+      className={`sports widget col-4 ${widgetSize}-widget`}
       ref={el => {
         widgetRef.current = [el];
       }}
     >
-      <div className="sports-widget-title-wrapper">
-        {/* The empty self-closing div here is used to help center the Countdown title, since the context menu also takes up space. */}
+      <div className="sports-title-wrapper">
+        {/* The empty self-closing div here is used to help center the title, since the context menu also takes up space. */}
         <div />
-        {countdownActive && (
-          <div className="countdown-text-wrapper">
-            <h2
-              className="sports-widget-countdown-title"
-              data-l10n-id="newtab-sports-widget-countdown-title"
-            />
-            <p
-              className="sports-widget-countdown-lede"
-              data-l10n-id="newtab-sports-widget-get-updates"
-            ></p>
-          </div>
-        )}
-        <div className="sports-widget-context-menu-wrapper">
+        <div className="sports-intro-wrapper">
+          <h2
+            className="sports-intro-title"
+            data-l10n-id="newtab-sports-widget-keep-tabs"
+          />
+          <p
+            className="sports-intro-lede"
+            data-l10n-id="newtab-sports-widget-get-updates"
+          ></p>
+        </div>
+        <div className="sports-context-menu-wrapper">
           <moz-button
-            className="sports-widget-context-menu-button"
+            className="sports-context-menu-button"
             iconSrc="chrome://global/skin/icons/more.svg"
-            menuId="sports-widget-context-menu"
+            menuId="sports-context-menu"
             type="ghost"
           />
-          <panel-list id="sports-widget-context-menu">
+          <panel-list id="sports-context-menu">
             <panel-item
               data-l10n-id="newtab-sports-widget-menu-follow-teams"
-              onClick={handleFollowTeams}
+              onClick={() => handleFollowTeams("context_menu")}
             />
             <panel-item
               data-l10n-id="newtab-sports-widget-menu-view-upcoming"
@@ -288,12 +251,12 @@ function SportsWidget({ dispatch, handleUserInteraction }) {
               data-l10n-id="newtab-sports-widget-menu-view-results"
               onClick={handleViewResults}
             />
-            <panel-item submenu="sports-widget-size-submenu">
+            <panel-item submenu="sports-size-submenu">
               <span data-l10n-id="newtab-widget-menu-change-size"></span>
               <panel-list
                 ref={sizeSubmenuRef}
                 slot="submenu"
-                id="sports-widget-size-submenu"
+                id="sports-size-submenu"
               >
                 {["medium", "large"].map(size => (
                   <panel-item
@@ -318,91 +281,28 @@ function SportsWidget({ dispatch, handleUserInteraction }) {
         </div>
       </div>
 
-      <div className="sports-widget-body">
-        {countdownActive && (
-          <SportsWidgetCountdown
-            widgetSize={widgetSize}
-            onViewSchedule={handleCountdownViewSchedule}
-            onFollowTeams={handleCountdownFollowTeams}
+      <div className="sports-body">
+        <div className="sports-buttons-wrapper">
+          <moz-button
+            type="primary"
+            size={widgetSize === "medium" ? "small" : undefined}
+            data-l10n-id="newtab-sports-widget-view-schedule"
+            className="sports-view-schedule"
+            onClick={handleViewSchedule}
           />
-        )}
+          <moz-button
+            type="secondary"
+            size={widgetSize === "medium" ? "small" : undefined}
+            data-l10n-id="newtab-sports-widget-follow-teams"
+            className="sports-follow-teams"
+            onClick={() => handleFollowTeams("widget")}
+          />
+        </div>
         {liveEnabled && sportsWidgetData?.initialized && (
-          <div className="sports-widget-live-scores">
-            {/* Live scores content */}
-          </div>
+          <div className="sports-live-scores">{/* Live scores content */}</div>
         )}
       </div>
     </article>
-  );
-}
-
-function SportsWidgetCountdown({ widgetSize, onViewSchedule, onFollowTeams }) {
-  const [countdown, setCountdown] = useState(() =>
-    calculateCountdown(WORLD_CUP_KICKOFF)
-  );
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const remaining = calculateCountdown(WORLD_CUP_KICKOFF);
-      setCountdown(remaining);
-      if (!remaining) {
-        clearInterval(interval);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!countdown) {
-    return null;
-  }
-
-  const units = [
-    { value: countdown.days, labelId: "newtab-sports-widget-countdown-days" },
-    {
-      value: countdown.hours,
-      labelId: "newtab-sports-widget-countdown-hours",
-    },
-    {
-      value: countdown.minutes,
-      labelId: "newtab-sports-widget-countdown-minutes",
-    },
-  ];
-
-  return (
-    <>
-      <div className="sports-widget-countdown">
-        <div className="sports-widget-countdown-units" aria-live="off">
-          {units.map(({ value, labelId }) => (
-            <div key={labelId} className="sports-widget-countdown-unit">
-              <span className="sports-widget-countdown-value">
-                {String(value).padStart(2, "0")}
-              </span>
-              <span
-                className="sports-widget-countdown-label"
-                data-l10n-id={labelId}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="countdown-buttons-wrapper">
-        {widgetSize !== "medium" && (
-          <moz-button
-            type="primary"
-            data-l10n-id="newtab-sports-widget-view-schedule"
-            className="countdown-view-schedule"
-            onClick={onViewSchedule}
-          />
-        )}
-        <moz-button
-          type="secondary"
-          size={widgetSize === "medium" ? "small" : undefined}
-          data-l10n-id="newtab-sports-widget-follow-teams"
-          className="countdown-follow-teams"
-          onClick={onFollowTeams}
-        />
-      </div>
-    </>
   );
 }
 

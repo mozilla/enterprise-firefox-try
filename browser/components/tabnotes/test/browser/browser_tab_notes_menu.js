@@ -491,7 +491,7 @@ add_task(async function test_ineligibleTabsDisableMenus() {
   );
   await BrowserTestUtils.browserLoaded(eligibleTab.linkedBrowser);
 
-  let ineligibleTab = BrowserTestUtils.addTab(gBrowser, "about:logo");
+  let ineligibleTab = BrowserTestUtils.addTab(gBrowser, "about:mozilla");
   await BrowserTestUtils.browserLoaded(ineligibleTab.linkedBrowser);
 
   info(

@@ -525,7 +525,7 @@ void RsdparsaSdpAttributeList::LoadFingerprint(
     }
     auto span = convertRustSpan(rustFingerprint.fingerprint);
     std::vector<uint8_t> fingerprint(span.begin(), span.end());
-    fingerprints->PushEntry(algorithm, fingerprint);
+    fingerprints->PushEntry(std::move(algorithm), fingerprint);
   }
   SetAttribute(fingerprints.release());
 }
@@ -1013,7 +1013,7 @@ std::vector<SdpImageattrAttributeList::Set> LoadImageattrSets(
 
     set.qValue = rustSet.q;
 
-    sets.push_back(set);
+    sets.push_back(std::move(set));
   }
 
   return sets;
@@ -1045,7 +1045,7 @@ void RsdparsaSdpAttributeList::LoadImageattr(RustAttributeList* attributeList) {
       imageAttr.recvSets = LoadImageattrSets(rustImageAttr.recv.sets);
     }
 
-    imageattrList->mImageattrs.push_back(imageAttr);
+    imageattrList->mImageattrs.push_back(std::move(imageAttr));
   }
   SetAttribute(imageattrList.release());
 }
@@ -1075,9 +1075,9 @@ static SdpSimulcastAttribute::Versions LoadSimulcastVersions(
     for (const auto& rustId : rustVersion.ids) {
       std::string id(convertStringView(rustId.id));
       version.choices.push_back(
-          SdpSimulcastAttribute::Encoding(id, rustId.paused));
+          SdpSimulcastAttribute::Encoding(std::move(id), rustId.paused));
     }
-    versions.push_back(version);
+    versions.push_back(std::move(version));
   }
   return versions;
 }

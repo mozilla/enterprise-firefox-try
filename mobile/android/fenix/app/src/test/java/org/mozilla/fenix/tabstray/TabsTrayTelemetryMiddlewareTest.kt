@@ -341,7 +341,7 @@ class TabsTrayTelemetryMiddlewareTest {
             ),
         )
 
-        store.dispatch(TabGroupAction.TabsAddedToGroup("id"))
+        store.dispatch(TabGroupAction.SelectedTabsAddedToGroup("id"))
 
         assertNotNull(TabsTray.tabAddedToGroup.testGetValue())
         val snapshot = TabsTray.tabAddedToGroup.testGetValue()!!

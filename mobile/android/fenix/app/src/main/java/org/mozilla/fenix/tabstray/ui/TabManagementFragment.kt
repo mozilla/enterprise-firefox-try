@@ -91,6 +91,7 @@ import org.mozilla.fenix.tabstray.TabsTrayTelemetryMiddleware
 import org.mozilla.fenix.tabstray.binding.SecureTabManagerBinding
 import org.mozilla.fenix.tabstray.controller.DefaultTabManagerController
 import org.mozilla.fenix.tabstray.controller.DefaultTabManagerInteractor
+import org.mozilla.fenix.tabstray.controller.TabInteractionHandler
 import org.mozilla.fenix.tabstray.controller.TabManagerController
 import org.mozilla.fenix.tabstray.controller.TabManagerInteractor
 import org.mozilla.fenix.tabstray.data.TabData
@@ -141,6 +142,30 @@ class TabManagementFragment : DialogFragment() {
     private lateinit var snackbarHostState: SnackbarHostState
 
     private val animationDurationMs = 200
+
+    private val tabInteractionHandler =
+        object : TabInteractionHandler {
+            override fun onMove(
+                sourceKey: String,
+                targetKey: String?,
+                placeAfter: Boolean,
+            ) {
+                requireComponents.useCases.tabsUseCases.moveTabs.invoke(
+                    sourceKey,
+                    targetKey,
+                    placeAfter,
+                )
+            }
+
+            override fun onDrop(sourceKey: String, targetKey: String) {
+                tabsTrayStore.dispatch(
+                    TabGroupAction.DragAndDropCompleted(
+                        sourceKey,
+                        targetKey,
+                    ),
+                )
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -366,7 +391,7 @@ class TabManagementFragment : DialogFragment() {
                                             System.currentTimeMillis()
                                     },
                                     onTabAutoCloseBannerShown = {},
-                                    tabInteractionHandler = tabManagerController,
+                                    tabInteractionHandler = tabInteractionHandler,
                                     onInactiveTabsCFRShown = {
                                         TabsTray.inactiveTabsCfrVisible.record(NoExtras())
                                     },
@@ -473,7 +498,9 @@ class TabManagementFragment : DialogFragment() {
                                         tabsTrayStore.dispatch(TabGroupAction.AddToNewTabGroup)
                                     },
                                     onAddToExistingTabGroup = { group ->
-                                        tabsTrayStore.dispatch(TabGroupAction.TabsAddedToGroup(groupId = group.id))
+                                        tabsTrayStore.dispatch(
+                                            TabGroupAction.SelectedTabsAddedToGroup(groupId = group.id),
+                                        )
                                     },
                                 )
                             }

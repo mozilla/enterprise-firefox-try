@@ -3077,7 +3077,7 @@ static bool MaybeCheckWAICTIntegrity(nsIStreamListener* aListener,
   promise->Then(
       GetCurrentSerialEventTarget(), __func__,
       [listener = nsCOMPtr{aListener}, channel, request = nsCOMPtr{aRequest},
-       status, policy = RefPtr{policy}, computedHash,
+       status, policy = RefPtr{policy}, computedHash = std::move(computedHash),
        bufferedImage = std::move(aBufferedImage)](bool) {
         nsCOMPtr<nsIURI> originalURI;
         channel->GetOriginalURI(getter_AddRefs(originalURI));

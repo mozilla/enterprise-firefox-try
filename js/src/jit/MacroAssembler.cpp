@@ -3759,19 +3759,10 @@ void MacroAssembler::timeClip(FloatRegister time, FloatRegister output) {
   MOZ_ASSERT(Assembler::HasRoundInstruction(RoundingMode::TowardsZero),
              "requires runtime call");
 
-  constexpr double MaxTimeMagnitude = 8.64e15;
+  constexpr double MaxTimeMagnitude = js::EndOfTime;
+  static_assert(js::StartOfTime < 0 && -js::StartOfTime == js::EndOfTime);
 
-#if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
-  if (HasAVX()) {
-    absDouble(time, output);
-  } else {
-    // Pre-AVX |absDouble| requires input == output.
-    moveDouble(time, output);
-    absDouble(output, output);
-  }
-#else
   absDouble(time, output);
-#endif
 
   ScratchDoubleScope fpscratch(*this);
   loadConstantDouble(MaxTimeMagnitude, fpscratch);
@@ -3804,19 +3795,10 @@ void MacroAssembler::timeClip(FloatRegister time, FloatRegister output,
   MOZ_ASSERT(!Assembler::HasRoundInstruction(RoundingMode::TowardsZero),
              "use rounding instructions instead of runtime call");
 
-  constexpr double MaxTimeMagnitude = 8.64e15;
+  constexpr double MaxTimeMagnitude = js::EndOfTime;
+  static_assert(js::StartOfTime < 0 && -js::StartOfTime == js::EndOfTime);
 
-#if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
-  if (HasAVX()) {
-    absDouble(time, output);
-  } else {
-    // Pre-AVX |absDouble| requires input == output.
-    moveDouble(time, output);
-    absDouble(output, output);
-  }
-#else
   absDouble(time, output);
-#endif
 
   ScratchDoubleScope fpscratch(*this);
   loadConstantDouble(MaxTimeMagnitude, fpscratch);

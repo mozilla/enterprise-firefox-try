@@ -1791,7 +1791,7 @@ class Inspector extends EventEmitter {
     this.sidebar.off("destroy", this.onSidebarHidden);
 
     for (const [, panel] of this.#panels) {
-      panel.destroy();
+      panel.destroy({ fromInspectorDestroy: true });
     }
     this.#panels.clear();
 

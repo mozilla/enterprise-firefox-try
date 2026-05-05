@@ -34,6 +34,10 @@ def _by_platform(arg):
     return optionally_keyed_by("build-platform", arg, use_msgspec=True)
 
 
+def _by_platform_or_project(arg):
+    return optionally_keyed_by("build-platform", "project", arg, use_msgspec=True)
+
+
 class MozharnessSchema(Schema, kw_only=True):
     # Script to invoke for mozharness
     script: _by_platform(str)  # type: ignore  # noqa: F821
@@ -97,7 +101,7 @@ class L10nDescriptionSchema(Schema, kw_only=True):
     # worker-type to utilize
     worker_type: _by_platform(str)  # type: ignore  # noqa: F821
     # File which contains the used locales
-    locales_file: _by_platform(str)  # type: ignore  # noqa: F821
+    locales_file: _by_platform_or_project(str)  # type: ignore  # noqa: F821
     # Tooltool visibility required for task.
     tooltool: _by_platform(Literal["internal", "public"])  # type: ignore  # noqa: F821
     # Docker image required for task.  We accept only in-tree images
@@ -241,7 +245,12 @@ def handle_keyed_by(config, jobs):
     for job in jobs:
         job = deepcopy(job)  # don't overwrite dict values here
         for field in fields:
-            resolve_keyed_by(item=job, field=field, item_name=job["name"])
+            resolve_keyed_by(
+                item=job,
+                field=field,
+                item_name=job["name"],
+                project=config.params["project"],
+            )
         yield job
 
 

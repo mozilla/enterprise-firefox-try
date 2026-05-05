@@ -4435,19 +4435,19 @@ button.arrow-button:dir(rtl) {
   --widgets-grid-gap: var(--space-large);
   --widgets-small-card-height: var(--newtab-card-height-small);
 }
-.classic-enabled .widgets-container:has(.lists), .classic-enabled .widgets-container:has(.focus-timer), .classic-enabled .widgets-container:has(.sports-widget) {
+.classic-enabled .widgets-container:has(.lists), .classic-enabled .widgets-container:has(.focus-timer), .classic-enabled .widgets-container:has(.sports) {
   display: grid;
   grid-template-columns: repeat(auto-fit, var(--widgets-card-width));
   gap: var(--widgets-grid-gap);
 }
 @media (min-width: 610px) {
-  .classic-enabled .widgets-container:has(.lists), .classic-enabled .widgets-container:has(.focus-timer), .classic-enabled .widgets-container:has(.sports-widget) {
+  .classic-enabled .widgets-container:has(.lists), .classic-enabled .widgets-container:has(.focus-timer), .classic-enabled .widgets-container:has(.sports) {
     max-width: calc(var(--widgets-max-cols) * var(--widgets-card-width) + (var(--widgets-max-cols) - 1) * var(--widgets-grid-gap));
     justify-content: center;
   }
 }
 @media (min-width: 1122px) {
-  .classic-enabled .widgets-container:has(.lists), .classic-enabled .widgets-container:has(.focus-timer), .classic-enabled .widgets-container:has(.sports-widget) {
+  .classic-enabled .widgets-container:has(.lists), .classic-enabled .widgets-container:has(.focus-timer), .classic-enabled .widgets-container:has(.sports) {
     --widgets-grid-gap: var(--space-xlarge);
   }
 }
@@ -4459,7 +4459,7 @@ button.arrow-button:dir(rtl) {
   --widgets-card-width: var(--newtab-card-width-medium);
 }
 @media (min-width: 1122px) {
-  .classic-enabled .has-sections-grid .widgets-container:has(.lists), .classic-enabled .has-sections-grid .widgets-container:has(.focus-timer), .classic-enabled .has-sections-grid .widgets-container:has(.sports-widget) {
+  .classic-enabled .has-sections-grid .widgets-container:has(.lists), .classic-enabled .has-sections-grid .widgets-container:has(.focus-timer), .classic-enabled .has-sections-grid .widgets-container:has(.sports) {
     --widgets-grid-gap: var(--space-large);
   }
 }
@@ -6051,158 +6051,120 @@ button.arrow-button:dir(rtl) {
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 /* stylelint-disable stylelint-plugin-mozilla/use-design-tokens */
-.sports-widget {
-  --sports-widget-countdown-color: light-dark(var(--color-orange-70), var(--color-orange-10));
+.sports {
   background: var(--newtab-background-card);
   transition: opacity 0.2s ease;
+  background-image: url("chrome://newtab/content/data/content/assets/sports-intro-background.png");
+  background-repeat: no-repeat;
+  background-size: contain;
   border-radius: var(--border-radius-large);
   padding: var(--space-medium);
   display: flex;
   flex-direction: column;
   box-shadow: var(--box-shadow-card);
 }
-.sports-widget:hover {
+.sports:hover {
   background: var(--newtab-background-color-secondary);
 }
-.sports-widget.medium-widget {
+.sports.medium-widget {
   grid-row: span 2;
+  background-image: url("chrome://newtab/content/data/content/assets/running-firefox.png");
+  background-size: cover;
+  background-position: center;
 }
-.sports-widget.medium-widget .sports-widget-title-wrapper {
+.sports.medium-widget .sports-title-wrapper {
   align-items: center;
+  margin-block-end: 0;
 }
-.sports-widget.medium-widget .countdown-text-wrapper > .sports-widget-countdown-lede {
+.sports.medium-widget .sports-intro-wrapper > .sports-intro-lede {
   display: none;
 }
-.sports-widget.medium-widget .sports-widget-countdown-title {
+.sports.medium-widget .sports-intro-title {
   font-size: var(--font-size-root);
 }
-.sports-widget.medium-widget .sports-widget-countdown-value {
-  font-size: var(--font-size-heading-xlarge);
+.sports.medium-widget .sports-buttons-wrapper {
+  margin-block-start: var(--space-medium);
 }
-.sports-widget.medium-widget .sports-widget-countdown-units {
-  height: 54px;
-  justify-content: space-between;
-}
-.sports-widget.medium-widget .sports-widget-countdown {
-  margin-block-end: 0;
-}
-.sports-widget.medium-widget .sports-widget-title-wrapper {
-  margin-block-end: 0;
-}
-.sports-widget.medium-widget .sports-widget-countdown-unit::after {
-  inset-inline-end: calc(-1 * var(--space-small));
-}
-.sports-widget.medium-widget .sports-widget-countdown-unit:last-of-type {
-  margin-inline-end: 0;
-}
-.sports-widget.large-widget {
+.sports.large-widget {
   grid-row: span 4;
 }
+.sports.large-widget .sports-intro-wrapper {
+  margin-block-start: var(--space-large);
+}
+.sports.large-widget .sports-buttons-wrapper {
+  margin-block-start: var(--space-large);
+}
 
-.sports-widget-title-wrapper {
+.sports-title-wrapper {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   margin-block-end: var(--space-xsmall);
 }
-.sports-widget-title-wrapper .sports-widget-countdown-title {
+.sports-title-wrapper .sports-intro-title {
   margin-block: 0;
-  width: 250px;
+  max-width: 250px;
 }
-.sports-widget-title-wrapper .sports-widget-countdown-lede {
+.sports-title-wrapper .sports-intro-lede {
   margin-block-end: var(--space-small);
 }
 
-.sports-widget-context-menu-wrapper {
+.sports-context-menu-wrapper {
   grid-column: 3;
   justify-self: end;
   opacity: 0;
   pointer-events: none;
 }
+.sports-context-menu-wrapper .sports-context-menu-button::part(button) {
+  color: var(--color-black);
+}
 
-.sports-widget:hover .sports-widget-context-menu-wrapper,
-.sports-widget:focus-within .sports-widget-context-menu-wrapper {
+.sports:hover,
+.sports:focus-within {
+  background-image: url("chrome://newtab/content/data/content/assets/sports-intro-background.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+.sports:hover.medium-widget,
+.sports:focus-within.medium-widget {
+  background-image: url("chrome://newtab/content/data/content/assets/running-firefox.png");
+  background-size: cover;
+}
+.sports:hover .sports-context-menu-wrapper,
+.sports:focus-within .sports-context-menu-wrapper {
   opacity: 1;
   pointer-events: auto;
 }
 
-.sports-widget-body {
+.sports-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-small);
 }
 
-.sports-widget-live-scores {
+.sports-live-scores {
   display: flex;
   flex-direction: column;
   gap: var(--space-xsmall);
 }
 
-.sports-widget-countdown {
-  display: flex;
-  flex-direction: column;
-  margin-block-end: var(--space-small);
-}
-
-.countdown-text-wrapper {
+.sports-intro-wrapper {
   text-align: center;
+  color: var(--color-black);
 }
 
-.sports-widget-countdown-title {
+.sports-intro-title {
   margin-block: 0;
   font-size: var(--font-size-heading-xlarge);
   font-weight: var(--font-weight-heading);
 }
 
-.sports-widget-countdown-units {
-  border-radius: var(--border-radius-large);
-  box-shadow: var(--box-shadow-level-2);
-  padding: var(--space-large);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--sports-widget-countdown-color);
-  height: 61px;
-  margin: 0 auto;
-}
-
-.sports-widget-countdown-unit {
-  margin-inline-end: var(--space-medium);
-  position: relative;
-  padding-inline: var(--space-xxsmall);
-}
-.sports-widget-countdown-unit::after {
-  position: absolute;
-  content: ":";
-  inset-inline-end: calc(-1 * var(--space-small));
-  inset-block-start: var(--space-small);
-}
-.sports-widget-countdown-unit:last-of-type {
-  margin-inline-end: 0;
-}
-.sports-widget-countdown-unit:last-of-type::after {
-  content: "";
-}
-
-.sports-widget-countdown-value {
-  font-size: var(--font-size-xxxlarge);
-  font-weight: var(--font-weight-heading);
-  font-variant-numeric: tabular-nums;
-  margin-inline-end: var(--space-xsmall);
-}
-
-.sports-widget-countdown-label {
-  max-width: 2ch;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.countdown-buttons-wrapper {
+.sports-buttons-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.countdown-buttons-wrapper .countdown-view-schedule {
+.sports-buttons-wrapper .sports-view-schedule {
   margin-block-end: var(--space-small);
 }
 

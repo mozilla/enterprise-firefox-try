@@ -112,10 +112,10 @@ class ContentAnalysisRequest final : public nsIContentAnalysisRequest {
   ContentAnalysisRequest() = default;
 
   // See nsIContentAnalysisRequest for values
-  AnalysisType mAnalysisType;
+  AnalysisType mAnalysisType = AnalysisType::eUnspecified;
 
   // See nsIContentAnalysisRequest for values
-  Reason mReason;
+  Reason mReason = Reason::eUnknown;
 
   RefPtr<nsITransferable> mTransferable;
   RefPtr<dom::DataTransfer> mDataTransfer;
@@ -151,7 +151,7 @@ class ContentAnalysisRequest final : public nsIContentAnalysisRequest {
   int64_t mUserActionRequestsCount = 1;
 
   // Type of text to display, see nsIContentAnalysisRequest for values
-  OperationType mOperationTypeForDisplay;
+  OperationType mOperationTypeForDisplay = OperationType::eClipboard;
 
   // File name to display if mOperationTypeForDisplay is
   // eUpload or eDownload.
@@ -416,7 +416,7 @@ class ContentAnalysis final : public nsIContentAnalysis,
     nsCString mUserActionId;
 
     // Number of CA requests remaining for this transaction.
-    size_t mNumCARequestsRemaining;
+    size_t mNumCARequestsRemaining = 0;
 
     // True if we have issued a response for these requests.
     bool mResponded = false;

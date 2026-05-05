@@ -313,6 +313,58 @@ class TabsTrayStoreReducerTest {
     }
 
     @Test
+    fun `WHEN navigating back from add to tab group in drag and drop mode then mode is set to normal`() {
+        val initialState = TabsTrayState(
+            mode = TabsTrayState.Mode.DragAndDrop(
+                sourceId = "123",
+                destinationId = "321",
+            ),
+            backStack = listOf(
+                TabManagerNavDestination.Root,
+                TabManagerNavDestination.AddToTabGroup,
+            ),
+        )
+
+        val resultState = TabsTrayReducer.reduce(
+            state = initialState,
+            action = TabsTrayAction.NavigateBackInvoked,
+        )
+
+        val expectedState = initialState.copy(
+            mode = TabsTrayState.Mode.Normal,
+            backStack = listOf(TabManagerNavDestination.Root),
+        )
+
+        assertEquals(expectedState, resultState)
+    }
+
+    @Test
+    fun `WHEN navigating back from edit tab group in drag and drop mode then mode is set to normal`() {
+        val initialState = TabsTrayState(
+            mode = TabsTrayState.Mode.DragAndDrop(
+                sourceId = "123",
+                destinationId = "321",
+            ),
+            backStack = listOf(
+                TabManagerNavDestination.Root,
+                TabManagerNavDestination.EditTabGroup,
+            ),
+        )
+
+        val resultState = TabsTrayReducer.reduce(
+            state = initialState,
+            action = TabsTrayAction.NavigateBackInvoked,
+        )
+
+        val expectedState = initialState.copy(
+            mode = TabsTrayState.Mode.Normal,
+            backStack = listOf(TabManagerNavDestination.Root),
+        )
+
+        assertEquals(expectedState, resultState)
+    }
+
+    @Test
     fun `WHEN navigating back from add to tab group in multiselect mode THEN only the sheet is dismissed`() {
         val initialState = TabsTrayState(
             mode = TabsTrayState.Mode.Select(selectedTabs = setOf(createTab("https://mozilla.org"))),

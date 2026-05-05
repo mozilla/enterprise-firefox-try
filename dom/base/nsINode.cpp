@@ -2045,7 +2045,7 @@ nsIContent* nsINode::GetChildAt_Deprecated(uint32_t aIndex) const {
     return nullptr;
   }
 
-  if (GetChildCount() >= ChildIndexCache::kThreshold) {
+  if (GetChildCount() >= ChildIndexCache::kThreshold && NS_IsMainThread()) {
     return ChildIndexCache::GetChildAt(this, aIndex);
   }
 
@@ -2105,7 +2105,8 @@ Maybe<uint32_t> nsINode::ComputeIndexOf(const nsINode* aPossibleChild) const {
     return Nothing();
   }
   const nsIContent* contentChild = nsIContent::FromNode(aPossibleChild);
-  if (contentChild && GetChildCount() >= ChildIndexCache::kThreshold) {
+  if (contentChild && GetChildCount() >= ChildIndexCache::kThreshold &&
+      NS_IsMainThread()) {
     return Some(ChildIndexCache::ComputeIndexOf(this, contentChild));
   }
 

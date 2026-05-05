@@ -72,8 +72,7 @@ internal const val INACTIVE_TABS_FEATURE_NAME = "Inactive tabs"
 interface TabManagerController :
     SyncedTabsController,
     InactiveTabsController,
-    TabsTrayFabController,
-    TabInteractionHandler {
+    TabsTrayFabController {
 
     /**
      * Set the current visible tab page to the provided [page].
@@ -396,16 +395,6 @@ class DefaultTabManagerController(
             tabsUseCases.removeTabs(ids = tabs.map { it.id })
         }
         showUndoSnackbarForTab(isPrivate)
-    }
-
-    override fun onMove(sourceKey: String, targetKey: String?, placeAfter: Boolean) {
-        if (targetKey != null && sourceKey != targetKey) {
-            tabsUseCases.moveTabs(listOf(sourceKey), targetKey, placeAfter)
-        }
-    }
-
-    override fun onDrop(sourceKey: String, targetKey: String) {
-        // todo bugs 2019823, 2019824, 2019825: Implement on drop
     }
 
     override fun handleNavigateToRecentlyClosed() {

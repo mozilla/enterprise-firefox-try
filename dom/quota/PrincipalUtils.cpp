@@ -137,7 +137,7 @@ Result<PrincipalMetadata, nsresult> GetInfoFromValidatedPrincipalInfo(
         QM_TRY_UNWRAP(principalMetadata.mStorageOrigin,
                       aQuotaManager.EnsureStorageOriginFromOrigin(origin));
       } else {
-        principalMetadata.mStorageOrigin = origin;
+        principalMetadata.mStorageOrigin = std::move(origin);
       }
 
       principalMetadata.mIsPrivate = info.attrs().IsPrivateBrowsing();

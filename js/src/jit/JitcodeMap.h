@@ -218,34 +218,42 @@ inline UniqueJitcodeGlobalEntry MakeJitcodeGlobalEntry(JSContext* cx,
   return res;
 }
 
-struct ScriptSourceAndExtent {
+// Identity key used by the profiler to refer to a script after the JSScript
+// may have gone away.
+//
+// Note: sharedData is part of the key because a private instance accessor
+// (get #x() {...}) and its parser-synthesized private-method initializer lambda
+// share the same (scriptSource, toStringStart, toStringEnd) while having
+// different bytecode.
+struct JitcodeScriptKey {
   RefPtr<ScriptSource> scriptSource;
+  RefPtr<SharedImmutableScriptData> sharedData;
   uint32_t toStringStart;
   uint32_t toStringEnd;
 
-  explicit ScriptSourceAndExtent(JSScript* script)
+  explicit JitcodeScriptKey(JSScript* script)
       : scriptSource(script->scriptSource()),
+        sharedData(script->sharedData()),
         toStringStart(script->toStringStart()),
-        toStringEnd(script->toStringEnd()) {}
+        toStringEnd(script->toStringEnd()) {
+    MOZ_ASSERT(sharedData);
+  }
 
   bool matches(JSScript* script) const {
     return scriptSource == script->scriptSource() &&
+           sharedData == script->sharedData() &&
            toStringStart == script->toStringStart() &&
            toStringEnd == script->toStringEnd();
   }
 };
 
 struct IonScriptData {
-  ScriptSourceAndExtent sourceAndExtent;
-  RefPtr<SharedImmutableScriptData> sharedData;
+  JitcodeScriptKey scriptKey;
   uint32_t lineno;
   JS::LimitedColumnNumberOneOrigin column;
 
   explicit IonScriptData(JSScript* script)
-      : sourceAndExtent(script),
-        sharedData(script->sharedData()),
-        lineno(script->lineno()),
-        column(script->column()) {}
+      : scriptKey(script), lineno(script->lineno()), column(script->column()) {}
 };
 
 class IonEntry : public JitcodeGlobalEntry {
@@ -288,9 +296,9 @@ class IonEntry : public JitcodeGlobalEntry {
 
   size_t numScripts() const { return scriptList_.length(); }
 
-  const ScriptSourceAndExtent& getScriptSource(unsigned idx) const {
+  const JitcodeScriptKey& getScriptKey(unsigned idx) const {
     MOZ_ASSERT(idx < numScripts());
-    return scriptList_[idx].scriptData.sourceAndExtent;
+    return scriptList_[idx].scriptData.scriptKey;
   }
 
   const IonScriptData& getScriptData(unsigned idx) const {
@@ -348,7 +356,7 @@ class IonICEntry : public JitcodeGlobalEntry {
 };
 
 class BaselineEntry : public JitcodeGlobalEntry {
-  ScriptSourceAndExtent scriptSource_;
+  JitcodeScriptKey scriptKey_;
   UniqueChars str_;
   uint64_t realmId_;
 
@@ -357,13 +365,13 @@ class BaselineEntry : public JitcodeGlobalEntry {
                 JSScript* script, UniqueChars str, uint64_t realmId)
       : JitcodeGlobalEntry(Kind::Baseline, code, nativeStartAddr,
                            nativeEndAddr),
-        scriptSource_(script),
+        scriptKey_(script),
         str_(std::move(str)),
         realmId_(realmId) {
     MOZ_ASSERT(str_);
   }
 
-  const ScriptSourceAndExtent& scriptSource() const { return scriptSource_; }
+  const JitcodeScriptKey& scriptKey() const { return scriptKey_; }
 
   const char* str() const { return str_.get(); }
 

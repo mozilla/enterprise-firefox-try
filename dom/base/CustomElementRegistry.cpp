@@ -1520,9 +1520,9 @@ void CustomElementRegistry::Upgrade(Element* aElement,
         LifecycleCallbackArgs args;
         args.mName = attrName;
         args.mOldValue = VoidString();
-        args.mNewValue = attrValue;
+        args.mNewValue = std::move(attrValue);
         args.mNamespaceURI =
-            (namespaceURI.IsEmpty() ? VoidString() : namespaceURI);
+            (namespaceURI.IsEmpty() ? VoidString() : std::move(namespaceURI));
 
         nsContentUtils::EnqueueLifecycleCallback(
             ElementCallbackType::eAttributeChanged, aElement, args,

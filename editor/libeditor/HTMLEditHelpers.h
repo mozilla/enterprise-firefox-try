@@ -1390,7 +1390,7 @@ struct MOZ_STACK_CLASS EditorInlineStyleAndValue : public EditorInlineStyle {
   EditorInlineStyleAndValue(nsStaticAtom& aHTMLProperty,
                             RefPtr<nsAtom>&& aAttribute, nsString&& aValue)
       : EditorInlineStyle(aHTMLProperty, std::move(aAttribute), HasValue::Yes),
-        mAttributeValue(aValue) {}
+        mAttributeValue(std::move(aValue)) {}
 
   [[nodiscard]] static EditorInlineStyleAndValue ToInvert(
       const EditorInlineStyle& aStyle) {

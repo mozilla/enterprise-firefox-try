@@ -41,7 +41,6 @@ class TabsTrayTelemetryMiddleware(
             is TabsTrayAction.NavigateBackInvoked -> handleNavigateBackInvoked(state = store.state)
             else -> handleGeneralTabsTrayAction(action = action)
         }
-
         next(action)
     }
 
@@ -57,35 +56,44 @@ class TabsTrayTelemetryMiddleware(
                     Metrics.inactiveTabsCount.set(action.tabStorageUpdate.inactiveTabs.size.toLong())
                 }
             }
+
             is TabsTrayAction.EnterSelectMode -> {
                 TabsTray.enterMultiselectMode.record(TabsTray.EnterMultiselectModeExtra(false))
             }
+
             is TabsTrayAction.AddSelectTab -> {
                 TabsTray.enterMultiselectMode.record(TabsTray.EnterMultiselectModeExtra(true))
             }
+
             is TabsTrayAction.TabAutoCloseDialogShown -> {
                 TabsTray.autoCloseSeen.record(NoExtras())
             }
+
             is TabsTrayAction.ShareAllNormalTabs,
             is TabsTrayAction.ShareAllPrivateTabs,
                 -> {
                 TabsTray.shareAllTabs.record(NoExtras())
             }
+
             is TabsTrayAction.CloseAllNormalTabs,
             is TabsTrayAction.CloseAllPrivateTabs,
                 -> {
                 TabsTray.closeAllTabs.record(NoExtras())
             }
+
             is TabsTrayAction.BookmarkSelectedTabs -> {
                 TabsTray.bookmarkSelectedTabs.record(TabsTray.BookmarkSelectedTabsExtra(tabCount = action.tabCount))
                 MetricsUtils.recordBookmarkAddMetric(Source.TABS_TRAY, nimbusEventStore, count = action.tabCount)
             }
+
             is TabsTrayAction.ThreeDotMenuShown -> {
                 TabsTray.menuOpened.record(NoExtras())
             }
+
             is TabsTrayAction.TabSearchClicked -> {
                 TabSearch.tabSearchIconClicked.record(NoExtras())
             }
+
             else -> {
                 // no-op
             }
@@ -103,27 +111,33 @@ class TabsTrayTelemetryMiddleware(
                     TabsTray.tabGroupCreated.record(NoExtras())
                 }
             }
+
             is TabGroupAction.DeleteConfirmed -> {
                 TabsTray.tabGroupDeleted.record(NoExtras())
             }
+
             is TabGroupAction.TabAddedToGroup -> {
                 TabsTray.tabAddedToGroup.record(
                     TabsTray.TabAddedToGroupExtra(tabCount = 1),
                 )
             }
-            is TabGroupAction.TabsAddedToGroup -> {
+
+            is TabGroupAction.SelectedTabsAddedToGroup -> {
                 TabsTray.tabAddedToGroup.record(
                     TabsTray.TabAddedToGroupExtra(tabCount = store.state.mode.selectedTabs.size),
                 )
             }
+
             is TabGroupAction.TabGroupClicked -> {
                 if (store.state.mode is TabsTrayState.Mode.Normal) {
                     TabsTray.tabGroupOpened.record(NoExtras())
                 }
             }
+
             is TabGroupAction.AddToNewTabGroup -> {
                 Metrics.tabGroupCreationMode["menu"].add()
             }
+
             else -> {
                 // no-op
             }
@@ -135,6 +149,7 @@ class TabsTrayTelemetryMiddleware(
             is TabSearchAction.SearchResultClicked -> {
                 TabSearch.resultClicked.record(NoExtras())
             }
+
             else -> {
                 // no-op
             }
@@ -152,14 +167,17 @@ class TabsTrayTelemetryMiddleware(
             is TabManagerNavDestination.TabSearch -> {
                 TabSearch.navigateBackIconClicked.record(NoExtras())
             }
+
             is TabManagerNavDestination.AddToTabGroup -> {
                 TabsTray.tabGroupCreateCancel.record(NoExtras())
             }
+
             is TabManagerNavDestination.EditTabGroup -> {
                 if (!isEditing) {
                     TabsTray.tabGroupCreateCancel.record(NoExtras())
                 }
             }
+
             else -> {
                 // no-op
             }

@@ -1277,7 +1277,10 @@ export class nsContextMenu {
       }
     };
 
-    const onViewSource = this.browser.currentURI.schemeIs("view-source");
+    const onViewSource =
+      !!this.browser.browsingContext.currentWindowGlobal?.documentURI?.schemeIs(
+        "view-source"
+      );
 
     showViewSourceItem("goToLine", () => false, true);
     showViewSourceItem("wrapLongLines", () =>

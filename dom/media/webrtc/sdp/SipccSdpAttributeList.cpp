@@ -280,7 +280,7 @@ bool SipccSdpAttributeList::LoadFingerprint(sdp_t* sdp, uint16_t level,
     }
 
     // Don't assert on unknown algorithm, just skip
-    fingerprintAttrs->PushEntry(algorithmToken, fingerprint, false);
+    fingerprintAttrs->PushEntry(std::move(algorithmToken), fingerprint, false);
   }
 
   if (fingerprintAttrs) {

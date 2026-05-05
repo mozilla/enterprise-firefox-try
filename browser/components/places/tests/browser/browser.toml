@@ -66,6 +66,8 @@ skip-if = [
 
 ["browser_bookmark_change_location.js"]
 
+["browser_bookmark_context_on_gutter.js"]
+
 ["browser_bookmark_context_menu_contents.js"]
 skip-if = [
   "os == 'win' && os_version == '11.26200'", # Bug 2019745

@@ -290,7 +290,8 @@ void MediaTransportHandlerIPC::RemoveTransportsExcept(
                                         aTransportIds.end());
   mInitPromise->Then(
       mThread, __func__,
-      [=, this, self = RefPtr<MediaTransportHandlerIPC>(this)](bool /*dummy*/) {
+      [this, self = RefPtr<MediaTransportHandlerIPC>(this),
+       transportIds = std::move(transportIds)](bool /*dummy*/) {
         if (mChild) {
           mChild->SendRemoveTransportsExcept(transportIds);
         }

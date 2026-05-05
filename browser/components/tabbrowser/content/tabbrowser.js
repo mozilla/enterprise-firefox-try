@@ -171,6 +171,15 @@
   }
 
   window.Tabbrowser = class {
+    static create(window) {
+      window.gBrowser = new window.Tabbrowser();
+      window.gBrowser.init();
+    }
+
+    static destroy(window) {
+      window.gBrowser.destroy();
+    }
+
     init() {
       this.tabContainer = document.getElementById("tabbrowser-tabs");
       this.tabGroupMenu = document.getElementById("tab-group-editor");

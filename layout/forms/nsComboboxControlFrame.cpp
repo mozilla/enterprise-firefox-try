@@ -10,6 +10,7 @@
 #include "mozilla/Likely.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/PresShellInlines.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/HTMLSelectElement.h"
 #include "nsContentUtils.h"

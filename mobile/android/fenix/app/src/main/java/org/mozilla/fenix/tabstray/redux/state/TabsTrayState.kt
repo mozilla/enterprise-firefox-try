@@ -96,6 +96,19 @@ data class TabsTrayState(
             override val selectedTabs: Set<TabsTrayItem.Tab> = emptySet(),
             override val selectedTabGroups: Set<TabsTrayItem.TabGroup> = emptySet(),
         ) : Mode()
+
+        /**
+         * The mode when an item on the tabs list is being dragged
+         *
+         * @property sourceId: The ID of the tab item being dragged
+         * @property destinationId: The ID of a tab item the source item is being dragged onto, if any.
+         * Currently this is non-null but will be expanded to allow for updating focus state when mode is drag and drop
+         * during a drag action.
+         */
+        data class DragAndDrop(
+            val sourceId: String,
+            val destinationId: String?,
+        ) : Mode()
     }
 
     /**

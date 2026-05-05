@@ -996,10 +996,15 @@ DownloadsViewUI.DownloadElementShell.prototype = {
 
   showDeletedOrMissing() {
     this.element.removeAttribute("exists");
-    let label =
-      lazy.DownloadsCommon.strings[
-        this.download.deleted ? "fileDeleted" : "fileMovedOrMissing"
-      ];
+    let stringKey;
+    if (this.download.deleted && this.download.error?.becauseBlocked) {
+      stringKey = "fileBlockedAndDeleted";
+    } else if (this.download.deleted) {
+      stringKey = "fileDeleted";
+    } else {
+      stringKey = "fileMovedOrMissing";
+    }
+    let label = lazy.DownloadsCommon.strings[stringKey];
     this.showStatusWithDetails(label, label);
     this.hideButton();
   },

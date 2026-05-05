@@ -434,7 +434,7 @@ nsresult SdpHelper::GetMsids(const SdpMediaSection& msection,
         std::string trackId;
         nsresult rv = ParseMsid(i->attribute, &streamId, &trackId);
         NS_ENSURE_SUCCESS(rv, rv);
-        msids->push_back({streamId, trackId});
+        msids->push_back({std::move(streamId), std::move(trackId)});
       }
     }
   }

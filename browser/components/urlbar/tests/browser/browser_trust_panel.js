@@ -13,6 +13,16 @@ ChromeUtils.defineESModuleGetters(this, {
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
   sinon: "resource://testing-common/Sinon.sys.mjs",
   SiteDataTestUtils: "resource://testing-common/SiteDataTestUtils.sys.mjs",
+  UIState: "resource://services-sync/UIState.sys.mjs",
+});
+
+const { FX_MONITOR_OAUTH_CLIENT_ID: monitorClientId } =
+  ChromeUtils.importESModule("resource://gre/modules/FxAccountsCommon.sys.mjs");
+
+ChromeUtils.defineLazyGetter(this, "fxAccounts", () => {
+  return ChromeUtils.importESModule(
+    "resource://gre/modules/FxAccounts.sys.mjs"
+  ).getFxAccountsSingleton();
 });
 
 const TRACKING_PAGE =
@@ -592,7 +602,264 @@ add_task(async function test_no_breach_alert_panel_with_pref_off() {
   );
 
   await BrowserTestUtils.removeTab(tab);
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.urlbar.trustPanel.breachAlerts", true]],
+  });
 });
+
+add_task(async function test_regular_header_with_monitor_account() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_SIGNED_IN,
+    email: "test@example.com",
+  });
+
+  sandbox.stub(fxAccounts, "listAttachedOAuthClients").resolves([
+    {
+      id: monitorClientId,
+      name: "Firefox Monitor",
+    },
+  ]);
+
+  const tab = await BrowserTestUtils.openNewForegroundTab({
+    gBrowser,
+    opening: "https://example.org",
+    waitForLoad: true,
+  });
+
+  await UrlbarTestUtils.openTrustPanel(window);
+
+  const breachAlertSection = window.document.getElementById(
+    "trustpanel-breach-alert-section"
+  );
+  Assert.strictEqual(
+    breachAlertSection.hidden,
+    true,
+    "The breach alert section is hidden for users with Monitor accounts"
+  );
+
+  const graphicSection = window.document.getElementById(
+    "trustpanel-graphic-section"
+  );
+  Assert.strictEqual(
+    graphicSection.hidden,
+    false,
+    "The regular graphic section is shown for users with Monitor accounts"
+  );
+
+  sandbox.restore();
+  await BrowserTestUtils.removeTab(tab);
+});
+
+add_task(async function test_breach_alert_without_valid_fxa_account() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_NOT_VERIFIED,
+    email: "test@example.com",
+  });
+
+  const tab = await BrowserTestUtils.openNewForegroundTab({
+    gBrowser,
+    opening: "https://example.org",
+    waitForLoad: true,
+  });
+
+  await UrlbarTestUtils.openTrustPanel(window);
+
+  const breachAlertSection = window.document.getElementById(
+    "trustpanel-breach-alert-section"
+  );
+  Assert.strictEqual(
+    breachAlertSection.hidden,
+    false,
+    "The breach alert section is shown for users without valid FxA accounts"
+  );
+
+  const graphicSection = window.document.getElementById(
+    "trustpanel-graphic-section"
+  );
+  Assert.strictEqual(
+    graphicSection.hidden,
+    true,
+    "The regular graphic section is hidden for users without valid FxA accounts"
+  );
+
+  sandbox.restore();
+  await BrowserTestUtils.removeTab(tab);
+});
+
+add_task(async function test_breach_alert_without_monitor_account() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_SIGNED_IN,
+    email: "test@example.com",
+  });
+
+  sandbox.stub(fxAccounts, "listAttachedOAuthClients").resolves([]);
+
+  const tab = await BrowserTestUtils.openNewForegroundTab({
+    gBrowser,
+    opening: "https://example.org",
+    waitForLoad: true,
+  });
+
+  await UrlbarTestUtils.openTrustPanel(window);
+
+  const breachAlertSection = window.document.getElementById(
+    "trustpanel-breach-alert-section"
+  );
+  Assert.strictEqual(
+    breachAlertSection.hidden,
+    false,
+    "The breach alert section is shown for users with FxA accounts without Monitor"
+  );
+
+  const graphicSection = window.document.getElementById(
+    "trustpanel-graphic-section"
+  );
+  Assert.strictEqual(
+    graphicSection.hidden,
+    true,
+    "The regular graphic section is hidden for users with FxA accounts without Monitor"
+  );
+
+  sandbox.restore();
+  await BrowserTestUtils.removeTab(tab);
+});
+
+add_task(async function test_breach_alert_visible_without_stored_passwords() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_NOT_CONFIGURED,
+  });
+
+  const originalLogins = Services.logins;
+  Services.logins = {
+    countLoginsAsync: sandbox.stub().resolves(0),
+  };
+
+  const tab = await BrowserTestUtils.openNewForegroundTab({
+    gBrowser,
+    opening: "https://example.org",
+    waitForLoad: true,
+  });
+
+  await UrlbarTestUtils.openTrustPanel(window);
+
+  const breachAlertSection = window.document.getElementById(
+    "trustpanel-breach-alert-section"
+  );
+  Assert.strictEqual(
+    breachAlertSection.hidden,
+    false,
+    "The breach alert section is shown for users without stored passwords"
+  );
+
+  const graphicSection = window.document.getElementById(
+    "trustpanel-graphic-section"
+  );
+  Assert.strictEqual(
+    graphicSection.hidden,
+    true,
+    "The regular graphic section is hidden when breach alert is shown"
+  );
+
+  Services.logins = originalLogins;
+  sandbox.restore();
+  await BrowserTestUtils.removeTab(tab);
+});
+
+add_task(async function test_breach_alert_hidden_with_stored_passwords() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_NOT_CONFIGURED,
+  });
+
+  const originalLogins = Services.logins;
+  Services.logins = {
+    countLoginsAsync: sandbox.stub().resolves(42),
+  };
+
+  const tab = await BrowserTestUtils.openNewForegroundTab({
+    gBrowser,
+    opening: "https://example.org",
+    waitForLoad: true,
+  });
+
+  await UrlbarTestUtils.openTrustPanel(window);
+
+  const breachAlertSection = window.document.getElementById(
+    "trustpanel-breach-alert-section"
+  );
+  Assert.strictEqual(
+    breachAlertSection.hidden,
+    true,
+    "The breach alert section is hidden for users with stored passwords"
+  );
+
+  const graphicSection = window.document.getElementById(
+    "trustpanel-graphic-section"
+  );
+  Assert.strictEqual(
+    graphicSection.hidden,
+    false,
+    "The regular graphic section is shown when breach alert is hidden"
+  );
+
+  Services.logins = originalLogins;
+  sandbox.restore();
+  await BrowserTestUtils.removeTab(tab);
+});
+
+add_task(
+  async function test_breach_alert_hidden_with_both_monitor_and_passwords() {
+    const sandbox = sinon.createSandbox();
+    sandbox.stub(UIState, "get").returns({
+      status: UIState.STATUS_SIGNED_IN,
+      email: "test@example.com",
+    });
+
+    sandbox
+      .stub(fxAccounts, "listAttachedOAuthClients")
+      .resolves([{ id: monitorClientId }]);
+
+    const originalLogins = Services.logins;
+    Services.logins = {
+      countLoginsAsync: sandbox.stub().resolves(42),
+    };
+
+    const tab = await BrowserTestUtils.openNewForegroundTab({
+      gBrowser,
+      opening: "https://example.org",
+      waitForLoad: true,
+    });
+
+    await UrlbarTestUtils.openTrustPanel(window);
+
+    const breachAlertSection = window.document.getElementById(
+      "trustpanel-breach-alert-section"
+    );
+    Assert.strictEqual(
+      breachAlertSection.hidden,
+      true,
+      "The breach alert section is hidden for users with both Monitor account and stored passwords"
+    );
+
+    const graphicSection = window.document.getElementById(
+      "trustpanel-graphic-section"
+    );
+    Assert.strictEqual(
+      graphicSection.hidden,
+      false,
+      "The regular graphic section is shown when breach alert is hidden"
+    );
+
+    Services.logins = originalLogins;
+    sandbox.restore();
+    await BrowserTestUtils.removeTab(tab);
+  }
+);
 
 add_task(async function insecure_and_etp_disabled_test() {
   const tab = await BrowserTestUtils.openNewForegroundTab({

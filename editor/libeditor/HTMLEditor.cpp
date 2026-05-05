@@ -3466,7 +3466,8 @@ nsresult HTMLEditor::CopyAttributes(WithTransaction aWithTransaction,
       nsString attrValue;
       attrInfo.mValue->ToString(attrValue);
       srcAttrs.AppendElement(AttrCache{attrInfo.mName->NamespaceID(),
-                                       *attrName->LocalName(), attrValue});
+                                       *attrName->LocalName(),
+                                       std::move(attrValue)});
     }
   }
   if (aWithTransaction == WithTransaction::No) {

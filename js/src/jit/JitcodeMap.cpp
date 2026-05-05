@@ -103,7 +103,7 @@ uint32_t IonEntry::callStackAtAddr(void* ptr, CallStackFrameInfo* results,
     MOZ_ASSERT(getStr(scriptIdx));
 
     results[count].label = getStr(scriptIdx);
-    results[count].sourceId = getScriptSource(scriptIdx).scriptSource->id();
+    results[count].sourceId = getScriptKey(scriptIdx).scriptSource->id();
 
     // Calculate line numbers during sampling
     // For the first entry (innermost frame), use precise PC offset from
@@ -113,7 +113,7 @@ uint32_t IonEntry::callStackAtAddr(void* ptr, CallStackFrameInfo* results,
     }
 
     const IonScriptData& scriptData = getScriptData(scriptIdx);
-    ImmutableScriptData* isd = scriptData.sharedData->get();
+    ImmutableScriptData* isd = scriptData.scriptKey.sharedData->get();
     jsbytecode* code = isd->code();
     jsbytecode* pc = code + pcOffset;
     MOZ_ASSERT(pcOffset < isd->codeLength());
@@ -168,7 +168,7 @@ uint32_t BaselineEntry::callStackAtAddr(void* ptr, CallStackFrameInfo* results,
   MOZ_ASSERT(maxResults >= 1);
 
   results[0].label = str();
-  results[0].sourceId = scriptSource().scriptSource->id();
+  results[0].sourceId = scriptKey().scriptSource->id();
   uint64_t addr = reinterpret_cast<uint64_t>(ptr);
 
   GetLineInfoFromJitCodeRecord(addr, &results[0].line, &results[0].column);
@@ -706,7 +706,7 @@ bool JitcodeRegionEntry::WriteRun(CompactBufferWriter& writer,
       // NB: scriptList is guaranteed to contain curTree->script()
       uint32_t scriptIdx = 0;
       for (; scriptIdx < scriptList.length(); scriptIdx++) {
-        if (scriptList[scriptIdx].scriptData.sourceAndExtent.matches(
+        if (scriptList[scriptIdx].scriptData.scriptKey.matches(
                 curTree->script())) {
           break;
         }
@@ -887,18 +887,18 @@ bool JitcodeIonTable::WriteIonTable(CompactBufferWriter& writer,
 
   JitSpew(JitSpew_Profiling,
           "Writing native to bytecode map for %s (offset %u-%u) (%zu entries)",
-          scriptList[0].scriptData.sourceAndExtent.scriptSource->filename(),
-          scriptList[0].scriptData.sourceAndExtent.toStringStart,
-          scriptList[0].scriptData.sourceAndExtent.toStringEnd,
+          scriptList[0].scriptData.scriptKey.scriptSource->filename(),
+          scriptList[0].scriptData.scriptKey.toStringStart,
+          scriptList[0].scriptData.scriptKey.toStringEnd,
           mozilla::PointerRangeSize(start, end));
 
   JitSpew(JitSpew_Profiling, "  ScriptList of size %u",
           unsigned(scriptList.length()));
   for (uint32_t i = 0; i < scriptList.length(); i++) {
     JitSpew(JitSpew_Profiling, "  Script %u - %s (offset %u-%u)", i,
-            scriptList[i].scriptData.sourceAndExtent.scriptSource->filename(),
-            scriptList[i].scriptData.sourceAndExtent.toStringStart,
-            scriptList[i].scriptData.sourceAndExtent.toStringEnd);
+            scriptList[i].scriptData.scriptKey.scriptSource->filename(),
+            scriptList[i].scriptData.scriptKey.toStringStart,
+            scriptList[i].scriptData.scriptKey.toStringEnd);
   }
 
   // Write out runs first.  Keep a vector tracking the positive offsets from

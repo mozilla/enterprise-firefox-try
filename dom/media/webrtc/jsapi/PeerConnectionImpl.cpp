@@ -1841,7 +1841,8 @@ PeerConnectionImpl::AddIceCandidate(
 
     GetMainThreadSerialEventTarget()->Dispatch(NS_NewRunnableFunction(
         __func__,
-        [this, self = RefPtr<PeerConnectionImpl>(this), errorString, result] {
+        [this, self = RefPtr<PeerConnectionImpl>(this),
+         errorString = std::move(errorString), result = std::move(result)] {
           if (IsClosed()) {
             return;
           }
@@ -2125,37 +2126,37 @@ void PeerConnectionImpl::GetDefaultRtpExtensions(
   RtpExtensionHeader audioLevel = {JsepMediaType::kAudio,
                                    SdpDirectionAttribute::Direction::kSendrecv,
                                    webrtc::RtpExtension::kAudioLevelUri};
-  aRtpExtensions.push_back(audioLevel);
+  aRtpExtensions.push_back(std::move(audioLevel));
 
   RtpExtensionHeader csrcAudioLevels = {
       JsepMediaType::kAudio, SdpDirectionAttribute::Direction::kRecvonly,
       webrtc::RtpExtension::kCsrcAudioLevelsUri};
-  aRtpExtensions.push_back(csrcAudioLevels);
+  aRtpExtensions.push_back(std::move(csrcAudioLevels));
 
   RtpExtensionHeader mid = {JsepMediaType::kAudioVideo,
                             SdpDirectionAttribute::Direction::kSendrecv,
                             webrtc::RtpExtension::kMidUri};
-  aRtpExtensions.push_back(mid);
+  aRtpExtensions.push_back(std::move(mid));
 
   RtpExtensionHeader absSendTime = {JsepMediaType::kVideo,
                                     SdpDirectionAttribute::Direction::kSendrecv,
                                     webrtc::RtpExtension::kAbsSendTimeUri};
-  aRtpExtensions.push_back(absSendTime);
+  aRtpExtensions.push_back(std::move(absSendTime));
 
   RtpExtensionHeader timestampOffset = {
       JsepMediaType::kVideo, SdpDirectionAttribute::Direction::kSendrecv,
       webrtc::RtpExtension::kTimestampOffsetUri};
-  aRtpExtensions.push_back(timestampOffset);
+  aRtpExtensions.push_back(std::move(timestampOffset));
 
   RtpExtensionHeader playoutDelay = {
       JsepMediaType::kVideo, SdpDirectionAttribute::Direction::kRecvonly,
       webrtc::RtpExtension::kPlayoutDelayUri};
-  aRtpExtensions.push_back(playoutDelay);
+  aRtpExtensions.push_back(std::move(playoutDelay));
 
   RtpExtensionHeader transportSequenceNumber = {
       JsepMediaType::kVideo, SdpDirectionAttribute::Direction::kSendrecv,
       webrtc::RtpExtension::kTransportSequenceNumberUri};
-  aRtpExtensions.push_back(transportSequenceNumber);
+  aRtpExtensions.push_back(std::move(transportSequenceNumber));
 }
 
 void PeerConnectionImpl::GetCapabilities(
@@ -4563,11 +4564,12 @@ void PeerConnectionImpl::AddIceCandidate(const std::string& aCandidate,
           cand.mTokenizedCandidate = std::move(tokens);
           cand.mTransportId = aTransportId;
           cand.mUfrag = aUfrag;
-          mQueriedMDNSHostnames[addr].push_back(cand);
+          mQueriedMDNSHostnames[addr].push_back(std::move(cand));
 
           GetMainThreadSerialEventTarget()->Dispatch(NS_NewRunnableFunction(
               "PeerConnectionImpl::SendQueryMDNSHostname",
-              [self = RefPtr<PeerConnectionImpl>(this), addr]() mutable {
+              [self = RefPtr<PeerConnectionImpl>(this),
+               addr = std::move(addr)]() mutable {
                 if (self->mStunAddrsRequest) {
                   self->StampTimecard("Look up mDNS name");
                   self->mStunAddrsRequest->SendQueryMDNSHostname(

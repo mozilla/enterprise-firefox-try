@@ -104,7 +104,7 @@ CreateSpeechRecognitionService(nsPIDOMWindowInner* aWindow,
   nsAutoCString speechRecognitionService;
 
   if (!prefValue.IsEmpty()) {
-    speechRecognitionService = prefValue;
+    speechRecognitionService = std::move(prefValue);
   } else {
     speechRecognitionService = DEFAULT_RECOGNITION_SERVICE;
   }

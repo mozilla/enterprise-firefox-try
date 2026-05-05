@@ -1485,7 +1485,7 @@ void RTCRtpSender::SetStreamsImpl(
     nsString id;
     stream->GetId(id);
     if (!ids.count(id)) {
-      ids.insert(id);
+      ids.insert(std::move(id));
       mStreams.AppendElement(stream);
     }
   }
@@ -1822,7 +1822,7 @@ void RTCRtpSender::SyncToJsep(JsepTransceiver& aJsepTransceiver) const {
     stream->GetId(wideStreamId);
     std::string streamId = NS_ConvertUTF16toUTF8(wideStreamId).get();
     MOZ_ASSERT(!streamId.empty());
-    streamIds.push_back(streamId);
+    streamIds.push_back(std::move(streamId));
   }
 
   aJsepTransceiver.mSendTrack.UpdateStreamIds(streamIds);
@@ -2125,7 +2125,7 @@ void RTCRtpSender::UpdateBaseConfig(BaseConfig* aConfig) {
           [&extmaps](const SdpExtmapAttributeList::Extmap& extmap) {
             extmaps.emplace_back(extmap.extensionname, extmap.entry);
           });
-      aConfig->mLocalRtpExtensions = extmaps;
+      aConfig->mLocalRtpExtensions = std::move(extmaps);
     }
   }
   // RTCRtpTransceiver::IsSending is updated after negotiation completes, in a

@@ -20119,7 +20119,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#82>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#82`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -20332,7 +20332,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#52>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#52`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -20756,7 +20756,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#73>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#73`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -20969,7 +20969,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#49>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#49`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -21315,7 +21315,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#100>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#100`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -21450,7 +21450,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#58>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#58`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -21738,7 +21738,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#118>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#118`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -22027,7 +22027,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#91>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#91`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -22162,7 +22162,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#55>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#55`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -22450,7 +22450,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#109>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#109`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -22817,7 +22817,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#136>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#136`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -23030,7 +23030,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#64>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#64`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -23454,7 +23454,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#127>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#127`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -23667,7 +23667,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#61>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#61`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -24091,7 +24091,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#154>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#154`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -24304,7 +24304,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#70>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#70`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -24728,7 +24728,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#145>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#145`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000
@@ -24941,7 +24941,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
    * **expected**: pass
    * **expose browser profiler**: true
    * **gecko profile interval**: 1
-   * **link searchfox**: `<https://searchfox.org/mozilla-central/source/testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#67>`__
+   * **link searchfox**: :searchfox:`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#67`
    * **lower is better**: true
    * **page cycles**: 3
    * **page timeout**: 360000

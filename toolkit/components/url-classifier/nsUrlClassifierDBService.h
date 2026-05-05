@@ -247,12 +247,12 @@ class nsUrlClassifierDBServiceWorker final : public nsIUrlClassifierDBService {
 
   TableUpdateArray mTableUpdates;
 
-  uint32_t mUpdateWaitSec;
+  uint32_t mUpdateWaitSec = 0;
 
   // Stores the last results that triggered a table update.
   ConstCacheResultArray mLastResults;
 
-  nsresult mUpdateStatus;
+  nsresult mUpdateStatus = NS_OK;
   nsTArray<nsCString> mUpdateTables;
 
   // The mUpdateObserver will be accessed by both the main thread and the worker

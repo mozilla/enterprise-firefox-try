@@ -334,7 +334,7 @@ void TextEditor::HandleNewLinesInStringForSingleLineEditor(
           ++offset;
         }
       }
-      aString = result;
+      aString = std::move(result);
       break;
     }
     case nsIEditor::eNewlinesPasteIntact:

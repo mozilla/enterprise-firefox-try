@@ -952,7 +952,7 @@ class FinishPreparingForNewPartRunnable final : public Runnable {
                                     NewPartResult&& aResult)
       : Runnable("FinishPreparingForNewPartRunnable"),
         mImgRequest(aImgRequest),
-        mResult(aResult) {
+        mResult(std::move(aResult)) {
     MOZ_ASSERT(aImgRequest);
   }
 

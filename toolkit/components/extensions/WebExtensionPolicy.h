@@ -53,9 +53,7 @@ class WebAccessibleResource final {
            (IsHostMatch(aURI) || IsExtensionMatch(aURI));
   }
 
-  bool IsHostMatch(const URLInfo& aURI) {
-    return mMatches && mMatches->Matches(aURI);
-  }
+  bool IsHostMatch(const URLInfo& aURI);
 
   bool IsExtensionMatch(const URLInfo& aURI);
 

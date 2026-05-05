@@ -242,7 +242,7 @@ class JsepCodecDescription {
 
       if (!aUsedPts.count(freePtAsString)) {
         aUsedPts.insert(freePtAsString);
-        aPtToCheck = freePtAsString;
+        aPtToCheck = std::move(freePtAsString);
         return true;
       }
     }
@@ -760,9 +760,9 @@ class JsepVideoCodecDescription final : public JsepCodecDescription {
     }
 
     mFECEnabled = true;
-    mREDPayloadType = redPayloadType;
-    mULPFECPayloadType = ulpfecPayloadType;
-    mREDRTXPayloadType = redRtxPayloadType;
+    mREDPayloadType = std::move(redPayloadType);
+    mULPFECPayloadType = std::move(ulpfecPayloadType);
+    mREDRTXPayloadType = std::move(redRtxPayloadType);
   }
 
   void EnableTransportCC() {
@@ -1460,11 +1460,11 @@ class JsepApplicationCodecDescription final : public JsepCodecDescription {
   void ApplyConfigToFmtp(
       UniquePtr<SdpFmtpAttributeList::Parameters>& aFmtp) const override {};
 
-  uint16_t mLocalPort;
-  uint32_t mLocalMaxMessageSize;
-  uint16_t mRemotePort;
-  uint32_t mRemoteMaxMessageSize;
-  bool mRemoteMMSSet;
+  uint16_t mLocalPort = 0;
+  uint32_t mLocalMaxMessageSize = 0;
+  uint16_t mRemotePort = 0;
+  uint32_t mRemoteMaxMessageSize = 0;
+  bool mRemoteMMSSet = false;
 };
 
 }  // namespace mozilla

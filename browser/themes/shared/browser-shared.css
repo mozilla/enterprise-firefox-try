@@ -117,6 +117,18 @@ body {
   --lwt-background-alignment: right top;
   --lwt-background-tiling: no-repeat;
 
+  --toolbox-background-image: var(--lwt-additional-images);
+  --toolbox-background-repeat: var(--lwt-background-tiling);
+  --toolbox-background-position: var(--lwt-background-alignment);
+
+  &[lwtheme-image] {
+    /* When a theme defines both theme_frame and additional_backgrounds, show
+       the latter atop the former. */
+    --toolbox-background-image: var(--lwt-header-image), var(--lwt-additional-images);
+    --toolbox-background-repeat: no-repeat, var(--lwt-background-tiling);
+    --toolbox-background-position: right top, var(--lwt-background-alignment);
+  }
+
   --ext-theme-background-transition: background-color 0.1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
 
   --inactive-window-transition: 0.2s ease;
@@ -214,21 +226,11 @@ body {
 
 /* Images go on the body by default, unless they are aligned in the y axis in
  * which case they go on the toolbox for backwards compatibility */
-:root[lwtheme]:not([lwtheme-image-y-align]) body,
-:root[lwtheme][lwtheme-image-y-align] #navigator-toolbox {
-  background-image: var(--lwt-additional-images);
-  background-repeat: var(--lwt-background-tiling);
-  background-position: var(--lwt-background-alignment);
-
-  /* When a theme defines both theme_frame and additional_backgrounds, show
-     the latter atop the former. */
-  :root[lwtheme-image] & {
-    background-image: var(--lwt-header-image), var(--lwt-additional-images);
-    background-repeat: no-repeat, var(--lwt-background-tiling);
-    background-position:
-      right top,
-      var(--lwt-background-alignment);
-  }
+:root:not([lwtheme-image-y-align]) body,
+:root[lwtheme-image-y-align] #navigator-toolbox {
+  background-image: var(--toolbox-background-image);
+  background-repeat: var(--toolbox-background-repeat);
+  background-position: var(--toolbox-background-position);
 }
 
 .browser-toolbar {
@@ -634,26 +636,18 @@ menupopup::part(drop-indicator) {
   border-top-color: var(--chrome-content-separator-color);
 
   :root[lwtheme] & {
-    background-color: var(--lwt-accent-color);
-    background-image: linear-gradient(var(--toolbar-bgcolor)), var(--lwt-additional-images);
-    background-repeat: no-repeat, var(--lwt-background-tiling);
+    background-color: var(--lwt-accent-color); /* Known opaque */
+    background-image: linear-gradient(var(--toolbar-bgcolor)), var(--toolbox-background-image);
+    background-repeat: no-repeat, var(--toolbox-background-repeat);
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
     background-position:
-      right bottom,
-      var(--lwt-background-alignment);
+      top left,
+      var(--toolbox-background-position);
     background-position-y: bottom !important;
   }
 
   :root[lwtheme]:not([lwtheme-image]) &:-moz-window-inactive {
     background-color: var(--lwt-accent-color-inactive, var(--lwt-accent-color));
-  }
-
-  :root[lwtheme-image] & {
-    background-image: linear-gradient(var(--toolbar-bgcolor), var(--toolbar-bgcolor)), var(--lwt-header-image), var(--lwt-additional-images);
-    background-repeat: no-repeat, no-repeat, var(--lwt-background-tiling);
-    background-position:
-      center,
-      right bottom,
-      var(--lwt-background-alignment);
   }
 }
 

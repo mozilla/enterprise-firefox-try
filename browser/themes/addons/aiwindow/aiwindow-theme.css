@@ -2,16 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* Opaque, so that the opaque region is completely covered. Note this is on the
- * <body> because some platforms (linux) use appearance on the root element to
- * render window decorations like shadows.
- * TODO(emilio, bug 2005818): This breaks rounded corners on Linux, unless we also
- * enable rounded bottom corners, which is blocked on bug 1979083. */
-
-body {
-  --tabpanel-background-color: transparent;
-  background-color: white !important;
-  background-image: var(--ai-gradient) !important;
+:root {
+  /* See bug 2036647 for removing this. */
+  --lwt-additional-images: var(--ai-gradient);
 
   /* stylelint-disable-next-line media-query-no-invalid */
   @media -moz-pref("browser.nova.enabled") {
@@ -20,12 +13,8 @@ body {
   }
 }
 
-/* LightWeightThemeConsumer forces these backgrounds to be opaque, but we want
- * to let the <body> background show through.
- * FIXME(bug 1952602): Find a solution that doesn't require custom CSS. */
-#navigator-toolbox,
-#browser {
-  background-color: transparent !important;
+body {
+  --tabpanel-background-color: transparent;
 }
 
 /* Selected tab */

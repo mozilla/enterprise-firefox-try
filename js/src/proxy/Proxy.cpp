@@ -60,9 +60,8 @@ static bool ProxySetOnExpando(JSContext* cx, HandleObject proxy, HandleId id,
     return false;
   }
 
-  RootedValue expandoValue(cx, proxy->as<ProxyObject>().expando());
-  return SetPropertyIgnoringNamedGetter(cx, expando, id, v, expandoValue,
-                                        ownDesc, result);
+  return SetPropertyIgnoringNamedGetter(cx, expando, id, v, receiver, ownDesc,
+                                        result);
 }
 
 static bool ProxyGetOwnPropertyDescriptorFromExpando(

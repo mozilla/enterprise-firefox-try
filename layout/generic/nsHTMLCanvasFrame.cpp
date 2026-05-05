@@ -9,6 +9,7 @@
 #include "ActiveLayerTracker.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/dom/HTMLCanvasElement.h"
 #include "mozilla/layers/ImageDataSerializer.h"
 #include "mozilla/layers/RenderRootStateManager.h"

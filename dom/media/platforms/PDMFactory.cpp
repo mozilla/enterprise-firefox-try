@@ -252,27 +252,28 @@ class SupportChecker {
       auto mimeType = aTrackConfig.GetAsVideoInfo()->mMimeType;
       RefPtr<MediaByteBuffer> extraData =
           aTrackConfig.GetAsVideoInfo()->mExtraData;
-      AddToCheckList([mimeType, extraData]() {
+      AddToCheckList(
+          [mimeType = std::move(mimeType), extraData = std::move(extraData)]() {
 #if defined(XP_WIN) || defined(XP_DARWIN)
-        if (MP4Decoder::IsH264(mimeType)) {
-          SPSData spsdata;
-          // WMF H.264 Video Decoder and Apple ATDecoder
-          // do not support YUV444 format.
-          if (H264::DecodeSPSFromExtraData(extraData, spsdata) &&
-              (spsdata.profile_idc == 244 /* Hi444PP */ ||
-               spsdata.chroma_format_idc == PDMFactory::kYUV444)) {
-            return CheckResult(
-                SupportChecker::Reason::kVideoFormatNotSupported,
-                MediaResult(
-                    NS_ERROR_DOM_MEDIA_FATAL_ERR,
-                    RESULT_DETAIL("Decoder may not have the capability "
-                                  "to handle the requested video format "
-                                  "with YUV444 chroma subsampling.")));
-          }
-        }
+            if (MP4Decoder::IsH264(mimeType)) {
+              SPSData spsdata;
+              // WMF H.264 Video Decoder and Apple ATDecoder
+              // do not support YUV444 format.
+              if (H264::DecodeSPSFromExtraData(extraData, spsdata) &&
+                  (spsdata.profile_idc == 244 /* Hi444PP */ ||
+                   spsdata.chroma_format_idc == PDMFactory::kYUV444)) {
+                return CheckResult(
+                    SupportChecker::Reason::kVideoFormatNotSupported,
+                    MediaResult(
+                        NS_ERROR_DOM_MEDIA_FATAL_ERR,
+                        RESULT_DETAIL("Decoder may not have the capability "
+                                      "to handle the requested video format "
+                                      "with YUV444 chroma subsampling.")));
+              }
+            }
 #endif
-        return CheckResult(SupportChecker::Reason::kSupported);
-      });
+            return CheckResult(SupportChecker::Reason::kSupported);
+          });
     }
   }
 

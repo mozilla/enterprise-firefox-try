@@ -6,16 +6,10 @@ import { render, fireEvent } from "@testing-library/react";
 import { INITIAL_STATE } from "common/Reducers.sys.mjs";
 import { actionTypes as at } from "common/Actions.mjs";
 import { WrapWithProvider } from "test/jest/test-utils";
-import {
-  SportsWidget,
-  calculateCountdown,
-} from "content-src/components/Widgets/SportsWidget/SportsWidget";
+import { SportsWidget } from "content-src/components/Widgets/SportsWidget/SportsWidget";
 
 const PREF_NOVA_ENABLED = "nova.enabled";
 const PREF_SPORTS_WIDGET_SIZE = "widgets.sportsWidget.size";
-
-const BEFORE_KICKOFF = new Date("2026-01-01T00:00:00Z").getTime();
-const AFTER_KICKOFF = new Date("2026-07-01T00:00:00Z").getTime();
 
 const defaultProps = {
   dispatch: jest.fn(),
@@ -45,7 +39,7 @@ describe("<SportsWidget>", () => {
         <SportsWidget {...defaultProps} />
       </WrapWithProvider>
     );
-    expect(container.querySelector(".sports-widget")).toBeInTheDocument();
+    expect(container.querySelector(".sports")).toBeInTheDocument();
   });
 
   it("should return null when nova.enabled is false", () => {
@@ -54,7 +48,7 @@ describe("<SportsWidget>", () => {
         <SportsWidget {...defaultProps} />
       </WrapWithProvider>
     );
-    expect(container.querySelector(".sports-widget")).not.toBeInTheDocument();
+    expect(container.querySelector(".sports")).not.toBeInTheDocument();
   });
 
   it("should apply the medium-widget class by default", () => {
@@ -64,7 +58,7 @@ describe("<SportsWidget>", () => {
       </WrapWithProvider>
     );
     expect(
-      container.querySelector(".sports-widget.medium-widget")
+      container.querySelector(".sports.medium-widget")
     ).toBeInTheDocument();
   });
 
@@ -76,81 +70,37 @@ describe("<SportsWidget>", () => {
         <SportsWidget {...defaultProps} />
       </WrapWithProvider>
     );
-    expect(
-      container.querySelector(".sports-widget.large-widget")
-    ).toBeInTheDocument();
-  });
-});
-
-describe("calculateCountdown", () => {
-  it("should return null when the target date is in the past", () => {
-    expect(calculateCountdown(new Date(Date.now() - 1000))).toBeNull();
+    expect(container.querySelector(".sports.large-widget")).toBeInTheDocument();
   });
 
-  it("should return null when the target date is now", () => {
-    expect(calculateCountdown(new Date(Date.now()))).toBeNull();
-  });
-
-  it("should return days, hours, and minutes for a future date", () => {
-    const result = calculateCountdown(new Date(Date.now() + 90061000));
-    expect(result).not.toBeNull();
-    expect(result).toHaveProperty("days");
-    expect(result).toHaveProperty("hours");
-    expect(result).toHaveProperty("minutes");
-    expect(result).not.toHaveProperty("seconds");
-  });
-
-  it("should compute correct day, hour, and minute values", () => {
-    const offsetMs = (2 * 86400 + 3 * 3600 + 4 * 60) * 1000 + 500;
-    const result = calculateCountdown(new Date(Date.now() + offsetMs));
-    expect(result.days).toBe(2);
-    expect(result.hours).toBe(3);
-    expect(result.minutes).toBe(4);
-  });
-});
-
-describe("<SportsWidget> countdown rendering", () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  function renderWidget(size = "medium") {
-    return render(
-      <WrapWithProvider state={makeState({ [PREF_SPORTS_WIDGET_SIZE]: size })}>
+  it("should always render the intro wrapper", () => {
+    const { container } = render(
+      <WrapWithProvider state={makeState()}>
         <SportsWidget {...defaultProps} />
       </WrapWithProvider>
     );
-  }
-
-  it("should render the countdown when kickoff is in the future", () => {
-    jest.useFakeTimers({ now: BEFORE_KICKOFF });
-    const { container } = renderWidget();
     expect(
-      container.querySelector(".sports-widget-countdown-units")
+      container.querySelector(".sports-intro-wrapper")
     ).toBeInTheDocument();
   });
 
-  it("should not render the countdown when kickoff has passed", () => {
-    jest.useFakeTimers({ now: AFTER_KICKOFF });
-    const { container } = renderWidget();
+  it("should show the keep-tabs title", () => {
+    const { container } = render(
+      <WrapWithProvider state={makeState()}>
+        <SportsWidget {...defaultProps} />
+      </WrapWithProvider>
+    );
     expect(
-      container.querySelector(".sports-widget-countdown-units")
-    ).not.toBeInTheDocument();
+      container.querySelector("[data-l10n-id='newtab-sports-widget-keep-tabs']")
+    ).toBeInTheDocument();
   });
 
-  it("should hide the view-schedule button on medium size", () => {
-    jest.useFakeTimers({ now: BEFORE_KICKOFF });
-    const { container } = renderWidget("medium");
-    expect(
-      container.querySelector(
-        "[data-l10n-id='newtab-sports-widget-view-schedule']"
-      )
-    ).not.toBeInTheDocument();
-  });
-
-  it("should show the view-schedule button on large size", () => {
-    jest.useFakeTimers({ now: BEFORE_KICKOFF });
-    const { container } = renderWidget("large");
+  it("should render the view-schedule button", () => {
+    const { container } = render(
+      <WrapWithProvider state={makeState()}>
+        <SportsWidget {...defaultProps} />
+      </WrapWithProvider>
+    );
     expect(
       container.querySelector(
         "[data-l10n-id='newtab-sports-widget-view-schedule']"
@@ -158,38 +108,47 @@ describe("<SportsWidget> countdown rendering", () => {
     ).toBeInTheDocument();
   });
 
-  it("should apply size=small to the follow-teams button on medium size", () => {
-    jest.useFakeTimers({ now: BEFORE_KICKOFF });
-    const { container } = renderWidget("medium");
+  it("should apply size=small to buttons on medium size", () => {
+    const { container } = render(
+      <WrapWithProvider state={makeState()}>
+        <SportsWidget {...defaultProps} />
+      </WrapWithProvider>
+    );
     expect(
-      container.querySelector(".countdown-follow-teams").getAttribute("size")
+      container.querySelector(".sports-view-schedule").getAttribute("size")
+    ).toBe("small");
+    expect(
+      container.querySelector(".sports-follow-teams").getAttribute("size")
     ).toBe("small");
   });
 
-  it("should not apply size=small to the follow-teams button on large size", () => {
-    jest.useFakeTimers({ now: BEFORE_KICKOFF });
-    const { container } = renderWidget("large");
+  it("should not apply size=small to buttons on large size", () => {
+    const { container } = render(
+      <WrapWithProvider
+        state={makeState({ [PREF_SPORTS_WIDGET_SIZE]: "large" })}
+      >
+        <SportsWidget {...defaultProps} />
+      </WrapWithProvider>
+    );
     expect(
-      container.querySelector(".countdown-follow-teams").getAttribute("size")
+      container.querySelector(".sports-view-schedule").getAttribute("size")
+    ).toBeNull();
+    expect(
+      container.querySelector(".sports-follow-teams").getAttribute("size")
     ).toBeNull();
   });
 });
 
-describe("<SportsWidget> countdown telemetry", () => {
+describe("<SportsWidget> telemetry", () => {
   let dispatch;
   let handleUserInteraction;
 
   beforeEach(() => {
-    jest.useFakeTimers({ now: BEFORE_KICKOFF });
     dispatch = jest.fn();
     handleUserInteraction = jest.fn();
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  function renderWidget(size = "large") {
+  function renderWidget(size = "medium") {
     return render(
       <WrapWithProvider state={makeState({ [PREF_SPORTS_WIDGET_SIZE]: size })}>
         <SportsWidget
@@ -201,7 +160,7 @@ describe("<SportsWidget> countdown telemetry", () => {
   }
 
   it("should dispatch view_schedule telemetry when view-schedule is clicked", () => {
-    const { container } = renderWidget("large");
+    const { container } = renderWidget();
     fireEvent.click(
       container.querySelector(
         "[data-l10n-id='newtab-sports-widget-view-schedule']"
@@ -211,7 +170,7 @@ describe("<SportsWidget> countdown telemetry", () => {
       expect.objectContaining({
         type: at.WIDGETS_USER_EVENT,
         data: expect.objectContaining({
-          widget_source: "countdown",
+          widget_source: "widget",
           user_action: "view_schedule",
         }),
       })
@@ -219,14 +178,14 @@ describe("<SportsWidget> countdown telemetry", () => {
     expect(handleUserInteraction).toHaveBeenCalledWith("sportsWidget");
   });
 
-  it("should dispatch follow_teams telemetry when the countdown follow-teams is clicked", () => {
+  it("should dispatch follow_teams telemetry when the follow-teams button is clicked", () => {
     const { container } = renderWidget();
-    fireEvent.click(container.querySelector(".countdown-follow-teams"));
+    fireEvent.click(container.querySelector(".sports-follow-teams"));
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: at.WIDGETS_USER_EVENT,
         data: expect.objectContaining({
-          widget_source: "countdown",
+          widget_source: "widget",
           user_action: "follow_teams",
         }),
       })

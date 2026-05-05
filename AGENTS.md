@@ -28,7 +28,7 @@ that has definitely changed locally. If you're unsure, ask.
 - `./mach run`: Run the project
 - `./mach doc --no-serve --no-open`: Build the documentation
 - `./mach python --virtualenv <virtualenv_name>`: Execute Python of a Mach command's virtualenv. Value of `virtualenv_name` is in relevant `@Command` decorator. This avoids `ImportError`s.
-- `treeherder-cli`: Pull CI results for a try push. It needs a revision hash. If given a Treeherder URL with a `landoCommitID=NNNN` parameter (no revision), resolve the revision first by fetching the landing page on the matching lando instance — for `landoInstance=lando-prod-2025`, use `curl -sL https://lando.moz.tools/landings/NNNN/` and grep for the 40-char hex commit hash. (The legacy `api.lando.services.mozilla.com/landing_jobs/NNNN` JSON endpoint serves a *different* lando instance with re-used IDs — do not use it for `lando-prod-2025`.)
+- `treeherder-cli`: Pull CI results for a try push
 - Use the MCP resource `@moz:bugzilla://bug/{bug_id}` to retrieve a bug
 - Use the MCP resource `@moz:phabricator://revision/D{revision_id}` to retrieve a Phabricator revision
 

@@ -170,6 +170,23 @@ WebAccessibleResource::WebAccessibleResource(
   }
 }
 
+bool WebAccessibleResource::IsHostMatch(const URLInfo& aURI) {
+  if (!mMatches) {
+    return false;
+  }
+  return mMatches->Matches(aURI) ||
+         // If aURI is not matching schemes of <all_urls>, permit access anyway
+         // if the match pattern includes <all_urls> or *://*/*. This allows
+         // requests from sandboxed documents (moz-nullprincipal) to pass.
+         //
+         // Note: this check means that file:-documents can create a sandboxed
+         // iframe to get access to a resource that is restricted to *://*/*,
+         // despite "*://*/*" supposed to only match http(s). This is acceptable
+         // because a file can already easily bypass the check by embedding a
+         // web page to fetch the resource.
+         (!MatchPattern::MatchesAllURLs(aURI) && mMatches->MatchesAllWebUrls());
+}
+
 bool WebAccessibleResource::IsExtensionMatch(const URLInfo& aURI) {
   if (!mExtensionIDs) {
     return false;

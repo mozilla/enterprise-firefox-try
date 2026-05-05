@@ -374,20 +374,23 @@ void MediaDocument::UpdateTitleAndCharset(const nsACString& aTypeStr,
     heightStr.AppendInt(aHeight);
     // If we got a filename, display it
     if (!fileStr.IsEmpty()) {
-      AutoTArray<nsString, 4> formatStrings = {fileStr, typeStr, widthStr,
-                                               heightStr};
+      AutoTArray<nsString, 4> formatStrings = {
+          std::move(fileStr), std::move(typeStr), std::move(widthStr),
+          std::move(heightStr)};
       FormatStringFromName(aFormatNames[eWithDimAndFile], formatStrings, title);
     } else {
-      AutoTArray<nsString, 3> formatStrings = {typeStr, widthStr, heightStr};
+      AutoTArray<nsString, 3> formatStrings = {
+          std::move(typeStr), std::move(widthStr), std::move(heightStr)};
       FormatStringFromName(aFormatNames[eWithDim], formatStrings, title);
     }
   } else {
     // If we got a filename, display it
     if (!fileStr.IsEmpty()) {
-      AutoTArray<nsString, 2> formatStrings = {fileStr, typeStr};
+      AutoTArray<nsString, 2> formatStrings = {std::move(fileStr),
+                                               std::move(typeStr)};
       FormatStringFromName(aFormatNames[eWithFile], formatStrings, title);
     } else {
-      AutoTArray<nsString, 1> formatStrings = {typeStr};
+      AutoTArray<nsString, 1> formatStrings = {std::move(typeStr)};
       FormatStringFromName(aFormatNames[eWithNoInfo], formatStrings, title);
     }
   }

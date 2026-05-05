@@ -2500,7 +2500,7 @@ nsPrefBranch::GetStringPref(const char* aPrefName,
   nsCString utf8String;
   nsresult rv = GetCharPref(aPrefName, utf8String);
   if (NS_SUCCEEDED(rv)) {
-    aRetVal = utf8String;
+    aRetVal = std::move(utf8String);
     return rv;
   }
 

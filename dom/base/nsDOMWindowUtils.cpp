@@ -1728,7 +1728,7 @@ Result<mozilla::LayoutDeviceRect, nsresult> nsDOMWindowUtils::ConvertTo(
   }
 
   LayoutDeviceRect devPixelsRect = LayoutDeviceRect::FromAppUnits(
-      appUnitsRect, presContext->AppUnitsPerDevPixel());
+      appUnitsRect, rootPresContext->AppUnitsPerDevPixel());
 
   // Apply the desktop zoom value via PresShell::GetResolution()
   devPixelsRect =
@@ -3337,7 +3337,7 @@ nsDOMWindowUtils::GetFilePath(JS::Handle<JS::Value> aFile, JSContext* aCx,
       return rv.StealNSResult();
     }
 
-    _retval = filePath;
+    _retval = std::move(filePath);
     return NS_OK;
   }
 

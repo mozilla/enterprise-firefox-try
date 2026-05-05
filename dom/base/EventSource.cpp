@@ -561,7 +561,7 @@ nsresult EventSourceImpl::ParseURL(const nsAString& aURL) {
     lock->mEventSource->mOriginalURL = NS_ConvertUTF8toUTF16(spec);
   }
   mSrc = std::move(srcURI);
-  mOrigin = origin;
+  mOrigin = std::move(origin);
   return NS_OK;
 }
 

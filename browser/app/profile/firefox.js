@@ -65,13 +65,9 @@ pref("extensions.geckoProfiler.acceptedExtensionIds", "geckoprofiler@mozilla.com
 
 
 pref("extensions.webextensions.remote", true);
-// TODO(Bug 2016509): disable the deprecated filter applied to the pageAction icon
-// on all channels.
-#ifdef NIGHTLY_BUILD
-  pref("extensions.webextensions.pageActionIconDarkModeFilter.enabled", false);
-#else
-  pref("extensions.webextensions.pageActionIconDarkModeFilter.enabled", true);
-#endif
+
+// Disable the deprecated filter applied to the pageAction icon on all channels.
+pref("extensions.webextensions.pageActionIconDarkModeFilter.enabled", false);
 
 // Require signed add-ons by default
 pref("extensions.langpacks.signatures.required", true);

@@ -6,7 +6,7 @@
 //!
 //! TODO: document this!
 
-use api::{ColorF, DebugFlags};
+use api::{BoxShadowClipMode, ColorF, DebugFlags};
 use api::ClipMode;
 use crate::util::clamp_to_scale_factor;
 use crate::box_shadow::{BoxShadowCacheKey, BLUR_SAMPLE_SCALE};
@@ -302,8 +302,7 @@ fn prepare_prim_for_render(
 
         // Per-frame, per-kind segment construction that has to run
         // before update_clip_task (which reads the segments via
-        // update_clip_task_for_brush). LinearGradient nine-patch will
-        // follow the same pattern in a later patch.
+        // update_clip_task_for_brush).
         match prim_instance.kind {
             PrimitiveKind::NormalBorder { data_handle } => {
                 NormalBorderScratch::build_for_prim(
@@ -404,7 +403,42 @@ fn prepare_interned_prim_for_render(
             let shadow_data = &prim_data.kind;
             let blur_radius = shadow_data.blur_radius;
 
-            let shadow_rect_size = shadow_data.inner_shadow_rect.size();
+            // Derive inner/outer/element rects per-frame from the prim's
+            // current rect, the box-shadow offset, and the (signed) spread
+            // amount stored on the template.
+            //
+            // For Outset, the prim was registered with `info.rect = dest_rect`,
+            // so prim_rect == outer; inner = outer.deflate(blur_offset);
+            // element = inner.deflate(spread).translate(-box_offset).
+            //
+            // For Inset, the prim was registered with `info.rect = element_rect`,
+            // so prim_rect == element; inner = element.translate(box_offset)
+            // .inflate(spread_amount); outer = inner.inflate(blur_offset).
+            let prim_rect = LayoutRect::from_origin_and_size(
+                prim_instance.prim_origin,
+                prim_data.common.prim_size,
+            );
+            let blur_offset = (BLUR_SAMPLE_SCALE * blur_radius).ceil();
+            let (inner_shadow_rect, outer_shadow_rect, element_rect) = match shadow_data.clip_mode {
+                BoxShadowClipMode::Outset => {
+                    let outer = prim_rect;
+                    let inner = outer.inflate(-blur_offset, -blur_offset);
+                    let element = inner
+                        .inflate(-shadow_data.spread_amount, -shadow_data.spread_amount)
+                        .translate(-shadow_data.box_offset);
+                    (inner, outer, element)
+                }
+                BoxShadowClipMode::Inset => {
+                    let element = prim_rect;
+                    let inner = element
+                        .translate(shadow_data.box_offset)
+                        .inflate(shadow_data.spread_amount, shadow_data.spread_amount);
+                    let outer = inner.inflate(blur_offset, blur_offset);
+                    (inner, outer, element)
+                }
+            };
+
+            let shadow_rect_size = inner_shadow_rect.size();
             let mut shadow_radius = shadow_data.shadow_radius;
             border::ensure_no_corner_overlap(&mut shadow_radius, shadow_rect_size);
 
@@ -546,22 +580,16 @@ fn prepare_interned_prim_for_render(
                 }
             );
 
-            let prim_rect = LayoutRect::from_origin_and_size(
-                prim_instance.prim_origin,
-                prim_data.common.prim_size,
-            );
-
             // For outset, prim_rect == dest_rect so offset is zero.
             // For inset, prim_rect is the element rect; dest_rect (outer_shadow_rect)
             // may be offset and smaller, so we pass its size and offset separately.
-            let dest_rect: LayoutRect = shadow_data.outer_shadow_rect.into();
+            let dest_rect = outer_shadow_rect;
             let dest_rect_offset = LayoutVector2D::new(
                 dest_rect.min.x - prim_rect.min.x,
                 dest_rect.min.y - prim_rect.min.y,
             );
             let dest_rect_size = dest_rect.size();
 
-            let element_rect: LayoutRect = shadow_data.element_rect.into();
             let mut element_radius = shadow_data.element_radius;
             border::ensure_no_corner_overlap(&mut element_radius, element_rect.size());
             let element_offset_rel_prim = LayoutVector2D::new(
@@ -1410,16 +1438,8 @@ fn update_clip_task_for_brush(
             }
             &segments_store[prim_brush_segments_range]
         }
-        PrimitiveKind::LinearGradient { data_handle, .. } => {
-            let prim_data = &data_stores.linear_grad[data_handle];
-
-            // TODO: This is quite messy - once we remove legacy primitives we
-            //       can change this to be a tuple match on (instance, template)
-            if prim_data.brush_segments.is_empty() {
-                return None;
-            }
-
-            prim_data.brush_segments.as_slice()
+        PrimitiveKind::LinearGradient { .. } => {
+            unreachable!("BUG: linear gradients should always use quad path");
         }
         PrimitiveKind::RadialGradient { .. } => {
             unreachable!("BUG: radial gradients should always use quad path");
@@ -1530,8 +1550,8 @@ pub fn update_clip_task(
 
     // First try to  render this primitive's mask using optimized brush rendering.
     let prim_segment_instance_index = scratch.frame.draws[prim_instance_index.0 as usize].segment_instance_index;
-    // For border kinds with per-frame brush segments, resolve the
-    // range from the prim's per-kind scratch (allocated in
+    // For prim kinds with per-frame brush segments, resolve the range
+    // from the prim's per-kind scratch (allocated in
     // prepare_prim_for_render before this point). Empty range for any
     // other kind.
     let prim_brush_segments_range = match instance.kind {

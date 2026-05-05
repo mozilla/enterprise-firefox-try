@@ -12,7 +12,6 @@ import org.mozilla.fenix.tabstray.redux.action.TabGroupAction
 import org.mozilla.fenix.tabstray.redux.state.Page
 import org.mozilla.fenix.tabstray.redux.state.TabsTrayState
 import org.mozilla.fenix.tabstray.redux.state.initializeTabGroupForm
-import kotlin.collections.plus
 
 /**
  * Reducer for [TabGroupAction] dispatched from the Tabs Tray store.
@@ -38,35 +37,25 @@ object TabGroupActionReducer {
 
             is TabGroupAction.AddToNewTabGroup -> state.navigateToCreateTabGroup()
 
-            is TabGroupAction.NameChanged -> {
-                val form = requireNotNull(state.tabGroupState.formState) {
-                    "NameChanged dispatched with no TabGroupFormState"
-                }
-                state.copy(
-                    tabGroupState = state.tabGroupState.copy(
-                        formState = form.copy(
-                            name = action.name,
-                            edited = true,
-                        ),
+            is TabGroupAction.DragAndDropTwoTabs -> {
+                state.navigateToCreateTabGroup().copy(
+                    mode = TabsTrayState.Mode.DragAndDrop(
+                        sourceId = action.sourceTabId,
+                        destinationId = action.destinationTabId,
                     ),
                 )
+            }
+
+            is TabGroupAction.NameChanged -> {
+                handleNameChange(state = state, action = action)
             }
 
             is TabGroupAction.ThemeChanged -> {
-                val form = requireNotNull(state.tabGroupState.formState) {
-                    "ThemeChanged dispatched with no TabGroupFormState"
-                }
-                state.copy(
-                    tabGroupState = state.tabGroupState.copy(
-                        formState = form.copy(
-                            theme = action.theme,
-                            edited = true,
-                        ),
-                    ),
-                )
+                handleThemeChange(state = state, action = action)
             }
 
             TabGroupAction.FormDismissed -> state.copy(
+                // mode = if (state.mode is TabsTrayState.Mode.DragAndDrop) TabsTrayState.Mode.Normal else state.mode,
                 tabGroupState = state.tabGroupState.copy(
                     formState = null,
                 ),
@@ -85,7 +74,7 @@ object TabGroupActionReducer {
 
             is TabGroupAction.TabAddedToGroup -> state
 
-            is TabGroupAction.TabsAddedToGroup -> state.copy(
+            is TabGroupAction.SelectedTabsAddedToGroup -> state.copy(
                 mode = TabsTrayState.Mode.Normal,
                 backStack = state.backStack.popTabGroupFlow(),
             )
@@ -113,7 +102,37 @@ object TabGroupActionReducer {
             is TabGroupAction.CloseTabGroupClicked -> state.copy(
                 backStack = listOf(TabManagerNavDestination.Root),
             )
+
+            is TabGroupAction.DragAndDropCompleted -> state
         }
+    }
+
+    private fun handleThemeChange(state: TabsTrayState, action: TabGroupAction.ThemeChanged): TabsTrayState {
+        val form = requireNotNull(state.tabGroupState.formState) {
+            "ThemeChanged dispatched with no TabGroupFormState"
+        }
+        return state.copy(
+            tabGroupState = state.tabGroupState.copy(
+                formState = form.copy(
+                    theme = action.theme,
+                    edited = true,
+                ),
+            ),
+        )
+    }
+
+    private fun handleNameChange(state: TabsTrayState, action: TabGroupAction.NameChanged): TabsTrayState {
+        val form = requireNotNull(state.tabGroupState.formState) {
+            "NameChanged dispatched with no TabGroupFormState"
+        }
+        return state.copy(
+            tabGroupState = state.tabGroupState.copy(
+                formState = form.copy(
+                    name = action.name,
+                    edited = true,
+                ),
+            ),
+        )
     }
 
     private fun TabsTrayState.navigateToCreateTabGroup() = copy(
@@ -140,7 +159,7 @@ object TabGroupActionReducer {
         currentState: TabsTrayState,
         group: TabsTrayItem.TabGroup,
     ): TabsTrayState = when (currentState.mode) {
-        is TabsTrayState.Mode.Normal -> currentState.copy(
+        is TabsTrayState.Mode.Normal, is TabsTrayState.Mode.DragAndDrop -> currentState.copy(
             backStack = currentState.backStack + ExpandedTabGroup(group = group),
         )
 

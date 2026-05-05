@@ -404,7 +404,9 @@ nsresult nsJARChannel::OpenLocalFile() {
   RefPtr<nsJARChannel> self = this;
   return mWorker->Dispatch(NS_NewRunnableFunction(
       "nsJARChannel::OpenLocalFile",
-      [self, jarCache, clonedFile, jarEntry, innerJarEntry]() mutable {
+      [self, jarCache = std::move(jarCache), clonedFile = std::move(clonedFile),
+       jarEntry = std::move(jarEntry),
+       innerJarEntry = std::move(innerJarEntry)]() mutable {
         RefPtr<nsJARInputThunk> input;
         nsresult rv = CreateLocalJarInput(jarCache, clonedFile, innerJarEntry,
                                           jarEntry, getter_AddRefs(input));

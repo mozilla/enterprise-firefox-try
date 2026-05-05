@@ -113,11 +113,14 @@ RefPtr<MediaDataDecoder::InitPromise> ChromiumCDMVideoDecoder::Init() {
   VideoInfo info = mConfig;
   RefPtr<layers::ImageContainer> imageContainer = mImageContainer;
   RefPtr<layers::KnowsCompositor> knowsCompositor = mKnowsCompositor;
-  return InvokeAsync(mGMPThread, __func__,
-                     [cdm, config, info, imageContainer, knowsCompositor]() {
-                       return cdm->InitializeVideoDecoder(
-                           config, info, imageContainer, knowsCompositor);
-                     });
+  return InvokeAsync(
+      mGMPThread, __func__,
+      [cdm = std::move(cdm), config = std::move(config), info = std::move(info),
+       imageContainer = std::move(imageContainer),
+       knowsCompositor = std::move(knowsCompositor)]() {
+        return cdm->InitializeVideoDecoder(config, info, imageContainer,
+                                           knowsCompositor);
+      });
 }
 
 nsCString ChromiumCDMVideoDecoder::GetDescriptionName() const {

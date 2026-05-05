@@ -11,6 +11,9 @@
 
 dictionary KeyframeAnimationOptions : KeyframeEffectOptions {
   DOMString id = "";
+
+  [Pref="layout.css.scroll-driven-animations.enabled"]
+  AnimationTimeline? timeline;
 };
 
 dictionary GetAnimationsOptions {

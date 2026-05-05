@@ -2671,7 +2671,7 @@ void HTMLInputElement::GetDisplayFileName(nsAString& aValue) const {
         count);
   }
 
-  aValue = value;
+  aValue = std::move(value);
 }
 
 const nsTArray<OwningFileOrDirectory>&
@@ -2814,7 +2814,7 @@ void HTMLInputElement::FireChangeEventIfNeeded() {
   if (mFocusedValue.Equals(value)) {
     return;
   }
-  mFocusedValue = value;
+  mFocusedValue = std::move(value);
   if (!changedByUser) {
     // value was changed, but only by scripts
     return;

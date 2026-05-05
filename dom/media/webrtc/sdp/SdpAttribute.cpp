@@ -656,7 +656,7 @@ bool SdpImageattrAttributeList::Imageattr::ParseSets(std::istream& is,
       return false;
     }
 
-    sets->push_back(set);
+    sets->push_back(std::move(set));
     is >> std::ws;
   } while (PeekChar(is, error) == '[');
 
@@ -745,7 +745,7 @@ bool SdpImageattrAttributeList::PushEntry(const std::string& raw,
     return false;
   }
 
-  mImageattrs.push_back(imageattr);
+  mImageattrs.push_back(std::move(imageattr));
   return true;
 }
 
@@ -853,7 +853,7 @@ bool SdpRidAttributeList::Rid::ParseDepend(std::istream& is,
     if (id.empty()) {
       return false;
     }
-    dependIds.push_back(id);
+    dependIds.push_back(std::move(id));
   } while (SkipChar(is, ',', error));
 
   return true;
@@ -1040,7 +1040,7 @@ bool SdpRidAttributeList::PushEntry(const std::string& raw, std::string* error,
     return false;
   }
 
-  mRids.push_back(rid);
+  mRids.push_back(std::move(rid));
   return true;
 }
 

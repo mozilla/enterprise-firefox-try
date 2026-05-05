@@ -7253,8 +7253,8 @@ nsHttpChannel::Suspend() {
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_TRUE(LoadIsPending(), NS_ERROR_NOT_AVAILABLE);
 
-  PROFILER_MARKER("nsHttpChannel::Suspend", NETWORK, {}, FlowMarker,
-                  Flow::FromPointer(this));
+  PROFILER_MARKER("nsHttpChannel::Suspend", NETWORK, {MarkerStack::Capture()},
+                  FlowMarker, Flow::FromPointer(this));
   LOG(("nsHttpChannel::Suspend [this=%p]\n", this));
   LogCallingScriptLocation(this);
 

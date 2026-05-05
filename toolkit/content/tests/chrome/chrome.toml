@@ -146,6 +146,8 @@ skip-if = [
 
 ["test_button.xhtml"]
 
+["test_checkbox.xhtml"]
+
 ["test_closemenu_attribute.xhtml"]
 
 ["test_contextmenu_list.xhtml"]

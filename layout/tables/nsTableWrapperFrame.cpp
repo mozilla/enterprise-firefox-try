@@ -9,6 +9,7 @@
 #include "LayoutConstants.h"
 #include "mozilla/ComputedStyle.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/ReflowInput.h"
 #include "nsCSSRendering.h"
 #include "nsDisplayList.h"
 #include "nsFrameManager.h"

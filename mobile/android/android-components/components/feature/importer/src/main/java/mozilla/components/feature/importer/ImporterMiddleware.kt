@@ -5,6 +5,7 @@
 package mozilla.components.feature.importer
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -23,6 +24,8 @@ class ImporterMiddleware(
     private val importer: BookmarksFileImporter,
     private val lifecycleScope: CoroutineScope,
 ) : Middleware<ImporterState, ImporterAction> {
+    private var importJob: Job? = null
+
     override fun invoke(
         store: Store<ImporterState, ImporterAction>,
         next: (ImporterAction) -> Unit,
@@ -30,28 +33,35 @@ class ImporterMiddleware(
     ) {
         next(action)
         when (action) {
-            is ImporterAction.FileSelected -> lifecycleScope.launch {
-                store.dispatch(ImporterAction.ImportStarted)
+            is ImporterAction.FileSelected -> {
+                importJob = lifecycleScope.launch {
+                    store.dispatch(ImporterAction.ImportStarted)
 
-                // We want to make sure we stay in the loading state for at least one second
-                // during an import to prevent the dialog from flashing before the user can
-                // comprehend what is currently happening.
-                val minimumWait = async { delay(1.seconds) }
-                val result = async { importer.importBookmarksFromUri(action.uri) }
+                    // We want to make sure we stay in the loading state for at least one second
+                    // during an import to prevent the dialog from flashing before the user can
+                    // comprehend what is currently happening.
+                    val minimumWait = async { delay(1.seconds) }
+                    val result = async { importer.importBookmarksFromUri(action.uri) }
 
-                awaitAll(minimumWait, result)
+                    awaitAll(minimumWait, result)
 
-                result.await()
-                    .onFailure { store.dispatch(ImporterAction.ImportFailed) }
-                    .onSuccess { store.dispatch(ImporterAction.ImportFinished(it.count)) }
+                    result.await()
+                        .onFailure { store.dispatch(ImporterAction.ImportFailed) }
+                        .onSuccess { store.dispatch(ImporterAction.ImportFinished(it.count)) }
+                }
             }
+
+            is ImporterAction.ImportCancelled -> {
+                importJob?.cancel()
+                importJob = null
+            }
+
             ImporterAction.FileSelectionCanceled,
             ImporterAction.ImportStarted,
             ImporterAction.ViewAppeared,
             is ImporterAction.ImportFinished,
-            ImporterAction.ImportCancelled,
             ImporterAction.ImportFailed,
-            -> Unit
+                -> Unit
         }
     }
 }

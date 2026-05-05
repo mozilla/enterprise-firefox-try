@@ -1604,8 +1604,8 @@ static bool MaybeCheckUnloadingIsCanceled(
   windowGlobalParent->PermitUnloadTraversable(
       targetEntry->Info(), action,
       [action, loadResults = CopyableTArray(std::move(aLoadResults)),
-       windowGlobalParent,
-       aResolver](nsIDocumentViewer::PermitUnloadResult aResult) mutable {
+       windowGlobalParent, aResolver = std::move(aResolver)](
+          nsIDocumentViewer::PermitUnloadResult aResult) mutable {
         if (aResult != nsIDocumentViewer::PermitUnloadResult::eContinue) {
           aResolver(loadResults, aResult);
           return;

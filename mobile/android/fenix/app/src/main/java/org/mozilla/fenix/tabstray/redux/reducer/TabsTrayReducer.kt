@@ -30,18 +30,18 @@ internal object TabsTrayReducer {
             is TabsTrayAction.ExitSelectMode,
             is TabsTrayAction.AddSelectTab,
             is TabsTrayAction.RemoveSelectTab,
-                 -> handleSelectionModeActions(state, action)
+                -> handleSelectionModeActions(state, action)
 
             // Tab Update Actions
             is TabsTrayAction.UpdateSelectedTabId,
             is TabsTrayAction.TabDataUpdateReceived,
-                 -> handleTabUpdates(state, action)
+                -> handleTabUpdates(state, action)
 
             // Inactive Tabs Actions
             is TabsTrayAction.UpdateInactiveExpanded,
             is TabsTrayAction.DismissInactiveTabsCFR,
             is TabsTrayAction.DismissInactiveTabsAutoCloseDialog,
-                 -> handleInactiveTabsActions(state, action)
+                -> handleInactiveTabsActions(state, action)
 
             // Sync Actions
             is TabsTrayAction.SyncNow -> state.copy(sync = state.sync.copy(isSyncing = true))
@@ -53,6 +53,7 @@ internal object TabsTrayReducer {
             is TabsTrayAction.TabSearchClicked -> {
                 state.copy(backStack = state.backStack + TabManagerNavDestination.TabSearch)
             }
+
             is TabsTrayAction.NavigateBackInvoked -> handleNavigateBack(state)
             is TabsTrayAction.PageSelected -> state.copy(selectedPage = action.page)
 
@@ -63,6 +64,7 @@ internal object TabsTrayReducer {
             // UI State / No-op Actions
             is TabsTrayAction.UpdatePbmLockStatus ->
                 state.copy(privateBrowsing = state.privateBrowsing.copy(isLocked = action.isLocked))
+
             is TabsTrayAction.TabAutoCloseDialogShown,
             is TabsTrayAction.ShareAllNormalTabs,
             is TabsTrayAction.ShareAllPrivateTabs,
@@ -70,7 +72,7 @@ internal object TabsTrayReducer {
             is TabsTrayAction.CloseAllPrivateTabs,
             is TabsTrayAction.BookmarkSelectedTabs,
             is TabsTrayAction.ThreeDotMenuShown,
-                 -> state
+                -> state
         }
 
         require(newState.backStack.isNotEmpty()) {
@@ -85,15 +87,17 @@ internal object TabsTrayReducer {
             is TabsTrayAction.EnterSelectMode ->
                 state.copy(
                     mode = TabsTrayState.Mode.Select(
-                    selectedTabs = emptySet(),
-                    selectedTabGroups = emptySet(),
-                ),
+                        selectedTabs = emptySet(),
+                        selectedTabGroups = emptySet(),
+                    ),
                 )
+
             is TabsTrayAction.ExitSelectMode ->
                 state.copy(mode = TabsTrayState.Mode.Normal)
 
             is TabsTrayAction.AddSelectTab ->
                 state.copy(mode = TabsTrayState.Mode.Select(selectedTabs = state.mode.selectedTabs + action.tab))
+
             is TabsTrayAction.RemoveSelectTab -> {
                 val selectedTabs = state.mode.selectedTabs.toHashSet()
                 selectedTabs.remove(action.tab)
@@ -105,6 +109,7 @@ internal object TabsTrayReducer {
                     },
                 )
             }
+
             else -> state
         }
     }
@@ -128,6 +133,7 @@ internal object TabsTrayReducer {
                     groups = action.tabStorageUpdate.tabGroups,
                 ),
             )
+
             else -> state
         }
     }
@@ -136,10 +142,13 @@ internal object TabsTrayReducer {
         return when (action) {
             is TabsTrayAction.UpdateInactiveExpanded ->
                 state.copy(inactiveTabs = state.inactiveTabs.copy(isExpanded = action.expanded))
+
             is TabsTrayAction.DismissInactiveTabsCFR ->
                 state.copy(inactiveTabs = state.inactiveTabs.copy(showCFR = false))
+
             is TabsTrayAction.DismissInactiveTabsAutoCloseDialog ->
                 state.copy(inactiveTabs = state.inactiveTabs.copy(showAutoCloseDialog = false))
+
             else -> state
         }
     }
@@ -152,7 +161,10 @@ internal object TabsTrayReducer {
             lastBackStackEntry in setOf(
                 TabManagerNavDestination.EditTabGroup,
                 TabManagerNavDestination.AddToTabGroup,
-            ) -> state.copy(backStack = state.popBackStack())
+            ) -> state.copy(
+                mode = if (state.mode is TabsTrayState.Mode.DragAndDrop) TabsTrayState.Mode.Normal else state.mode,
+                backStack = state.popBackStack(),
+            )
 
             state.mode is TabsTrayState.Mode.Select -> state.copy(mode = TabsTrayState.Mode.Normal)
 
@@ -160,6 +172,7 @@ internal object TabsTrayReducer {
                 tabSearchState = TabSearchState(query = "", searchResults = emptyList()),
                 backStack = state.popBackStack(),
             )
+
             else -> state.copy(backStack = state.popBackStack())
         }
     }
@@ -191,6 +204,7 @@ internal object TabsTrayReducer {
                     ),
                 )
             }
+
             tabs.isNotEmpty() -> {
                 state.copy(
                     sync = currentSync.copy(
@@ -199,6 +213,7 @@ internal object TabsTrayReducer {
                     ),
                 )
             }
+
             else -> {
                 state.copy(
                     sync = currentSync.copy(

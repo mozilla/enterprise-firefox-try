@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.0.4
- * pdfjsBuild = 091b172a2
+ * pdfjsVersion = 6.0.16
+ * pdfjsBuild = a55cec4a0
  */
 /******/ // The require scope
 /******/ var __webpack_require__ = {};
@@ -10900,12 +10900,11 @@ class Jbig2Stream extends DecodeStream {
 
 
 class JpxStream extends DecodeStream {
-  constructor(stream, maybeLength, params) {
+  constructor(stream, maybeLength) {
     super(maybeLength);
     this.stream = stream;
     this.dict = stream.dict;
     this.maybeLength = maybeLength;
-    this.params = params;
   }
   get bytes() {
     return shadow(this, "bytes", this.stream.getBytes(this.maybeLength));
@@ -11862,7 +11861,7 @@ class Parser {
           return new JpegStream(stream, maybeLength, params);
         case "JPX":
         case "JPXDecode":
-          return new JpxStream(stream, maybeLength, params);
+          return new JpxStream(stream, maybeLength);
         case "A85":
         case "ASCII85Decode":
           return new Ascii85Stream(stream, maybeLength);
@@ -18665,8 +18664,9 @@ class CFFParser {
     } else if (pos === 2) {
       return new CFFCharset(true, CFFCharsetPredefinedTypes.EXPERT_SUBSET, ExpertSubsetCharset);
     }
-    const bytes = this.bytes;
-    const start = pos;
+    const {
+      bytes
+    } = this;
     const format = bytes[pos++];
     const charset = [cid ? 0 : ".notdef"];
     let id, count, i;
@@ -18699,9 +18699,7 @@ class CFFParser {
       default:
         throw new FormatError("Unknown charset format");
     }
-    const end = pos;
-    const raw = bytes.subarray(start, end);
-    return new CFFCharset(false, format, charset, raw);
+    return new CFFCharset(false, format, charset);
   }
   parseEncoding(pos, properties, strings, charset) {
     const encoding = Object.create(null);
@@ -18988,11 +18986,10 @@ const CFFCharsetPredefinedTypes = {
   EXPERT_SUBSET: 2
 };
 class CFFCharset {
-  constructor(predefined, format, charset, raw) {
+  constructor(predefined, format, charset) {
     this.predefined = predefined;
     this.format = format;
     this.charset = charset;
-    this.raw = raw;
   }
 }
 class CFFEncoding {
@@ -19076,11 +19073,6 @@ class CompilerOutput {
   get data() {
     return this.#buf.subarray(0, this.#pos);
   }
-  get finalData() {
-    const data = this.#buf.slice(0, this.#pos);
-    this.#buf = null;
-    return data;
-  }
   get length() {
     return this.#pos;
   }
@@ -19156,7 +19148,7 @@ class CFFCompiler {
     }
     this.compilePrivateDicts([cff.topDict], [topDictTracker], output);
     output.add([0]);
-    return output.finalData;
+    return output.data;
   }
   encodeNumber(value) {
     if (Number.isInteger(value)) {
@@ -19388,9 +19380,7 @@ class CFFCompiler {
       case 0:
         out = new Uint8Array(1 + fdSelect.fdSelect.length);
         out[0] = format;
-        for (i = 0; i < fdSelect.fdSelect.length; i++) {
-          out[i + 1] = fdSelect.fdSelect[i];
-        }
+        out.set(fdSelect.fdSelect, 1);
         break;
       case 3:
         const start = 0;
@@ -20471,9 +20461,10 @@ class CFFFont {
     this.seacs = this.cff.seacs;
     try {
       this.data = compiler.compile();
-    } catch {
-      warn("Failed to compile font " + properties.loadedName);
-      this.data = file;
+    } catch (ex) {
+      warn(`Failed to compile font "${properties.loadedName}": "${ex}".`);
+      file.reset();
+      this.data = file.getBytes();
     }
     this._createBuiltInEncoding();
   }
@@ -26889,13 +26880,14 @@ class Font {
         data[8] = data[9] = data[10] = data[11] = 0;
         data[17] |= 0x20;
       }
+      const view = tag === "CFF " ? null : new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         tag,
         checksum,
         length,
         offset,
         data,
-        view: new DataView(data.buffer, data.byteOffset, data.byteLength)
+        view
       };
     }
     function readOpenTypeHeader(ttf) {
@@ -62382,7 +62374,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.0.4";
+    const workerVersion = "6.0.16";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }

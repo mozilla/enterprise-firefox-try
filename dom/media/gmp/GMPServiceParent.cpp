@@ -587,7 +587,7 @@ RefPtr<GenericPromise> GeckoMediaPluginServiceParent::LoadFromEnvironment() {
 class NotifyObserversTask final : public mozilla::Runnable {
  public:
   explicit NotifyObserversTask(const char* aTopic, nsString aData = u""_ns)
-      : Runnable(aTopic), mTopic(aTopic), mData(aData) {}
+      : Runnable(aTopic), mTopic(aTopic), mData(std::move(aData)) {}
   NS_IMETHOD Run() override {
     MOZ_ASSERT(NS_IsMainThread());
     nsCOMPtr<nsIObserverService> obsService =

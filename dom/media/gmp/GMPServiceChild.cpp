@@ -90,8 +90,8 @@ GeckoMediaPluginServiceChild::GetContentParent(
 
   GetServiceChild()->Then(
       thread, __func__,
-      [nodeIdVariant = aNodeIdVariant, self, api, tags = aTags.Clone(), helper,
-       rawHolder](GMPServiceChild* child) {
+      [nodeIdVariant = aNodeIdVariant, self, api = std::move(api),
+       tags = aTags.Clone(), helper, rawHolder](GMPServiceChild* child) {
         nsTArray<base::ProcessId> alreadyBridgedTo;
 
         // We want to force the content process to keep all of our
@@ -354,7 +354,9 @@ GeckoMediaPluginServiceChild::GetNodeId(
   nsString gmpName(aGMPName);
   GetServiceChild()->Then(
       thread, __func__,
-      [rawCallback, origin, topLevelOrigin, gmpName](GMPServiceChild* child) {
+      [rawCallback, origin = std::move(origin),
+       topLevelOrigin = std::move(topLevelOrigin),
+       gmpName = std::move(gmpName)](GMPServiceChild* child) {
         child->SendGetGMPNodeId(
             origin, topLevelOrigin, gmpName,
             [rawCallback](nsCString&& aId) {

@@ -373,7 +373,7 @@ class PLDHashTable {
       nullptr;                   // Virtual operations; see below.
   EntryStore mEntryStore;        // (Lazy) entry storage and generation.
   uint16_t mGeneration = 0;      // The storage generation.
-  uint8_t mHashShift;            // Multiplicative hash shift.
+  uint8_t mHashShift = 0;        // Multiplicative hash shift.
   const uint8_t mEntrySize = 0;  // Number of bytes in an entry.
   uint32_t mEntryCount = 0;      // Number of entries in table.
   uint32_t mRemovedCount = 0;    // Removed entry sentinels in table.

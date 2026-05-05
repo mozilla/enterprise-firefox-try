@@ -393,7 +393,7 @@ bool OriginAttributes::PopulateFromOrigin(const nsACString& aOrigin,
   int32_t pos = origin.RFindChar('^');
 
   if (pos == kNotFound) {
-    aOriginNoSuffix = origin;
+    aOriginNoSuffix = std::move(origin);
     return true;
   }
 

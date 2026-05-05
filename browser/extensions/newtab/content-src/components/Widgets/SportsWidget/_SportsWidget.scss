@@ -4,11 +4,12 @@
 
 /* stylelint-disable stylelint-plugin-mozilla/use-design-tokens */
 
-.sports-widget {
-  --sports-widget-countdown-color: light-dark(var(--color-orange-70), var(--color-orange-10));
-
+.sports {
   @include newtab-card-style;
 
+  background-image: url('chrome://newtab/content/data/content/assets/sports-intro-background.png');
+  background-repeat: no-repeat;
+  background-size: contain;
   border-radius: var(--border-radius-large);
   padding: var(--space-medium);
   display: flex;
@@ -17,163 +18,114 @@
 
   &.medium-widget {
     grid-row: span 2;
+    background-image: url('chrome://newtab/content/data/content/assets/running-firefox.png');
+    background-size: cover;
+    background-position: center;
 
-    .sports-widget-title-wrapper {
+    .sports-title-wrapper {
       align-items: center;
+      margin-block-end: 0;
     }
 
-    .countdown-text-wrapper > .sports-widget-countdown-lede {
+    .sports-intro-wrapper > .sports-intro-lede {
       display: none;
     }
 
-    .sports-widget-countdown-title {
+    .sports-intro-title {
       font-size: var(--font-size-root);
     }
 
-    .sports-widget-countdown-value {
-      font-size: var(--font-size-heading-xlarge);
-    }
-
-    .sports-widget-countdown-units {
-      height: 54px;
-      justify-content: space-between;
-    }
-
-    .sports-widget-countdown {
-      margin-block-end: 0;
-    }
-
-    .sports-widget-title-wrapper {
-      margin-block-end: 0;
-    }
-
-    .sports-widget-countdown-unit {
-      &::after {
-        inset-inline-end: calc(-1 * var(--space-small));
-      }
-
-      &:last-of-type {
-        margin-inline-end: 0;
-      }
+    .sports-buttons-wrapper {
+      margin-block-start: var(--space-medium);
     }
   }
 
   &.large-widget {
     grid-row: span 4;
+
+    .sports-intro-wrapper {
+      margin-block-start: var(--space-large);
+    }
+
+    .sports-buttons-wrapper {
+      margin-block-start: var(--space-large);
+    }
   }
 }
 
-.sports-widget-title-wrapper {
+.sports-title-wrapper {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   margin-block-end: var(--space-xsmall);
 
-  .sports-widget-countdown-title {
+  .sports-intro-title {
     margin-block: 0;
-    width: 250px;
+    max-width: 250px;
   }
 
-  .sports-widget-countdown-lede {
+  .sports-intro-lede {
     margin-block-end: var(--space-small);
   }
 }
 
-.sports-widget-context-menu-wrapper {
+.sports-context-menu-wrapper {
   grid-column: 3;
   justify-self: end;
   opacity: 0;
   pointer-events: none;
+
+  .sports-context-menu-button::part(button) {
+    color: var(--color-black);
+  }
 }
 
-.sports-widget:hover,
-.sports-widget:focus-within {
-  .sports-widget-context-menu-wrapper {
+.sports:hover,
+.sports:focus-within {
+  background-image: url('chrome://newtab/content/data/content/assets/sports-intro-background.png');
+  background-repeat: no-repeat;
+  background-size: contain;
+
+  &.medium-widget {
+    background-image: url('chrome://newtab/content/data/content/assets/running-firefox.png');
+    background-size: cover;
+  }
+
+  .sports-context-menu-wrapper {
     opacity: 1;
     pointer-events: auto;
   }
 }
 
-.sports-widget-body {
+.sports-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-small);
 }
 
-.sports-widget-live-scores {
+.sports-live-scores {
   display: flex;
   flex-direction: column;
   gap: var(--space-xsmall);
 }
 
-.sports-widget-countdown {
-  display: flex;
-  flex-direction: column;
-  margin-block-end: var(--space-small);
-}
-
-.countdown-text-wrapper {
+.sports-intro-wrapper {
   text-align: center;
+  color: var(--color-black);
 }
 
-.sports-widget-countdown-title {
+.sports-intro-title {
   margin-block: 0;
   font-size: var(--font-size-heading-xlarge);
   font-weight: var(--font-weight-heading);
 }
 
-.sports-widget-countdown-units {
-  border-radius: var(--border-radius-large);
-  box-shadow: var(--box-shadow-level-2);
-  padding: var(--space-large);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--sports-widget-countdown-color);
-  height: 61px;
-  margin: 0 auto;
-}
-
-.sports-widget-countdown-unit {
-  margin-inline-end: var(--space-medium);
-  position: relative;
-  padding-inline: var(--space-xxsmall);
-
-  &::after {
-    position: absolute;
-    content: ':';
-    inset-inline-end: calc(-1 * var(--space-small));
-    inset-block-start: var(--space-small);
-  }
-
-  &:last-of-type {
-    margin-inline-end: 0;
-
-    &::after {
-      content: '';
-    }
-  }
-}
-
-.sports-widget-countdown-value {
-  font-size: var(--font-size-xxxlarge);
-  font-weight: var(--font-weight-heading);
-  font-variant-numeric: tabular-nums; // numbers are all of the same size, preventing the containing from resizing when the seconds change
-  margin-inline-end: var(--space-xsmall);
-}
-
-.sports-widget-countdown-label {
-  max-width: 2ch; // Adding in this rule to ensure that there is a maximum of 1-2 characters showing here, helps with localization
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.countdown-buttons-wrapper {
+.sports-buttons-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
 
-  .countdown-view-schedule {
+  .sports-view-schedule {
     margin-block-end: var(--space-small);
   }
 }

@@ -605,7 +605,7 @@ static nsTArray<nsCString> GetMIMELabelStrings(const ParsedMIMEType& aType) {
   if (aType.mCodecs.IsEmpty()) {
     nsCString label = baseLabel;
     label.AppendLiteral("_unspecified");
-    labels.AppendElement(label);
+    labels.AppendElement(std::move(label));
     return labels;
   }
   for (const auto& codec : aType.mCodecs) {
@@ -621,7 +621,7 @@ static nsTArray<nsCString> GetMIMELabelStrings(const ParsedMIMEType& aType) {
         ("GetMIMELabelStrings: type: %s, container: %s, codec: %s => label: %s",
          ToString(aType.mMediaType).c_str(), ToString(aType.mContainer).c_str(),
          ToString(codec).c_str(), label.get()));
-    labels.AppendElement(label);
+    labels.AppendElement(std::move(label));
   }
   return labels;
 }

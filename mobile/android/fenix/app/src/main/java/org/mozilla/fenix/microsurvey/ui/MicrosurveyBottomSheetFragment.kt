@@ -9,8 +9,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.fragment.compose.content
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -18,11 +21,11 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.launch
 import org.mozilla.fenix.HomeActivity
-import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.openToBrowser
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.messaging.MicrosurveyMessageController
+import org.mozilla.fenix.microsurvey.ui.ext.MicrosurveyUIData
 import org.mozilla.fenix.microsurvey.ui.ext.toMicrosurveyUIData
 import org.mozilla.fenix.theme.FirefoxTheme
 import com.google.android.material.R as materialR
@@ -47,7 +50,20 @@ class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
         )
     }
 
+    private var microsurveyUIData by mutableStateOf<MicrosurveyUIData?>(null)
+
     private val closeBottomSheet = { dismiss() }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val messaging = requireComponents.nimbus.messaging
+        val microsurveyId = args.microsurveyId
+
+        lifecycleScope.launch {
+            microsurveyUIData = messaging.getMessage(microsurveyId)?.toMicrosurveyUIData()
+        }
+    }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog =
         super.onCreateDialog(savedInstanceState).apply {
@@ -66,44 +82,37 @@ class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
-    ): View = ComposeView(requireContext()).apply {
-        val messaging = context.components.nimbus.messaging
-        val microsurveyId = args.microsurveyId
+    ) = content {
+        FirefoxTheme {
+            val activity = requireActivity() as HomeActivity
 
-        lifecycleScope.launch {
-            val microsurveyUIData = messaging.getMessage(microsurveyId)?.toMicrosurveyUIData()
             microsurveyUIData?.let {
-                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                microsurveyMessageController.onMicrosurveyShown(it.id)
-                setContent {
-                    FirefoxTheme {
-                        val activity = requireActivity() as HomeActivity
-
-                        MicrosurveyBottomSheet(
-                            question = it.question,
-                            icon = it.icon,
-                            answers = it.answers,
-                            onPrivacyPolicyLinkClick = {
-                                closeBottomSheet()
-                                microsurveyMessageController.onPrivacyPolicyLinkClicked(
-                                    it.id,
-                                    it.utmContent,
-                                )
-                            },
-                            onCloseButtonClicked = {
-                                microsurveyMessageController.onMicrosurveyDismissed(it.id)
-                                context.settings().shouldShowMicrosurveyPrompt = false
-                                activity.isMicrosurveyPromptDismissed.value = true
-                                closeBottomSheet()
-                            },
-                            onSubmitButtonClicked = { answer ->
-                                context.settings().shouldShowMicrosurveyPrompt = false
-                                activity.isMicrosurveyPromptDismissed.value = true
-                                microsurveyMessageController.onSurveyCompleted(it.id, answer)
-                            },
-                        )
-                    }
+                LaunchedEffect(it.id) {
+                    microsurveyMessageController.onMicrosurveyShown(it.id)
                 }
+                MicrosurveyBottomSheet(
+                    question = it.question,
+                    icon = it.icon,
+                    answers = it.answers,
+                    onPrivacyPolicyLinkClick = {
+                        closeBottomSheet()
+                        microsurveyMessageController.onPrivacyPolicyLinkClicked(
+                            it.id,
+                            it.utmContent,
+                        )
+                    },
+                    onCloseButtonClicked = {
+                        microsurveyMessageController.onMicrosurveyDismissed(it.id)
+                        requireContext().settings().shouldShowMicrosurveyPrompt = false
+                        activity.isMicrosurveyPromptDismissed.value = true
+                        closeBottomSheet()
+                    },
+                    onSubmitButtonClicked = { answer ->
+                        requireContext().settings().shouldShowMicrosurveyPrompt = false
+                        activity.isMicrosurveyPromptDismissed.value = true
+                        microsurveyMessageController.onSurveyCompleted(it.id, answer)
+                    },
+                )
             }
         }
     }

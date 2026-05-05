@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 from mozlint import result
+from mozlint.errors import LintException
 
 
 def _get_source_root():
@@ -84,7 +85,12 @@ def lint(paths, config, fix=None, **lintargs):
         root = src_root
     binary = _find_mozcheck_binary(log, root, lintargs.get("topobjdir"))
     if not binary:
-        return {"results": [], "fixed": 0}
+        raise LintException(
+            "mozcheck binary is unavailable: could not locate a prebuilt "
+            "binary (MOZ_FETCHES_DIR/mozcheck) and the source build failed. "
+            "Ensure the linter task fetches the linux64-mozcheck toolchain, "
+            "or that cargo is available locally."
+        )
 
     check = config.get("check", config["name"])
 

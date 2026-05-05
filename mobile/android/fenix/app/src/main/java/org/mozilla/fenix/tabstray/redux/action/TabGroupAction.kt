@@ -23,6 +23,11 @@ sealed interface TabGroupAction : TabsTrayAction {
     data object AddToNewTabGroup : TabGroupAction
 
     /**
+     * Fired when the user drags a tab onto another to create a new tab group.
+     */
+    data class DragAndDropTwoTabs(val sourceTabId: String, val destinationTabId: String) : TabGroupAction
+
+    /**
      * Fired when the user changes the tab group name.
      *
      * @property name The name of the tab group the user has typed in.
@@ -73,7 +78,7 @@ sealed interface TabGroupAction : TabsTrayAction {
      *
      * @property groupId The ID of the group the tabs are being added into.
      */
-    data class TabsAddedToGroup(val groupId: String) : TabGroupAction, TabsStorageAction
+    data class SelectedTabsAddedToGroup(val groupId: String) : TabGroupAction, TabsStorageAction
 
     /**
      * Fired when the user performs an action to add a single item to an existing Tab Group, such as a drag and drop.
@@ -103,4 +108,12 @@ sealed interface TabGroupAction : TabsTrayAction {
      * @property group The [TabsTrayItem.TabGroup] to be closed.
      */
     data class CloseTabGroupClicked(val group: TabsTrayItem.TabGroup) : TabGroupAction, TabsStorageAction
+
+    /**
+     * [TabGroupAction] fired when one [TabsTrayItem] is dropped onto another.
+     *
+     * @property sourceId The id of the source item
+     * @property destinationId The id of the destination item
+     */
+    data class DragAndDropCompleted(val sourceId: String, val destinationId: String) : TabGroupAction, TabsStorageAction
 }
