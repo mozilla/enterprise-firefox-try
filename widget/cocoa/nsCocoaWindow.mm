@@ -125,13 +125,14 @@ static void LogEffectiveCB(NSWindow* window, const char* label) {
 struct VTEntry {
   int event;
   uint64_t timestamp;
+  void* window;
 };
 
 static const int kVibrancyTraceSize = 512;
 static volatile VTEntry sVibrancyTrace[kVibrancyTraceSize];
 static volatile int sVibrancyTracePos = 0;
 
-void VTRecord(int event) {
+static void VTRecordWin(int event, void* win) {
   if (sVibrancyTracePos >= kVibrancyTraceSize) {
     return;
   }
@@ -144,6 +145,11 @@ void VTRecord(int event) {
   }
   sVibrancyTrace[pos].event = event;
   sVibrancyTrace[pos].timestamp = mach_absolute_time();
+  sVibrancyTrace[pos].window = win;
+}
+
+void VTRecord(int event) {
+  VTRecordWin(event, nullptr);
 }
 
 // Snapshot of titlebar subviews as a string, taken at displayIfNeeded entry.
@@ -179,8 +185,8 @@ static BOOL sTitlebarSwizzled = NO;
 
 static void SwizzledTitlebarAddSubview(id self, SEL _cmd, NSView* view) {
   if ([[view className] isEqualToString:@"_NSThemeFullScreenButton"]) {
-    VTRecord(VT_FULLSCREEN_BUTTON_ADDED);
     NSWindow* window = [self window];
+    VTRecordWin(VT_FULLSCREEN_BUTTON_ADDED, (__bridge void*)window);
     NSWindowCollectionBehavior cb = [window collectionBehavior];
     BOOL hasPrimary = (cb & NSWindowCollectionBehaviorFullScreenPrimary) != 0;
     BOOL hasNone = (cb & NSWindowCollectionBehaviorFullScreenNone) != 0;
@@ -213,7 +219,7 @@ static IMP sOrigUpdateButtons = nil;
 static BOOL sUpdateButtonsSwizzled = NO;
 
 static void SwizzledUpdateButtons(id self, SEL _cmd) {
-  VTRecord(VT_UPDATE_BUTTONS);
+  VTRecordWin(VT_UPDATE_BUTTONS, (__bridge void*)[(NSView*)self window]);
   ((void(*)(id, SEL))sOrigUpdateButtons)(self, _cmd);
 }
 
@@ -228,14 +234,14 @@ static BOOL sWindowFSSwizzled = NO;
 
 static BOOL SwizzledZoomButtonIsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigZoomIsFS)(self, _cmd);
-  VTRecord(VT_ZOOM_IS_FS_BUTTON);
+  VTRecordWin(VT_ZOOM_IS_FS_BUTTON, (__bridge void*)self);
   fprintf(stderr, "FELT_ZOOM_IS_FS window=%p result=%d\n", self, result);
   return result;
 }
 
 static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigShowsFS)(self, _cmd);
-  VTRecord(VT_SHOWS_FS_BUTTON);
+  VTRecordWin(VT_SHOWS_FS_BUTTON, (__bridge void*)self);
   fprintf(stderr, "FELT_SHOWS_FS window=%p result=%d\n", self, result);
   return result;
 }
@@ -259,7 +265,7 @@ static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
     }
   }
   BOOL result = ((BOOL(*)(id, SEL))sOrigImplicitlyAllowsFSPrimary)(self, _cmd);
-  VTRecord(VT_IMPLICITLY_ALLOWS_FS_PRIMARY);
+  VTRecordWin(VT_IMPLICITLY_ALLOWS_FS_PRIMARY, (__bridge void*)self);
   fprintf(stderr, "FELT_IMPLICITLY_ALLOWS_FS_PRIMARY window=%p result=%d "
           "isSheet=%d parent=%p level=%ld wasModal=%d isTitled=%d isResizable=%d "
           "screen=%p frame=%.0fx%.0f aux105=%d\n",
@@ -270,7 +276,7 @@ static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
 
 static BOOL SwizzledCurrentlyAllowsFullScreenMode(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigCurrentlyAllowsFS)(self, _cmd);
-  VTRecord(VT_CURRENTLY_ALLOWS_FS);
+  VTRecordWin(VT_CURRENTLY_ALLOWS_FS, (__bridge void*)self);
   NSWindow* win = (NSWindow*)self;
   id sheet = [win attachedSheet];
   NSArray* sheets = [win valueForKey:@"sheets"];
@@ -280,7 +286,7 @@ static BOOL SwizzledCurrentlyAllowsFullScreenMode(id self, SEL _cmd) {
 }
 
 static void SwizzledCacheAndSetCB(id self, SEL _cmd, NSUInteger cb) {
-  VTRecord(VT_CACHE_AND_SET_CB);
+  VTRecordWin(VT_CACHE_AND_SET_CB, (__bridge void*)self);
   fprintf(stderr, "FELT_CACHE_SET_CB window=%p cb=0x%lx windowNum=%ld\n",
           self, (unsigned long)cb, (long)[(NSWindow*)self windowNumber]);
   ((void(*)(id, SEL, NSUInteger))sOrigCacheAndSetCB)(self, _cmd, cb);
@@ -413,8 +419,13 @@ void VTDump(NSException* exception) {
     VTEntry e = const_cast<VTEntry&>(sVibrancyTrace[i]);
     uint64_t usec = (e.timestamp - firstTs) * info.numer
         / info.denom / 1000;
-    fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
-            (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", usec);
+    if (e.window) {
+      fprintf(stderr, "  %s(%s,%p)@%llu\n", VTEventName(e.event),
+              (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", e.window, usec);
+    } else {
+      fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
+              (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", usec);
+    }
   }
   fprintf(stderr, "\n");
 
@@ -454,8 +465,13 @@ void VTDumpNoException() {
     VTEntry e = const_cast<VTEntry&>(sVibrancyTrace[i]);
     uint64_t usec = (e.timestamp - firstTs) * info.numer
         / info.denom / 1000;
-    fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
-            (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", usec);
+    if (e.window) {
+      fprintf(stderr, "  %s(%s,%p)@%llu\n", VTEventName(e.event),
+              (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", e.window, usec);
+    } else {
+      fprintf(stderr, "  %s(%s)@%llu\n", VTEventName(e.event),
+              (e.event & VT_OFF_MAIN_THREAD) ? "offthread" : "main", usec);
+    }
   }
   fprintf(stderr, "\n");
 
