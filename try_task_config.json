@@ -1,0 +1,19 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-enterprise-end2end",
+                "test-linux2404-64-enterprise/opt-enterprise-end2end",
+                "test-macosx1500-64-enterprise/debug-enterprise-end2end",
+                "test-macosx1500-64-enterprise/opt-enterprise-end2end",
+                "test-windows11-64-24h2-enterprise/debug-enterprise-end2end",
+                "test-windows11-64-24h2-enterprise/opt-enterprise-end2end"
+            ]
+        }
+    },
+    "version": 2
+}
