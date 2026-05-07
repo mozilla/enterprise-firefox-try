@@ -5430,11 +5430,11 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
     VTRecord(VT_SET_OPAQUE);
     mWindow.opaque = YES;
 
-    // if (mWindowType == WindowType::TopLevel &&
-    //     (features & NSWindowStyleMaskTitled)) {
-    //   mWindow.collectionBehavior = mWindow.collectionBehavior |
-    //                                NSWindowCollectionBehaviorFullScreenPrimary;
-    // }
+    if (mWindowType == WindowType::TopLevel &&
+        (features & NSWindowStyleMaskTitled)) {
+      mWindow.collectionBehavior = mWindow.collectionBehavior |
+                                   NSWindowCollectionBehaviorFullScreenPrimary;
+    }
   }
 
   if (mAlwaysOnTop || mIsAlert) {
