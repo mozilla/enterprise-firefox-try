@@ -431,12 +431,14 @@ class Rebuild(TryConfig):
                 print(
                     "warning: setting --rebuild to 1 is the same as not specifying it."
                 )
+            """
             elif kwargs.get("full") and rebuild > 3:
                 print(
                     "warning: limiting --rebuild to 3 when using --full. "
                     "Use custom push actions to add more."
                 )
                 rebuild = 3
+            """
 
         return {
             "rebuild": rebuild,
