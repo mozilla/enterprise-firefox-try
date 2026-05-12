@@ -236,14 +236,14 @@ static BOOL sWindowFSSwizzled = NO;
 static BOOL SwizzledZoomButtonIsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigZoomIsFS)(self, _cmd);
   VTRecordWin(VT_ZOOM_IS_FS_BUTTON, (__bridge void*)self);
-  fprintf(stderr, "FELT_ZOOM_IS_FS window=%p result=%d\n", self, result);
+  fprintf(stderr, "FELT _zoomButtonIsFullScreenButton window=%p result=%d\n", self, result);
   return result;
 }
 
 static BOOL SwizzledShowsFullScreenButton(id self, SEL _cmd) {
   BOOL result = ((BOOL(*)(id, SEL))sOrigShowsFS)(self, _cmd);
   VTRecordWin(VT_SHOWS_FS_BUTTON, (__bridge void*)self);
-  fprintf(stderr, "FELT_SHOWS_FS window=%p result=%d\n", self, result);
+  fprintf(stderr, "FELT showsFullScreenButton window=%p result=%d\n", self, result);
   return result;
 }
 
@@ -252,7 +252,7 @@ static NSSize SwizzledValidSizeForFS(id self, SEL _cmd, NSSize* size, BOOL forFu
   NSSize result = ((NSSize(*)(id, SEL, NSSize*, BOOL, BOOL))sOrigValidSizeForFS)(self, _cmd, size, forFullScreen, force);
   VTRecordWin(VT_VALID_SIZE_FOR_FS, (__bridge void*)self);
   NSSize inputSize = size ? *size : NSZeroSize;
-  fprintf(stderr, "FELT_VALID_SIZE_FOR_FS window=%p validSize=%.0fx%.0f inputSize=%.0fx%.0f equal=%d forFS=%d force=%d\n",
+  fprintf(stderr, "FELT _validSize:forFullScreen:force: window=%p validSize=%.0fx%.0f inputSize=%.0fx%.0f equal=%d forFS=%d force=%d\n",
           self, result.width, result.height, inputSize.width, inputSize.height,
           (int)NSEqualSizes(result, inputSize), forFullScreen, force);
   return result;
@@ -280,10 +280,11 @@ static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
   }
   BOOL result = ((BOOL(*)(id, SEL))sOrigImplicitlyAllowsFSPrimary)(self, _cmd);
   VTRecordWin(VT_IMPLICITLY_ALLOWS_FS_PRIMARY, (__bridge void*)self);
-  fprintf(stderr, "FELT_IMPLICITLY_ALLOWS_FS_PRIMARY window=%p result=%d "
+  NSUInteger cb = [win collectionBehavior];
+  fprintf(stderr, "FELT _implicitlyAllowsFullScreenPrimary window=%p class=%s cb=0x%lx result=%d "
           "isSheet=%d parent=%p level=%ld wasModal=%d isTitled=%d isResizable=%d "
           "screen=%p frame=%.0fx%.0f aux105=%d aux102=0x%x\n",
-          self, result, isSheet, parentWin, (long)level, wasModal, isTitled,
+          self, [[(NSWindow*)self className] UTF8String], (unsigned long)cb, result, isSheet, parentWin, (long)level, wasModal, isTitled,
           isResizable, screen, frame.size.width, frame.size.height, aux105bits,
           aux102bits);
   return result;
@@ -295,14 +296,14 @@ static BOOL SwizzledCurrentlyAllowsFullScreenMode(id self, SEL _cmd) {
   NSWindow* win = (NSWindow*)self;
   id sheet = [win attachedSheet];
   NSArray* sheets = [win valueForKey:@"sheets"];
-  fprintf(stderr, "FELT_CURRENTLY_ALLOWS_FS window=%p result=%d attachedSheet=%p sheets.count=%lu\n",
+  fprintf(stderr, "FELT _currentlyAllowsFullScreenMode window=%p result=%d attachedSheet=%p sheets.count=%lu\n",
           self, result, sheet, (unsigned long)(sheets ? [sheets count] : 0));
   return result;
 }
 
 static void SwizzledCacheAndSetCB(id self, SEL _cmd, NSUInteger cb) {
   VTRecordWin(VT_CACHE_AND_SET_CB, (__bridge void*)self);
-  fprintf(stderr, "FELT_CACHE_SET_CB window=%p cb=0x%lx windowNum=%ld\n",
+  fprintf(stderr, "FELT _cacheAndSetPropertiesForCollectionBehavior: window=%p cb=0x%lx windowNum=%ld\n",
           self, (unsigned long)cb, (long)[(NSWindow*)self windowNumber]);
   ((void(*)(id, SEL, NSUInteger))sOrigCacheAndSetCB)(self, _cmd, cb);
 }
