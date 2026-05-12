@@ -187,6 +187,9 @@ def verify_task_graph_no_shippable_enterprise_level_not_1(
     if task is None:
         return
 
+    if parameters["project"] == "enterprise-firefox-try":
+        return
+
     level = int(parameters["level"])
     if level < 3 and "enterprise" in task.label and "shippable" in task.label:
         raise Exception(
