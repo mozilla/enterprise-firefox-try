@@ -1,0 +1,15 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "enterprise-repack-win64-aarch64-enterprise-shippable",
+                "enterprise-repack-win64-enterprise-shippable"
+            ]
+        }
+    },
+    "version": 2
+}
