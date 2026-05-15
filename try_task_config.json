@@ -1,0 +1,15 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZ_RECORD_TEST": "1",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise"
+            ]
+        }
+    },
+    "version": 2
+}
