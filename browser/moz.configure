@@ -18,33 +18,6 @@ imply_option("MOZ_DEVTOOLS", "all")
 imply_option("BROWSER_CHROME_URL", "chrome://browser/content/browser.xhtml")
 
 
-option(
-    "--enable-enterprise",
-    default=False,
-    help="Build with enterprise support",
-)
-
-
-@depends("--enable-enterprise")
-def enable_enterprise(value):
-    if value:
-        return True
-
-
-set_config("MOZ_ENTERPRISE", enable_enterprise)
-set_define("MOZ_ENTERPRISE", enable_enterprise)
-imply_option("--with-app-basename", "FirefoxEnterprise", when="--enable-enterprise")
-imply_option("--with-app-name", "firefox", when="--enable-enterprise")
-imply_option(
-    "--with-branding", "browser/branding/enterprise", when="--enable-enterprise"
-)
-# Clear the default value to avoid mozilla.com url compiled into product
-imply_option("--with-crashreporter-url", "", when="--enable-enterprise")
-
-# Set UA name to "Firefox" for enterprise builds
-imply_option("MOZ_APP_UA_NAME", "Firefox", when="--enable-enterprise")
-
-
 with only_when(target_has_linux_kernel & compile_environment):
     option(env="MOZ_NO_PIE_COMPAT", help="Enable non-PIE wrapper")
 
@@ -79,3 +52,16 @@ def requires_stub_installer(
 imply_option("MOZ_STUB_INSTALLER", True, when=requires_stub_installer)
 
 include("../toolkit/moz.configure")
+
+@depends("--enable-enterprise", "--enable-project")
+def firefox_enterprise(enterprise, project):
+    return enterprise and project[0] == "browser"
+
+
+imply_option("--with-app-basename", "FirefoxEnterprise", when=firefox_enterprise)
+imply_option("--with-app-name", "firefox", when=firefox_enterprise)
+imply_option(
+    "--with-branding", "browser/branding/enterprise", when=firefox_enterprise
+)
+
+imply_option("MOZ_APP_UA_NAME", "Firefox", when=firefox_enterprise)

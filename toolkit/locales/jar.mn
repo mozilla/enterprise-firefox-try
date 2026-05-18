@@ -58,3 +58,6 @@
   locale/@AB_CD@/autoconfig/autoconfig.properties   (%chrome/autoconfig/autoconfig.properties)
 % locale places @AB_CD@ %locale/@AB_CD@/places/
   locale/@AB_CD@/places/places.properties                 (%chrome/places/places.properties)
+#ifdef MOZ_ENTERPRISE
+  locale/toolkit/enterprise.properties       (%chrome/enterprise.properties)
+#endif

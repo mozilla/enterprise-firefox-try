@@ -36,4 +36,3 @@
 % locale browser-region @AB_CD@ %locale/browser-region/
 # the following files are browser-specific overrides
     locale/browser/appstrings.properties       (%chrome/overrides/appstrings.properties)
-    locale/browser/enterprise.properties       (%chrome/overrides/enterprise.properties)

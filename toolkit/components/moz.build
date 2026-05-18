@@ -154,6 +154,9 @@ if CONFIG["MOZ_UNIFFI_FIXTURES"]:
 if CONFIG["NIGHTLY_BUILD"]:
     DIRS += ["aboutinference"]
 
+if CONFIG["MOZ_ENTERPRISE"]:
+    DIRS += ["felt", "enterprise"]
+
 UNIFIED_SOURCES += [
     "/toolkit/components/antitracking/ContentBlockingAllowList.cpp",
 ]

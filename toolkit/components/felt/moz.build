@@ -7,7 +7,12 @@
 JAR_MANIFESTS += ["jar.mn"]
 
 EXTRA_JS_MODULES += [
+    "Felt.sys.mjs",
     "FeltStorage.sys.mjs",
+]
+
+XPCOM_MANIFESTS += [
+    "components.conf",
 ]
 
 DIRS += ["rust"]
