@@ -1645,7 +1645,7 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
       if (!_stricmp(flag, approvedArg)) {
         approved = true;
 
-        if (j == profileArgIndex) {
+        if (i == profileArgIndex) {
           *explicitProfile = true;
         }
         break;
