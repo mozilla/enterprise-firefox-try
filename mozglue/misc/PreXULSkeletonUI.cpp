@@ -1633,6 +1633,7 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
 #endif
 
     bool approved = false;
+    int j = 0;
     for (const char* approvedArg : approvedArguments) {
       // We do a case-insensitive compare here with _stricmp. Even though some
       // of these arguments are *not* read as case-insensitive, others *are*.
@@ -1644,16 +1645,27 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
       if (!_stricmp(flag, approvedArg)) {
         approved = true;
 
-        if (i == profileArgIndex) {
+        if (j == profileArgIndex) {
           *explicitProfile = true;
         }
         break;
       }
+      ++j;
     }
 
     if (!approved) {
       return Err(PreXULSkeletonUIError::Cmdline);
     }
+  }
+
+#if defined(MOZ_ENTERPRISE)
+  // If there is MOZ_BYPASS_FELT environment variable, then likely tests are
+  // executing and thus no `-felt <socket>` argument can be found to verify if
+  // this is running a browser. By essence of that variable it is known the
+  // browser is running and not Felt UI so explicitely use the PreSkeletonUI
+  // in this case.
+  if (EnvHasValue("MOZ_BYPASS_FELT")) {
+    return Ok();
   }
 
   // When starting FELT, disable the PreXULSkeletonUI. Checking with
@@ -1662,7 +1674,6 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
   // existence of "-felt" as is_felt_browser() would be doing, so
   // PreXULSkeletonUI is kept for normal browser, just disabled for FELT
   // window.
-#if defined(MOZ_ENTERPRISE)
   if (!hasFeltFlag) {
     return Err(PreXULSkeletonUIError::Cmdline);
   }
@@ -2116,6 +2127,9 @@ HWND ConsumePreXULSkeletonUIHandle() {
   ::CloseHandle(sPreXULSKeletonUIAnimationThread);
   sPreXULSKeletonUIAnimationThread = nullptr;
   HWND result = sPreXULSkeletonUIWindow;
+  if (sPreXULSkeletonUIWindow) {
+    sPreXULSkeletonUIShown = true;
+  }
   sPreXULSkeletonUIWindow = nullptr;
   free(sPixelBuffer);
   sPixelBuffer = nullptr;
