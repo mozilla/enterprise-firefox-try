@@ -1607,7 +1607,7 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
 #endif
 
 #if defined(MOZ_ENTERPRISE)
-  bool hasFeltFlag = false;
+  // bool hasFeltFlag = false;
 #endif
   for (int i = 1; i < argc; ++i) {
     const char* flag = NormalizeFlag(argv[i]);
@@ -1627,9 +1627,9 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
     }
 
 #if defined(MOZ_ENTERPRISE)
-    if (!_stricmp(flag, "felt")) {
-      hasFeltFlag = true;
-    }
+    // if (!_stricmp(flag, "felt")) {
+    //   hasFeltFlag = true;
+    // }
 #endif
 
     bool approved = false;
@@ -1674,9 +1674,9 @@ static Result<Ok, PreXULSkeletonUIError> ValidateCmdlineArguments(
   // existence of "-felt" as is_felt_browser() would be doing, so
   // PreXULSkeletonUI is kept for normal browser, just disabled for FELT
   // window.
-  if (!hasFeltFlag) {
-    return Err(PreXULSkeletonUIError::Cmdline);
-  }
+  // if (!hasFeltFlag) {
+  //   return Err(PreXULSkeletonUIError::Cmdline);
+  // }
 #endif
 
   return Ok();
