@@ -108,6 +108,13 @@ BOOL sTouchBarIsInitialized = NO;
 #include <mach/mach_time.h>
 #include <objc/runtime.h>
 #include <objc/message.h>
+#include <dlfcn.h>
+
+// Reproducer: flip _implicitlyAllowsFullScreenPrimary return value
+// during displayIfNeeded to simulate the Suppress/Restore asymmetry crash.
+static bool sReproducerArmed = false;
+static bool sReproducerActive = false;
+static int sReproducerImplicitCallCount = 0;
 
 static void LogEffectiveCB(NSWindow* window, const char* label) {
   NSWindowCollectionBehavior cb = [window collectionBehavior];
@@ -287,6 +294,18 @@ static BOOL SwizzledImplicitlyAllowsFSPrimary(id self, SEL _cmd) {
           self, [[(NSWindow*)self className] UTF8String], (unsigned long)cb, result, isSheet, parentWin, (long)level, wasModal, isTitled,
           isResizable, screen, frame.size.width, frame.size.height, aux105bits,
           aux102bits);
+
+  // Reproducer: during displayIfNeeded, flip the result to simulate the crash.
+  // First call returns YES (normal), second call returns NO (simulates
+  // _NXIsBackgroundOnly flip from Suppress/Restore asymmetry).
+  if (sReproducerActive && result) {
+    int count = sReproducerImplicitCallCount++;
+    if (count > 0) {
+      fprintf(stderr, "FELT_REPRODUCER _implicitlyAllowsFullScreenPrimary FLIPPED to NO (call #%d)\n", count);
+      return NO;
+    }
+    fprintf(stderr, "FELT_REPRODUCER _implicitlyAllowsFullScreenPrimary keeping YES (call #%d)\n", count);
+  }
   return result;
 }
 
@@ -5426,17 +5445,11 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect,
     // NeedsRecreateToReshow() for multi-display with multi-space workaround.
     mWindow.collectionBehavior =
         mWindow.collectionBehavior |
-        NSWindowCollectionBehaviorMoveToActiveSpace |
-        NSWindowCollectionBehaviorFullScreenAuxiliary |
-        NSWindowCollectionBehaviorFullScreenDisallowsTiling;
+        NSWindowCollectionBehaviorMoveToActiveSpace;
   } else {
     // Non-popup windows are always opaque.
     VTRecord(VT_SET_OPAQUE);
     mWindow.opaque = YES;
-    mWindow.collectionBehavior =
-        mWindow.collectionBehavior |
-        NSWindowCollectionBehaviorFullScreenPrimary |
-        NSWindowCollectionBehaviorFullScreenAllowsTiling;
   }
 
   if (mAlwaysOnTop || mIsAlert) {
@@ -8382,7 +8395,25 @@ static const NSString* kStateCollectionBehavior = @"collectionBehavior";
   LogEffectiveCB(self, "displayIfNeeded.enter");
   VTSwizzleTitlebar(self);
   VTSnapshotTitlebar(self);
+
+  // Reproducer: on first displayIfNeeded, activate the flip.
+  // This simulates _implicitlyAllowsFullScreenPrimary returning YES then NO
+  // during the vibrancy enumeration walk, which triggers _updateButtons
+  // and mutates the collection mid-enumeration.
+  if (!sReproducerArmed) {
+    sReproducerArmed = true;
+    sReproducerActive = true;
+    sReproducerImplicitCallCount = 0;
+    fprintf(stderr, "FELT_REPRODUCER activated on first displayIfNeeded window=%p\n", self);
+  }
+
   [super displayIfNeeded];
+
+  if (sReproducerActive) {
+    sReproducerActive = false;
+    fprintf(stderr, "FELT_REPRODUCER deactivated after displayIfNeeded (calls=%d)\n",
+            sReproducerImplicitCallCount);
+  }
   VTRecord(VT_DISPLAY_IF_NEEDED_EXIT);
 }
 
