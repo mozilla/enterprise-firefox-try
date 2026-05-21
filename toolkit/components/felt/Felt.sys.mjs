@@ -57,48 +57,6 @@ const FeltCls = class {
     }
   }
 
-  async registerActors() {
-    const { ConsoleClient } = ChromeUtils.importESModule(
-      "resource://gre/modules/enterprise/ConsoleClient.sys.mjs"
-    );
-    const matches = [await ConsoleClient.ssoCallbackUriMatchPattern];
-    ChromeUtils.registerWindowActor(this.FELT_WINDOW_ACTOR, {
-      parent: {
-        esModuleURI: "chrome://felt/content/FeltWindowParent.sys.mjs",
-      },
-      child: {
-        esModuleURI: "chrome://felt/content/FeltWindowChild.sys.mjs",
-        events: {
-          DOMContentLoaded: {},
-          load: {},
-        },
-      },
-      allFrames: true,
-      matches,
-    });
-
-    // We use a much simpler version of the context menu so replace the default actor with our own.
-    ChromeUtils.unregisterWindowActor("ContextMenu");
-    ChromeUtils.registerWindowActor("ContextMenu", {
-      parent: {
-        esModuleURI: "chrome://felt/content/ContextMenuParent.sys.mjs",
-      },
-      child: {
-        esModuleURI: "chrome://felt/content/ContextMenuChild.sys.mjs",
-        events: {
-          contextmenu: { mozSystemGroup: true },
-        },
-      },
-      allFrames: true,
-    });
-
-    ChromeUtils.registerProcessActor(this.FELT_PROCESS_ACTOR, {
-      parent: {
-        esModuleURI: "chrome://felt/content/FeltProcessParent.sys.mjs",
-      },
-    });
-  }
-
   urlObserver = {
     _sessionStoreRestored: false,
 
@@ -252,7 +210,6 @@ const FeltCls = class {
       // their main thread demoted to low-priority QoS, which can starve the
       // SSO callback's DOMContentLoaded event and prevent token extraction.
       Services.prefs.setBoolPref("threads.use_low_power.enabled", false);
-      await this.registerActors();
       await lazy.FeltStorage.init();
       this.showWindow();
       this.addFeltMessageListeners();

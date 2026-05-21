@@ -811,6 +811,62 @@ if (AppConstants.platform != "android") {
   };
 }
 
+if (AppConstants.MOZ_ENTERPRISE && Services.felt?.isFeltUI()) {
+  JSWINDOWACTORS.FeltWindow = {
+    parent: {
+      esModuleURI: "chrome://felt/content/FeltWindowParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "chrome://felt/content/FeltWindowChild.sys.mjs",
+      events: {
+        DOMContentLoaded: {},
+        load: {},
+      },
+    },
+    allFrames: true,
+    matches: [],
+    onAddActor(register, unregister) {
+      let isRegistered = false;
+
+      const maybeRegister = async () => {
+        const { ConsoleClient } = ChromeUtils.importESModule(
+          "resource://gre/modules/enterprise/ConsoleClient.sys.mjs"
+        );
+        this.matches = [await ConsoleClient.ssoCallbackUriMatchPattern];
+
+        if (!isRegistered) {
+          register();
+          isRegistered = true;
+        } else {
+          unregister();
+          isRegistered = false;
+        }
+      };
+
+      maybeRegister();
+    },
+  };
+
+  JSWINDOWACTORS.ContextMenu = {
+    parent: {
+      esModuleURI: "chrome://felt/content/ContextMenuParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "chrome://felt/content/ContextMenuChild.sys.mjs",
+      events: {
+        contextmenu: { mozSystemGroup: true },
+      },
+    },
+    allFrames: true,
+  };
+
+  JSPROCESSACTORS.FeltProcess = {
+    parent: {
+      esModuleURI: "chrome://felt/content/FeltProcessParent.sys.mjs",
+    },
+  };
+}
+
 export var ActorManagerParent = {
   _addActors(actors, kind) {
     let register, unregister;
