@@ -185,6 +185,9 @@ export const Updates = {
           );
         }
 
+        lazy.log.warn(
+          `FeltUpdates: appUpdaterCallback: STATUS.DOWNLOADING: downloadedBytes:${downloadedBytes} totalBytes:${totalBytes} => percent:${percent}`
+        );
         this._document.querySelector("#felt-updates-progress").value = percent;
         break;
       }
