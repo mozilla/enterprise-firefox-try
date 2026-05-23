@@ -4,8 +4,6 @@ subsuite = "enterprise"
 
 ["test_felt_browser_about_config_blocked.py"]
 
-["test_felt_browser_access_connector.py"]
-
 ["test_felt_browser_close_warning.py"]
 
 ["test_felt_browser_compulsory_restart.py"]
@@ -13,10 +11,6 @@ subsuite = "enterprise"
 ["test_felt_browser_console_error.py"]
 
 ["test_felt_browser_context_menu.py"]
-
-["test_felt_browser_crash_abort_restart.py"]
-
-["test_felt_browser_crash_restart.py"]
 
 ["test_felt_browser_enterprise_toolbar_button.py"]
 
