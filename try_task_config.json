@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"marionette-enterprise\": [\"testing/enterprise/manifest.toml\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "priority": "lowest",
+            "rebuild": 2500,
+            "tasks": [
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise"
+            ]
+        }
+    },
+    "version": 2
+}
