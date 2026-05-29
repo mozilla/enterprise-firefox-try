@@ -1,0 +1,15 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"browser/base/content/test/performance\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-windows11-64-25h2/opt-mochitest-browser-chrome-*"
+            ]
+        }
+    },
+    "version": 2
+}
