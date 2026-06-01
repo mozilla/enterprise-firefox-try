@@ -43,6 +43,10 @@ const FeltCls = class {
 
   constructor() {
     lazy.log.debug(`constructor()`);
+
+    // Felt UI XPCOM is triggered by app-startup, make sure to block closing
+    // until startup has been executed.
+    Services.startup.enterLastWindowClosingSurvivalArea();
   }
 
   // nsIObserver
@@ -226,6 +230,10 @@ const FeltCls = class {
       } catch (e) {
         lazy.log.error("FeltExtension: Failed to send extension ready:", e);
       }
+
+      // Now either the FeltUI is showing and its handler does this, or the main
+      // application is showing and this can now be relaxed.
+      Services.startup.exitLastWindowClosingSurvivalArea();
     }
 
     this._ready = true;
