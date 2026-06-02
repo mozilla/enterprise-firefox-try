@@ -5,7 +5,4 @@
 felt.jar:
 % content felt %felt/content/
     felt/Felt.sys.mjs (Felt.sys.mjs)
-    felt/background.js (background.js)
     felt/content/ (content/*)
-    felt/manifest.json (manifest.json)
-    felt/schema.json (schema.json)

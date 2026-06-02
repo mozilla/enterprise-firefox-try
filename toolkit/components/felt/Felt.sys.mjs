@@ -2,52 +2,61 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-"use strict";
-
-/* globals ExtensionAPI, Services, XPCOMUtils */
-
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   UpdateListener: "resource://gre/modules/UpdateListener.sys.mjs",
-  FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs",
-  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   FeltStorage: "resource://gre/modules/FeltStorage.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
-  isBlockingShutdown: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
-  isBuildAppBrowser: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  isBlockingShutdown:
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  isBuildAppBrowser:
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   shouldNotCloseWindow:
     "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   createEnterpriseLogger:
     "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   WebAuthnPromptHelper:
     "moz-src:///toolkit/modules/WebAuthnPromptHelper.sys.mjs",
+
+  // These two should be it only in browser app, hitting elsewhere should fail,
+  // be diagnosed, and calling code guarded appropriately with isBuildAppBrowser()
+  // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+  FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs",
+  // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "log", () => {
   return lazy.createEnterpriseLogger("Felt");
 });
 
-this.felt = class extends ExtensionAPI {
-  FELT_PROCESS_ACTOR = "FeltProcess";
-  FELT_WINDOW_ACTOR = "FeltWindow";
+const FeltCls = class {
+  // XPCOM identity
+  static classID = Components.ID("{4a73d4d4-09fd-4f68-8c31-a6b39bfb36b7}");
+  static contractID = "@mozilla.org/felt;1";
+  static classDescription = "Felt";
 
-  registerChrome() {
-    let aomStartup = Cc[
-      "@mozilla.org/addons/addon-manager-startup;1"
-    ].getService(Ci.amIAddonManagerStartup);
+  // QI — implement nsISupports + nsIObserver
+  QueryInterface = ChromeUtils.generateQI(["nsIObserver"]);
 
-    const manifestURI = Services.io.newURI(
-      "manifest.json",
-      null,
-      this.extension.rootURI
-    );
-
-    this.chromeHandle = aomStartup.registerChrome(manifestURI, [
-      ["content", "felt", "content/"],
-    ]);
+  constructor() {
+    lazy.log.debug(`constructor()`);
   }
+
+  // nsIObserver
+  observe(_subject, topic, _data) {
+    switch (topic) {
+      case "app-startup":
+        Services.obs.addObserver(this, "profile-after-change");
+        break;
+      case "profile-after-change":
+        this.#init().catch(e => lazy.log.error("Felt init failed", e));
+        break;
+    }
+  }
+
   async registerActors() {
     const { ConsoleClient } = ChromeUtils.importESModule(
       "resource://gre/modules/enterprise/ConsoleClient.sys.mjs"
@@ -232,13 +241,17 @@ this.felt = class extends ExtensionAPI {
     );
   }
 
-  async onStartup() {
+  async #init() {
+    if (this._ready) {
+      lazy.log.info(`Felt is already ready.`);
+      return;
+    }
+
     if (Services.felt.isFeltUI()) {
       // Disable QoS thread priority demotion: background content processes get
       // their main thread demoted to low-priority QoS, which can starve the
       // SSO callback's DOMContentLoaded event and prevent token extraction.
       Services.prefs.setBoolPref("threads.use_low_power.enabled", false);
-      this.registerChrome();
       await this.registerActors();
       await lazy.FeltStorage.init();
       this.showWindow();
@@ -257,6 +270,8 @@ this.felt = class extends ExtensionAPI {
         lazy.log.error("FeltExtension: Failed to send extension ready:", e);
       }
     }
+
+    this._ready = true;
   }
 
   receiveMessage(message) {
@@ -439,3 +454,5 @@ this.felt = class extends ExtensionAPI {
     }
   }
 };
+
+export { FeltCls };
