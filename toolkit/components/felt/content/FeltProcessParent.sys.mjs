@@ -8,8 +8,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
   Subprocess: "resource://gre/modules/Subprocess.sys.mjs",
   ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
-  CONSOLE_ADDRESS_PREF: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
-  isBuildAppBrowser: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  CONSOLE_ADDRESS_PREF:
+    "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
+  isBuildAppBrowser:
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   isTesting: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   createEnterpriseLogger:
     "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
@@ -17,7 +19,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   FeltStorage: "resource://gre/modules/FeltStorage.sys.mjs",
   gFeltPendingURLs: "resource:///modules/FeltURLHandler.sys.mjs",
   resetFeltFirefoxWindowReady: "resource:///modules/FeltURLHandler.sys.mjs",
-  FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs", 
+  FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "log", () => {
@@ -53,7 +55,8 @@ let gFeltProcessParentInstance = null;
 function extractURLPayload(payload) {
   return {
     url: payload.url ?? "",
-    disposition: payload.disposition ?? lazy.FELT_OPEN_WINDOW_DISPOSITION.DEFAULT,
+    disposition:
+      payload.disposition ?? lazy.FELT_OPEN_WINDOW_DISPOSITION.DEFAULT,
   };
 }
 

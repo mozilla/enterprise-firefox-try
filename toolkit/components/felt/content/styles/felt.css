@@ -29,6 +29,7 @@ body {
 
 .felt-logo {
   display: flex;
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   background: var(--felt-logo-background-gradient);
   overflow: hidden;
   flex-direction: column;

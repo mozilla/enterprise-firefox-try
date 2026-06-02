@@ -6,7 +6,8 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
-  EnterpriseCommon: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  EnterpriseCommon:
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   createEnterpriseLogger:
     "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
 });
