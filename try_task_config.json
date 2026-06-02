@@ -1,0 +1,31 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "enterprise-repack-hosted_pilotStage_en-US-hosted_pilotStage_en-US-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-hosted_pilotStage_en-US-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-hosted_pilotStage_fr-hosted_pilotStage_fr-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-hosted_pilotStage_fr-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_en-US-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_en-US-moz_stageGCP_en-US-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_fr-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_fr-moz_stageGCP_fr-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-macosx64-enterprise-shippable/opt",
+                "repackage-l10n-fr-macosx64-enterprise-shippable/opt",
+                "repackage-macosx64-enterprise-shippable/opt"
+            ]
+        }
+    },
+    "version": 2
+}
