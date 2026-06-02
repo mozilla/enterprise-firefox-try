@@ -8,7 +8,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   createEnterpriseLogger:
-    "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   WindowsRegistry: "resource://gre/modules/WindowsRegistry.sys.mjs",
 });
 

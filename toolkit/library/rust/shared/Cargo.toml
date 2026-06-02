@@ -46,7 +46,7 @@ bitsdownload = { path = "../../../components/bitsdownload", optional = true }
 storage = { path = "../../../../storage/rust" }
 bookmark_sync = { path = "../../../components/places/bookmark_sync", optional = true }
 buildid_reader_ffi = { path = "../../buildid_reader/ffi" }
-felt = { path = "../../../../browser/extensions/felt/rust", optional = true }
+felt = { path = "../../../../toolkit/components/felt/rust", optional = true }
 chardetng_c = "1.0.0"
 audio_thread_priority = { version = "0.35", default-features = false }
 mdns_service = { path="../../../../dom/media/webrtc/transport/mdns_service", optional = true }

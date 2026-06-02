@@ -5,15 +5,19 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
   Subprocess: "resource://gre/modules/Subprocess.sys.mjs",
-  ConsoleClient: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
-  CONSOLE_ADDRESS_PREF: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
-  isBuildAppBrowser: "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
-  isTesting: "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+  ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
+  CONSOLE_ADDRESS_PREF: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
+  isBuildAppBrowser: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  isTesting: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   createEnterpriseLogger:
-    "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   FeltCommon: "chrome://felt/content/FeltCommon.sys.mjs",
-  FeltStorage: "resource:///modules/FeltStorage.sys.mjs",
+  FeltStorage: "resource://gre/modules/FeltStorage.sys.mjs",
+  gFeltPendingURLs: "resource:///modules/FeltURLHandler.sys.mjs",
+  resetFeltFirefoxWindowReady: "resource:///modules/FeltURLHandler.sys.mjs",
+  FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs", 
 });
 
 ChromeUtils.defineLazyGetter(lazy, "log", () => {
@@ -26,13 +30,6 @@ const PROCESS_START_REASON = {
   CRASH: "crash",
 };
 
-// Import the shared pending URLs queue
-import {
-  gFeltPendingURLs,
-  resetFeltFirefoxWindowReady,
-  FELT_OPEN_WINDOW_DISPOSITION,
-} from "resource:///modules/FeltURLHandler.sys.mjs";
-
 export function queueURL(payload) {
   // If Firefox AND extension are both ready, forward immediately
   if (
@@ -44,7 +41,7 @@ export function queueURL(payload) {
     Services.felt.makeBackgroundProcess(true);
   } else {
     // Queue at module level until ready
-    gFeltPendingURLs.push(payload).catch(err => {
+    lazy.gFeltPendingURLs.push(payload).catch(err => {
       lazy.log.error("Failed to persist pending Felt URL", err);
     });
     Services.cpmm.sendAsyncMessage("FeltParent:ForceFeltFocus", {});
@@ -56,7 +53,7 @@ let gFeltProcessParentInstance = null;
 function extractURLPayload(payload) {
   return {
     url: payload.url ?? "",
-    disposition: payload.disposition ?? FELT_OPEN_WINDOW_DISPOSITION.DEFAULT,
+    disposition: payload.disposition ?? lazy.FELT_OPEN_WINDOW_DISPOSITION.DEFAULT,
   };
 }
 
@@ -453,7 +450,7 @@ export class FeltProcessParent extends JSProcessActorParent {
     if (lazy.isBuildAppBrowser()) {
       // This also part of FeltURLHandler that cannot be loaded in non browser
       // applications.
-      resetFeltFirefoxWindowReady();
+      lazy.resetFeltFirefoxWindowReady();
     }
     gFeltFirefoxReadyNotified = false;
 
@@ -488,8 +485,8 @@ export class FeltProcessParent extends JSProcessActorParent {
         Services.felt.sendReady();
         this.firefoxReady = true;
 
-        // Try to forward pending URLs now (will only forward if extension is also ready)
         if (lazy.isBuildAppBrowser()) {
+          // Try to forward pending URLs now (will only forward if extension is also ready)
           await this.forwardPendingURLs();
         }
         notifyFirefoxReady();
@@ -700,9 +697,9 @@ export class FeltProcessParent extends JSProcessActorParent {
    * Forward all pending URLs to Firefox
    */
   async forwardPendingURLs() {
-    await gFeltPendingURLs.init();
+    await lazy.gFeltPendingURLs.init();
 
-    if (gFeltPendingURLs.length === 0) {
+    if (lazy.gFeltPendingURLs.length === 0) {
       return;
     }
 
@@ -722,7 +719,7 @@ export class FeltProcessParent extends JSProcessActorParent {
     }
 
     // Forward all URLs directly via IPC (both Firefox and extension are ready)
-    for (const payload of gFeltPendingURLs) {
+    for (const payload of lazy.gFeltPendingURLs) {
       try {
         let { url, disposition } = extractURLPayload(payload);
         Services.felt.openURL(url, disposition);
@@ -732,7 +729,7 @@ export class FeltProcessParent extends JSProcessActorParent {
     }
 
     // Clear the queue
-    gFeltPendingURLs.clear();
+    lazy.gFeltPendingURLs.clear();
   }
 
   /**

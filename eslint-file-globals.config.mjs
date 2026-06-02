@@ -493,7 +493,6 @@ export default [
       "browser/components/preferences/tests/browser_contentblocking_categories.js",
       "browser/components/preferences/tests/browser_contentblocking.js",
       "browser/components/preferences/tests/browser_extension_controlled.js",
-      "browser/extensions/felt/background.js",
       "browser/extensions/formautofill/background.js",
       "browser/extensions/newtab/webext-glue/background.js",
       "devtools/client/responsive/test/browser/browser_ext_messaging.js",

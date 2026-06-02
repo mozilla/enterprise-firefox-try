@@ -43,7 +43,6 @@ export default [
   ...(await convertConfigurationFile("accessible/tests/browser")),
   ...(await convertConfigurationFile("accessible/tests/mochitest")),
   ...(await convertConfigurationFile("browser")),
-  ...(await convertConfigurationFile("browser/extensions/felt")),
   ...(await convertConfigurationFile(
     "browser/base/content/test/webextensions"
   )),
@@ -170,6 +169,7 @@ export default [
   ...(await convertConfigurationFile(
     "toolkit/components/extensions/test/xpcshell/webidl-api"
   )),
+  ...(await convertConfigurationFile("toolkit/components/felt")),
   ...(await convertConfigurationFile("toolkit/components/narrate")),
   ...(await convertConfigurationFile("toolkit/components/normandy/test")),
   ...(await convertConfigurationFile(

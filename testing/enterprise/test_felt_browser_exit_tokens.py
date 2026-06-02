@@ -47,7 +47,7 @@ class BrowserExitTokens(FeltTests):
             """
             const callback = arguments[arguments.length - 1];
             const { ConsoleClient } = ChromeUtils.importESModule(
-                "resource:///modules/enterprise/ConsoleClient.sys.mjs"
+                "resource://gre/modules/enterprise/ConsoleClient.sys.mjs"
             );
             ConsoleClient._refreshSession()
                     .then(callback)

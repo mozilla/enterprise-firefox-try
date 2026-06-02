@@ -277,7 +277,7 @@ enterprise.console.address=http://localhost:{self.console_port}
             user = driver.execute_async_script(
                 """
                 const callback = arguments[arguments.length - 1];
-                const { ConsoleClient } = ChromeUtils.importESModule("resource:///modules/enterprise/ConsoleClient.sys.mjs");
+                const { ConsoleClient } = ChromeUtils.importESModule("resource://gre/modules/enterprise/ConsoleClient.sys.mjs");
                 ConsoleClient.getLoggedInUserInfo()
                     .then(callback)
                     .catch(err => callback({_error: String(err)}))

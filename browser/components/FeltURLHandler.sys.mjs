@@ -9,7 +9,7 @@ ChromeUtils.defineLazyGetter(
   "feltL10n",
   () =>
     new Localization(
-      ["browser/enterprise/felt.ftl", "branding/brand.ftl"],
+      ["toolkit/enterprise/felt.ftl", "branding/brand.ftl"],
       true
     )
 );

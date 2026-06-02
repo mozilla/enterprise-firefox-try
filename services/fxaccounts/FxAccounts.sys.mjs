@@ -41,7 +41,7 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   CryptoUtils: "moz-src:///services/crypto/modules/utils.sys.mjs",
   EnterpriseStorageManager:
-    "resource:///modules/enterprise/EnterpriseAccountsStorage.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseAccountsStorage.sys.mjs",
   FxAccountsClient: "resource://gre/modules/FxAccountsClient.sys.mjs",
   FxAccountsCommands: "resource://gre/modules/FxAccountsCommands.sys.mjs",
   FxAccountsConfig: "resource://gre/modules/FxAccountsConfig.sys.mjs",

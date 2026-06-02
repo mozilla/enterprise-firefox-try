@@ -8,13 +8,13 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
-  ConsoleClient: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
+  ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
   FeltCommon: "chrome://felt/content/FeltCommon.sys.mjs",
-  FeltStorage: "resource:///modules/FeltStorage.sys.mjs",
+  FeltStorage: "resource://gre/modules/FeltStorage.sys.mjs",
   PopupNotifications: "resource://gre/modules/PopupNotifications.sys.mjs",
-  Updates: "resource:///modules/enterprise/Updates.sys.mjs",
+  Updates: "resource://gre/modules/enterprise/Updates.sys.mjs",
   createEnterpriseLogger:
-    "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "log", () => {

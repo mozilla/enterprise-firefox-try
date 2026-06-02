@@ -131,7 +131,7 @@ ChromeUtils.defineLazyGetter(this, "fxAccounts", () => {
 if (AppConstants.MOZ_ENTERPRISE) {
   ChromeUtils.defineESModuleGetters(this, {
     EnterpriseHandler:
-      "resource:///modules/enterprise/EnterpriseHandler.sys.mjs",
+      "resource://gre/modules/enterprise/EnterpriseHandler.sys.mjs",
   });
 }
 

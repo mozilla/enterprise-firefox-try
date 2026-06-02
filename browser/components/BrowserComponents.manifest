@@ -26,7 +26,7 @@ category browser-before-ui-startup resource:///modules/AboutHomeStartupCache.sys
 category browser-before-ui-startup resource:///modules/AccountsGlue.sys.mjs AccountsGlue.init
 category browser-before-ui-startup moz-src:///browser/modules/ObserverForwarder.sys.mjs ObserverForwarder.init
 #ifdef MOZ_ENTERPRISE
-category browser-before-ui-startup resource:///modules/enterprise/EnterpriseEndpoints.sys.mjs EnterpriseEndpoints.init
+category browser-before-ui-startup resource://gre/modules/enterprise/EnterpriseEndpoints.sys.mjs EnterpriseEndpoints.init
 #endif
 
 # Browser window lifecycle consumers
@@ -46,7 +46,7 @@ category browser-window-domcontentloaded moz-src:///browser/components/customiza
 category browser-window-domcontentloaded chrome://browser/content/browser-addons.js gUnifiedExtensions.init
 category browser-window-domcontentloaded chrome://browser/content/browser.js FirefoxViewHandler.init
 #ifdef MOZ_ENTERPRISE
-category browser-window-domcontentloaded resource:///modules/enterprise/EnterpriseHandler.sys.mjs EnterpriseHandler.init
+category browser-window-domcontentloaded resource://gre/modules/enterprise/EnterpriseHandler.sys.mjs EnterpriseHandler.init
 #endif
 
 category browser-window-load-before-sessionstore-init chrome://browser/content/browser-captivePortal.js CaptivePortalWatcher.init
@@ -179,7 +179,7 @@ category browser-quit-application-granted moz-src:///browser/components/urlbar/U
 category browser-quit-application-granted moz-src:///browser/components/ipprotection/IPProtectionHelpers.sys.mjs IPProtectionActivator.uninit
 
 #ifdef MOZ_ENTERPRISE
-category browser-quit-application-granted resource:///modules/enterprise/EnterpriseHandler.sys.mjs EnterpriseHandler.uninit
+category browser-quit-application-granted resource://gre/modules/enterprise/EnterpriseHandler.sys.mjs EnterpriseHandler.uninit
 #endif
 
 category search-service-notification moz-src:///browser/components/search/SearchUIUtils.sys.mjs SearchUIUtils.showSearchServiceNotification

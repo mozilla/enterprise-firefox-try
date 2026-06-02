@@ -20,7 +20,7 @@
 #include "RemoteUtils.h"
 
 #if defined(MOZ_ENTERPRISE)
-#  include "mozilla/browser/extensions/felt/felt.h"
+#  include "mozilla/toolkit/components/felt/felt.h"
 #endif
 
 CFDataRef messageServerCallback(CFMessagePortRef aLocal, int32_t aMsgid,

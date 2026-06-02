@@ -225,7 +225,7 @@
 #include "DirectManipulationOwner.h"
 
 #if defined(MOZ_ENTERPRISE)
-#  include "mozilla/browser/extensions/felt/felt.h"
+#  include "mozilla/toolkit/components/felt/felt.h"
 #endif
 
 using namespace mozilla;

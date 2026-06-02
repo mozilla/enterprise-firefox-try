@@ -21,7 +21,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   BrowserUsageTelemetry: "resource:///modules/BrowserUsageTelemetry.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
-  ConsoleClient: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
+  ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
   ContentBlockingPrefs:
     "moz-src:///browser/components/protections/ContentBlockingPrefs.sys.mjs",
   ContextualIdentityService:
@@ -83,7 +83,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 if (AppConstants.MOZ_ENTERPRISE) {
   ChromeUtils.defineESModuleGetters(lazy, {
     EnterpriseHandler:
-      "resource:///modules/enterprise/EnterpriseHandler.sys.mjs",
+      "resource://gre/modules/enterprise/EnterpriseHandler.sys.mjs",
   });
 }
 

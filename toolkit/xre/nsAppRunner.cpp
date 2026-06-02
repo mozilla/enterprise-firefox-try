@@ -45,7 +45,7 @@
 #include "mozJSModuleLoader.h"
 
 #if defined(MOZ_ENTERPRISE)
-#  include "mozilla/browser/extensions/felt/felt.h"
+#  include "mozilla/toolkit/components/felt/felt.h"
 #  include "SpecialSystemDirectory.h"
 #endif
 

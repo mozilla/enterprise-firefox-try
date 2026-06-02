@@ -8,11 +8,11 @@ const FELT_REFRESH_TIMEOUT = 60000;
 
 ChromeUtils.defineESModuleGetters(lazy, {
   TelemetryEnvironment: "resource://gre/modules/TelemetryEnvironment.sys.mjs",
-  EnterpriseCommon: "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+  EnterpriseCommon: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   createEnterpriseLogger:
-    "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
-  FeltStorage: "resource:///modules/FeltStorage.sys.mjs",
-  composeOSNames: "resource:///modules/enterprise/EnterpriseOSInfo.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  FeltStorage: "resource://gre/modules/FeltStorage.sys.mjs",
+  composeOSNames: "resource://gre/modules/enterprise/EnterpriseOSInfo.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
 });

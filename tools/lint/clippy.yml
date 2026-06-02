@@ -2,7 +2,6 @@
 clippy:
     description: Lint rust
     include:
-        - browser/extensions/felt/rust/
         - browser/components/shell/rust/shell_windows/
         - build/workspace-hack/
         - browser/app/nmhproxy/
@@ -83,6 +82,7 @@ clippy:
         - toolkit/components/cascade_bloom_filter/
         - toolkit/components/content-classifier/content_classifier_engine/
         # - toolkit/components/dap/ffi/
+        - toolkit/components/felt/rust/
         - toolkit/components/gecko-trace/
         - toolkit/components/glean/
         - toolkit/components/kvstore/

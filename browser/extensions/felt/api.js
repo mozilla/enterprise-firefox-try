@@ -12,15 +12,15 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UpdateListener: "resource://gre/modules/UpdateListener.sys.mjs",
   FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
-  FeltStorage: "resource:///modules/FeltStorage.sys.mjs",
+  FeltStorage: "resource://gre/modules/FeltStorage.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
-  ConsoleClient: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
-  isBlockingShutdown: "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
-  isBuildAppBrowser: "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+  ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
+  isBlockingShutdown: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
+  isBuildAppBrowser: "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   shouldNotCloseWindow:
-    "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   createEnterpriseLogger:
-    "resource:///modules/enterprise/EnterpriseCommon.sys.mjs",
+    "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   WebAuthnPromptHelper:
     "moz-src:///toolkit/modules/WebAuthnPromptHelper.sys.mjs",
 });
@@ -50,7 +50,7 @@ this.felt = class extends ExtensionAPI {
   }
   async registerActors() {
     const { ConsoleClient } = ChromeUtils.importESModule(
-      "resource:///modules/enterprise/ConsoleClient.sys.mjs"
+      "resource://gre/modules/enterprise/ConsoleClient.sys.mjs"
     );
     const matches = [await ConsoleClient.ssoCallbackUriMatchPattern];
     ChromeUtils.registerWindowActor(this.FELT_WINDOW_ACTOR, {

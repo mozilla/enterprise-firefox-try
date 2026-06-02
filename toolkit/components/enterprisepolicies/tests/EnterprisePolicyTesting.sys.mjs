@@ -122,7 +122,7 @@ export var EnterprisePolicyTesting = {
         Services.prefs.clearUserPref("enterprise.console.address");
         Services.prefs.clearUserPref("browser.policies.live_polling.enabled");
         const { ConsoleClient } = ChromeUtils.importESModule(
-          "resource:///modules/enterprise/ConsoleClient.sys.mjs"
+          "resource://gre/modules/enterprise/ConsoleClient.sys.mjs"
         );
         ConsoleClient.clearTokenData();
       });

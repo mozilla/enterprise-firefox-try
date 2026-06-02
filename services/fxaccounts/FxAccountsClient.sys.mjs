@@ -12,7 +12,7 @@ import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 const lazy = {};
 if (AppConstants.MOZ_ENTERPRISE) {
   ChromeUtils.defineESModuleGetters(lazy, {
-    ConsoleClient: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
+    ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
   });
 }
 

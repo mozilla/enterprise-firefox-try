@@ -10,7 +10,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   JsonSchemaValidator:
     "resource://gre/modules/components-utils/JsonSchemaValidator.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
-  EnterpriseHandler: "resource:///modules/enterprise/EnterpriseHandler.sys.mjs",
+  EnterpriseHandler:
+    "resource://gre/modules/enterprise/EnterpriseHandler.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
   Policies: "resource:///modules/policies/Policies.sys.mjs",
   WindowsGPOParser: "resource://gre/modules/policies/WindowsGPOParser.sys.mjs",
@@ -19,7 +20,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   clearInterval: "resource://gre/modules/Timer.sys.mjs",
   setInterval: "resource://gre/modules/Timer.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
-  ConsoleClient: "resource:///modules/enterprise/ConsoleClient.sys.mjs",
+  ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
   SitePolicyUtils: "resource://gre/modules/SitePolicyUtils.sys.mjs",
 });
 
