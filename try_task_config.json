@@ -1,0 +1,19 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"marionette-enterprise\": [\"testing/enterprise\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise",
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise",
+                "test-linux2404-64-enterprise/opt-marionette-integration"
+            ]
+        }
+    },
+    "version": 2
+}
