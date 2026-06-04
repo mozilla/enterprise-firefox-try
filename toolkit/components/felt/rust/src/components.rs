@@ -240,6 +240,28 @@ impl FeltXPCOM {
         self.set_tokens_impl("".to_string(), "".to_string(), 0)
     }
 
+    // Send the console-supplied primarySecret to the spawned Firefox over the
+    // existing Felt IPC channel. Called from the Felt UI process right after
+    // spawning Firefox; the secret is never stored on either side -- the UI
+    // fetches it and relays it here, and the browser hands it straight to the
+    // storage encryption layer on receipt (see client.rs). No-op if invoked
+    // from the browser side. Mirrors SendAccessToken.
+    xpcom_method!(send_primary_secret => SendPrimarySecret(
+        hex: *const nsACString
+    ));
+    fn send_primary_secret(&self, hex: &nsACString) -> Result<(), nserror::nsresult> {
+        if self.is_felt_browser {
+            trace!("FeltXPCOM::SendPrimarySecret: called from the browser, no-op");
+            return Ok(());
+        }
+        let hex = hex.to_string();
+        if hex.is_empty() {
+            trace!("FeltXPCOM::SendPrimarySecret: empty primarySecret, not sending");
+            return Err(NS_ERROR_FAILURE);
+        }
+        self.send(FeltMessage::PrimarySecret(hex)).to_result()
+    }
+
     fn RefreshTokens(&self) -> nserror::nsresult {
         trace!("FeltXPCOM::RefreshTokens");
         let guard = crate::FELT_CLIENT.lock().expect("Could not get lock");
