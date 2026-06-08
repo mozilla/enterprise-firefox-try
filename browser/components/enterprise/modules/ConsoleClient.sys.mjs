@@ -681,6 +681,25 @@ export const ConsoleClient = {
       ...(os_short_name != null && { os_short_name }),
     };
 
+    // Gather Endpoint Detection and Response (EDR) agents present on the client.
+    const getPresentEDRs = () => {
+      try {
+        const checker = Cc["@mozilla.org/enterprise/process-checker;1"]
+          .getService()
+          .QueryInterface(Ci.nsIProcessChecker);
+        const allIds = [
+          "crowdstrike", "cortex-xdr", "sentinelone", "ms-defender",
+          "carbon-black", "trellix", "sophos", "cisco-secure-endpoint",
+          "eset", "cylance",
+        ];
+        return allIds
+          .filter(id => checker.isAppRunning(id))
+          .map(name => ({ name }));
+      } catch {
+        return [];
+      }
+    };
+
     const devicePosturePayload = {
       os,
       security: lazy.TelemetryEnvironment.currentEnvironment.system.sec,
@@ -691,6 +710,7 @@ export const ConsoleClient = {
       },
       secureBootEnabled:
         Services.sysinfo.getPropertyAsBool("secureBootEnabled"),
+      presentEdrs: getPresentEDRs(),
     };
     return devicePosturePayload;
   },

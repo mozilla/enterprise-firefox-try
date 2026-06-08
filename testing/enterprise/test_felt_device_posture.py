@@ -129,6 +129,16 @@ class FeltDevicePosture(FeltTests):
                     f"os_short_name '{os_short_name}' does not match expected Linux format"
                 )
 
+        assert "presentEdrs" in device_posture, "Device posture reports presentEdrs"
+        present_edrs = device_posture["presentEdrs"]
+        self._logger.info(f"EDR detection results: {present_edrs}")
+        assert isinstance(present_edrs, list), "presentEdrs is an array"
+        for edr in present_edrs:
+            assert "name" in edr, "Each EDR entry has a name field"
+        assert len(present_edrs) == 0, (
+            f"No EDRs should be detected in test environment, found: {present_edrs}"
+        )
+
         assert "mobileEquipmentId" in device_posture["network"], (
             "Device posture reports IMEI/MEID"
         )

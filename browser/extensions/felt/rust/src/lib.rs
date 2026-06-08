@@ -19,6 +19,13 @@ extern crate thin_vec;
 mod client;
 mod components;
 mod message;
+mod process_checker;
+#[cfg(target_os = "linux")]
+mod process_checker_linux;
+#[cfg(target_os = "macos")]
+mod process_checker_macos;
+#[cfg(target_os = "windows")]
+mod process_checker_win;
 mod utils;
 
 pub use utils::{CONSOLE_URL, TOKENS};
