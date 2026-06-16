@@ -88,6 +88,12 @@ access-connector-button =
 access-connector-panel-header = { -enterprise-feature-access-connector } enabled
 access-connector-panel-message = Connections to this site use additional authentication methods and are routed through a secure enterprise proxy.
 
+access-connector-button-error =
+    .aria-label = { -enterprise-feature-access-connector } unavailable
+    .tooltiptext = { -enterprise-feature-access-connector } unavailable
+access-connector-panel-header-error = { -enterprise-feature-access-connector } unavailable
+access-connector-panel-message-error = The site is configured to use additional authentication methods and is routed through a secure enterprise proxy, but the { -enterprise-feature-access-connector } is currently unavailable. Try again later or contact your administrator if the issue continues.
+
 blocked-by-policy-title-enterprise = Access to this site is restricted
 neterror-blocked-by-policy-page-title-enterprise = Access to this site is restricted
 neterror-blocked-by-policy-contact-admin = If you believe this is an error or need access for work purposes, please contact your IT administrator.

@@ -2,12 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+:root {
+  --lockdown-mode-icon: url("chrome://browser/content/enterprise/site-restrictions.svg");
+  --access-connector-icon: url("chrome://browser/content/enterprise/access-connector.svg");
+  --access-connector-error-icon: url("chrome://browser/content/enterprise/access-connector-unavailable.svg");
+}
+
 #lockdown-mode-button .urlbar-icon {
-  list-style-image: url("chrome://browser/content/enterprise/site-restrictions.svg");
+  list-style-image: var(--lockdown-mode-icon);
 }
 
 #access-connector-button .urlbar-icon {
-  list-style-image: url("chrome://browser/content/enterprise/access-connector.svg");
+  list-style-image: var(--access-connector-icon);
+}
+
+#access-connector-button[error] .urlbar-icon {
+  list-style-image: var(--access-connector-error-icon);
 }
 
 /* use theme colors for HCM */
@@ -16,6 +26,10 @@
   #access-connector-button .urlbar-icon {
     -moz-context-properties: fill;
     fill: var(--icon-color-information);
+  }
+
+  #access-connector-button[error] .urlbar-icon {
+    fill: var(--icon-color-critical);
   }
 }
 

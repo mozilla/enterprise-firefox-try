@@ -15,6 +15,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 const BUTTON_ID = "access-connector-button";
 const PANEL_ID = "panelUI-access-connector";
+const PANEL_HEADER_ID = "access-connector-panel-header";
+const PANEL_MESSAGE_ID = "access-connector-panel-message";
+
+const PROXY_ERROR_CODES = new Set([
+  "proxyConnectFailure",
+  "proxyResolveFailure",
+]);
 
 /**
  * AccessConnectorButton manages the enterprise access connector urlbar button
@@ -107,32 +114,90 @@ export class AccessConnectorButton {
    * Recomputes the button status and applies it.
    */
   #update() {
-    this.applyStatus(this.#getStatus());
+    this.#applyStatus(this.#getStatus());
   }
 
   /**
    * Checks the current proxy status for the current page.
    *
-   * @returns {boolean}
-   *  Whether the current page is protected by the access connector.
+   * @returns {{ isProtected: boolean, isError: boolean }}
    */
   #getStatus() {
     const principal = this.gBrowser?.selectedBrowser?.contentPrincipal;
-    return (
-      lazy.IPPExceptionsManager.getPrincipalRule(principal) ===
-      lazy.IPPPrincipalRules.INCLUDED
-    );
+
+    if (!lazy.IPPProxyManager.active) {
+      return { isProtected: false, isError: false };
+    }
+
+    const rule = lazy.IPPExceptionsManager.getPrincipalRule(principal);
+    if (rule === lazy.IPPPrincipalRules.INCLUDED) {
+      return { isProtected: true, isError: false };
+    }
+
+    return this.#checkForProxyError(principal);
   }
 
   /**
-   * Shows the button only when the page is protected by the access connector.
+   * Checks whether the given principal corresponds to a proxy error page.
    *
-   * @param {boolean} isProtected - Whether the current page is protected.
+   * @param {*} principal - The principal to check, expected to be the content principal of the currently selected browser tab.
+   * @returns {{ isProtected: boolean, isError: boolean }}
    */
-  applyStatus(isProtected) {
+  #checkForProxyError(principal) {
+    const principalURI = principal?.URI;
+    if (principalURI?.spec.startsWith("about:neterror")) {
+      const params = new URLSearchParams(principalURI.query);
+      const errorCode = params.get("e");
+      if (PROXY_ERROR_CODES.has(errorCode)) {
+        return { isProtected: true, isError: true };
+      }
+    }
+    return { isProtected: false, isError: false };
+  }
+
+  /**
+   * Shows the button when the page is protected by the access connector, and
+   * applies error styling when the proxy is unavailable.
+   *
+   * @param {{ isProtected: boolean, isError: boolean }} status
+   */
+  #applyStatus({ isProtected, isError }) {
     const button = this.#button;
-    if (button) {
-      button.hidden = !isProtected;
+    if (!button) {
+      return;
+    }
+
+    button.hidden = !isProtected;
+
+    if (isError) {
+      button.setAttribute("error", "true");
+    } else {
+      button.removeAttribute("error");
+    }
+
+    const doc = this.#window?.get()?.document;
+    if (doc) {
+      doc.l10n.setAttributes(
+        button,
+        isError ? "access-connector-button-error" : "access-connector-button"
+      );
+
+      const panelHeader = doc.getElementById(PANEL_HEADER_ID);
+      const panelMessage = doc.getElementById(PANEL_MESSAGE_ID);
+      if (panelHeader && panelMessage) {
+        doc.l10n.setAttributes(
+          panelHeader,
+          isError
+            ? "access-connector-panel-header-error"
+            : "access-connector-panel-header"
+        );
+        doc.l10n.setAttributes(
+          panelMessage,
+          isError
+            ? "access-connector-panel-message-error"
+            : "access-connector-panel-message"
+        );
+      }
     }
   }
 

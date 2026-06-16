@@ -53,6 +53,11 @@ class BrowserAccessConnector(FeltTests):
 
         self.run_access_connector_enabled_in_browser()
         self.run_access_connector_neterror_page()
+
+        self._child_wait.until(
+            lambda _: self.get_access_connector_icon_is_displayed(True)
+        )
+        self.check_access_connector_panel_error()
         self.run_disable_access_connector()
 
     def run_enable_access_connector(self):
@@ -120,13 +125,31 @@ class BrowserAccessConnector(FeltTests):
         rv.update(self.get_pref_value_and_locked_state("browser.ipProtection.enabled"))
         return rv
 
-    def get_access_connector_icon_is_displayed(self):
+    def get_access_connector_icon_is_displayed(self, hasError=False):
         with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
             try:
                 button = self.find_elem_child("#access-connector-button")
+                if hasError:
+                    return (
+                        button.is_displayed()
+                        and button.get_attribute("error") == "true"
+                    )
                 return button.is_displayed()
             except NoSuchElementException:
                 return False
+
+    def check_access_connector_panel_error(self):
+        with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
+            header = self.find_elem_child("#access-connector-panel-header")
+            message = self.find_elem_child("#access-connector-panel-message")
+            assert (
+                header.get_attribute("data-l10n-id")
+                == "access-connector-panel-header-error"
+            ), "Panel header should show error state"
+            assert (
+                message.get_attribute("data-l10n-id")
+                == "access-connector-panel-message-error"
+            ), "Panel message should show error state"
 
     def run_access_connector_enabled_in_browser(self):
         self._logger.info("Checking access connectors state is on")
