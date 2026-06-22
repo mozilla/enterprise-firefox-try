@@ -135,15 +135,16 @@ marionette-enterprise:
         name: marionette-enterprise
     run-on-projects: built-projects
     tier: default
+    # At-rest encryption makes every test's FELT/browser startup appreciably
+    # slower, so the whole enterprise suite needs more wall-clock. (The
+    # `.*-debug.*` key does not match the enterprise platform string
+    # `*-enterprise/debug`, so every enterprise job uses `default`.)
     max-run-time:
         by-test-platform:
             .*-debug.*: 3600
-            default: 2700
+            default: 3600
     instance-size: default
-    chunks:
-        by-test-platform:
-            .*-debug.*: 2
-            default: 1
+    chunks: 1
     mozharness:
         config:
             by-test-platform:

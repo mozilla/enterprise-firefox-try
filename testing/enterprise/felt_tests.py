@@ -1106,7 +1106,13 @@ class FeltTests(FeltTestsBase):
         self._logger.info("Performed SSO auth")
 
     def await_felt_auth_window(self):
-        self._wait.until(lambda mn: len(self._driver.chrome_window_handles) == 1)
+        # Use the long waiter: the Felt UI auth window appears only after the
+        # FELT process has finished starting up, and with at-rest encryption
+        # enabled that startup (keystore + NSS init) is appreciably slower on
+        # both opt and debug builds -- the short 10s wait times out. This is a
+        # dedicated headroom for the startup-dependent window wait, not a bump
+        # of the general element waits.
+        self._longwait.until(lambda mn: len(self._driver.chrome_window_handles) == 1)
 
     @contextmanager
     def expect_new_felt_auth_window(self):
@@ -1129,5 +1135,7 @@ class FeltTests(FeltTestsBase):
             handles = self._driver.chrome_window_handles
             return previous_handle not in handles and len(handles) == 1
 
-        self._wait.until(replaced)
+        # Long waiter: re-opening the Felt auth window goes through the slow
+        # encryption-enabled FELT startup (see await_felt_auth_window).
+        self._longwait.until(replaced)
         self.force_window()
