@@ -386,6 +386,7 @@ def _try_task_config(full_task_graph, parameters, graph_config):
 def target_tasks_try(full_task_graph, parameters, graph_config):
     try_mode = parameters["try_mode"]
     if try_mode == "try_task_config":
+        assert False
         return _try_task_config(full_task_graph, parameters, graph_config)
     # With no try mode, we schedule nothing, allowing the user to add tasks
     # later via treeherder.
