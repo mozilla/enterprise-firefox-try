@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/opt-marionette-enterprise",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64/debug-gtest-1proc",
+                "test-linux2404-64/debug-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
