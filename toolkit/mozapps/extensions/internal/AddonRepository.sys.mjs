@@ -4,6 +4,8 @@
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -11,6 +13,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AddonManagerPrivate: "resource://gre/modules/AddonManager.sys.mjs",
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.sys.mjs",
   DeferredTask: "resource://gre/modules/DeferredTask.sys.mjs",
+  getProfileRoot: "resource://gre/modules/AddonManager.sys.mjs",
   NetUtil: "resource://gre/modules/NetUtil.sys.mjs",
   ServiceRequest: "resource://gre/modules/ServiceRequest.sys.mjs",
 });
@@ -865,14 +868,36 @@ var AddonDatabase = {
   // the in-memory database
   DB: BLANK_DB(),
 
+  jsonFilePromise: null,
+
   /**
    * A getter to retrieve the path to the DB
    */
   get jsonFile() {
-    return PathUtils.join(
-      Services.dirsvc.get("ProfD", Ci.nsIFile).path,
-      FILE_DATABASE
+    console.debug(
+      `Felt: AddonRepository.sys.mjs: AddonDatabase: get jsonFile(): ADDONS`
     );
+    if (!AppConstants.MOZ_ENTERPRISE || !Services.felt?.isFeltUI()) {
+      return PathUtils.join(
+        Services.dirsvc.get("ProfD", Ci.nsIFile).path,
+        FILE_DATABASE
+      );
+    }
+
+    console.debug(
+      `Felt: AddonRepository.sys.mjs: AddonDatabase: get jsonFile(): ADDONS FELT`
+    );
+    // In Felt
+    if (!this.jsonFilePromise) {
+      this.jsonFilePromise = (async () => {
+        console.debug(
+          `Felt: AddonRepository.sys.mjs: AddonDatabase: get jsonFile(): ADDONS FELT JSONFILE`
+        );
+        return PathUtils.join(await lazy.getProfileRoot(), FILE_DATABASE);
+      })();
+    }
+
+    return this.jsonFilePromise;
   },
 
   /**
@@ -886,8 +911,19 @@ var AddonDatabase = {
         let inputDB, schema;
 
         try {
-          let data = await IOUtils.readUTF8(this.jsonFile);
+          const jsonFile = await this.jsonFile;
+          console.debug(
+            `Felt: AddonRepository.sys.mjs: AddonDatabase: openConncetion(): ADDONS`,
+            jsonFile
+          );
+
+          let data = await IOUtils.readUTF8(jsonFile);
           inputDB = JSON.parse(data);
+
+          console.debug(
+            `Felt: AddonRepository.sys.mjs: AddonDatabase: openConncetion(): ADDONS INPUTDB`,
+            inputDB
+          );
 
           if (
             !inputDB.hasOwnProperty("addons") ||
@@ -926,14 +962,29 @@ var AddonDatabase = {
 
         // Convert the addon objects as necessary
         // and store them in our in-memory copy of the database.
+        console.debug(
+          `Felt: AddonRepository.sys.mjs: AddonDatabase: openConncetion(): ADDONS ITERATE`
+        );
         for (let addon of inputDB.addons) {
+          console.debug(
+            `Felt: AddonRepository.sys.mjs: AddonDatabase: openConncetion(): ADDONS ITERATE: ADDON ${addon.id}`,
+            addon
+          );
           let id = addon.id;
 
           let entry = this._parseAddon(addon);
+          console.debug(
+            `Felt: AddonRepository.sys.mjs: AddonDatabase: openConncetion(): ADDONS ITERATE: ADDON ${id} entry`,
+            entry
+          );
           this.DB.addons.set(id, entry);
         }
 
         this._loaded = true;
+        console.debug(
+          `Felt: AddonRepository.sys.mjs: AddonDatabase: openConncetion(): ADDONS ITERATE: ADDON DB`,
+          this.DB
+        );
         return this.DB;
       })();
     }

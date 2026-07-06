@@ -27,6 +27,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   DeferredTask: "resource://gre/modules/DeferredTask.sys.mjs",
   ExtensionData: "resource://gre/modules/Extension.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
+  getProfileRoot: "resource://gre/modules/AddonManager.sys.mjs",
   ObjectUtils: "resource://gre/modules/ObjectUtils.sys.mjs",
   PermissionsUtils: "resource://gre/modules/PermissionsUtils.sys.mjs",
   QuarantinedDomains: "resource://gre/modules/ExtensionPermissions.sys.mjs",
@@ -1794,8 +1795,6 @@ function _filterDB(addonDB, aFilter) {
 export const XPIDatabase = {
   // true if the database connection has been opened
   initialized: false,
-  // The database file
-  jsonFilePath: PathUtils.join(PathUtils.profileDir, FILE_JSON_DB),
   rebuildingDatabase: false,
   syncLoadingDB: false,
   // Add-ons from the database in locations which are no longer
@@ -1817,6 +1816,28 @@ export const XPIDatabase = {
   // Saved error object if we fail to save the database
   _saveError: null,
 
+  // The database file promise
+  jsonFilePathPromise: null,
+  get jsonFilePath() {
+    console.debug(
+      `Felt: XPIDatabase.sys.mjs: XPIDatabase: get jsonFilePath(): ADDONS`
+    );
+    if (!AppConstants.MOZ_ENTERPRISE || !Services.felt?.isFeltUI()) {
+      return PathUtils.join(PathUtils.profileDir, FILE_JSON_DB);
+    }
+
+    console.debug(
+      `Felt: XPIDatabase.sys.mjs: XPIDatabase: get jsonFilePath(): ADDONS FELT`
+    );
+    if (!this.jsonFilePathPromise) {
+      this.jsonFilePathPromise = (async () => {
+        const profileRoot = await lazy.getProfileRoot();
+        return PathUtils.join(profileRoot, FILE_JSON_DB);
+      })();
+    }
+    return this.jsonFilePathPromise;
+  },
+
   // Error reported by our most recent attempt to read or write the database, if any
   get lastError() {
     if (this._loadError) {
@@ -1830,8 +1851,8 @@ export const XPIDatabase = {
 
   async _saveNow() {
     try {
-      await IOUtils.writeJSON(this.jsonFilePath, this, {
-        tmpPath: `${this.jsonFilePath}.tmp`,
+      await IOUtils.writeJSON(await this.jsonFilePath, this, {
+        tmpPath: `${await this.jsonFilePath}.tmp`,
       });
 
       if (!this._schemaVersionSet) {
@@ -2091,7 +2112,7 @@ export const XPIDatabase = {
     logger.debug(`Starting async load of XPI database ${this.jsonFilePath}`);
     this._dbPromise = (async () => {
       try {
-        let json = await IOUtils.readJSON(this.jsonFilePath);
+        let json = await IOUtils.readJSON(await this.jsonFilePath);
 
         logger.debug("Finished async read of XPI database, parsing...");
         await this.maybeIdleDispatch();
@@ -2103,7 +2124,7 @@ export const XPIDatabase = {
           }
         } else {
           logger.warn(
-            `Extensions database ${this.jsonFilePath} exists but is not readable; rebuilding`,
+            `Extensions database ${await this.jsonFilePath} exists but is not readable; rebuilding`,
             error
           );
           this._loadError = error;

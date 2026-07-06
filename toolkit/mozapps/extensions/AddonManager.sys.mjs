@@ -101,6 +101,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "resource://gre/modules/addons/siteperms-addon-utils.sys.mjs",
 });
 
+if (AppConstants.MOZ_ENTERPRISE) {
+  ChromeUtils.defineESModuleGetters(lazy, {
+    ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
+    ProfileName: "chrome://felt/content/FeltCommon.sys.mjs",
+  });
+}
+
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "WEBEXT_POSTDOWNLOAD_THIRD_PARTY",
@@ -586,6 +593,7 @@ var AddonManagerInternal = {
     }
 
     logger.debug(`Starting provider: ${providerName(aProvider)}`);
+    console.debug(`ADDONS: Starting provider: ${providerName(aProvider)}`);
     callProvider(
       aProvider,
       "startup",
@@ -604,6 +612,9 @@ var AddonManagerInternal = {
         if (this.providers.has(aProvider)) {
           this.providers.delete(aProvider);
           this.pendingProviders.add(aProvider);
+          console.debug(
+            `ADDONS: pendingProviders add: ${providerName(aProvider)}`
+          );
         }
 
         return new Promise(resolve => {
@@ -625,6 +636,7 @@ var AddonManagerInternal = {
 
     this.pendingProviders.delete(aProvider);
     this.providers.add(aProvider);
+    console.debug(`ADDONS: providers add: ${providerName(aProvider)}`);
     logger.debug(`Provider finished startup: ${providerName(aProvider)}`);
   },
 
@@ -3764,6 +3776,63 @@ var AddonManagerInternal = {
     },
   },
 };
+
+let profileRootPromise = null;
+export async function getProfileRoot() {
+  console.debug(`Felt: AddonManager.sys.mjs: getProfileRoot(): ADDONS FELT`);
+  // In Felt
+  if (!this.profileRootPromise) {
+    this.profileRootPromise = (async () => {
+      let foundProfile = null;
+      console.debug(
+        `Felt: AddonManager.sys.mjs: getProfileRoot(): ADDONS FELT USERINFO`
+      );
+      const loggedInUserInfo = await new Promise((resolve, reject) => {
+        resolve({
+          email: "user@domain.tld",
+          id: "ac4e04ef-fbca-4b2c-b568-cbc842fd5f66",
+        });
+      }); // await lazy.ConsoleClient.getLoggedInUserInfo();
+
+      console.debug(
+        `Felt: AddonManager.sys.mjs: getProfileRoot(): ADDONS FELT PROFILESERVICE`
+      );
+      let profileService = Cc[
+        "@mozilla.org/toolkit/profile-service;1"
+      ].getService(Ci.nsIToolkitProfileService);
+
+      console.debug(
+        `Felt: AddonManager.sys.mjs: getProfileRoot(): ADDONS FELT PROFILENAME`,
+        loggedInUserInfo
+      );
+      let profileName = await lazy.ProfileName(loggedInUserInfo);
+
+      console.debug(
+        `Felt: AddonManager.sys.mjs: getProfileRoot(): ADDONS FELT PROFILES....`,
+        profileName
+      );
+      for (let profile of profileService.profiles) {
+        if (profile.name === profileName) {
+          foundProfile = profile;
+          break;
+        }
+      }
+
+      console.debug(
+        `Felt: AddonManager.sys.mjs: getProfileRoot(): ADDONS FELT PROFILES.... DONE`,
+        foundProfile
+      );
+      if (!foundProfile) {
+        console.error(`No profile with name ${profileName}`);
+        throw new Error(`Profile not found`);
+      }
+
+      return foundProfile.rootDir.path;
+    })();
+  }
+
+  return this.profileRootPromise;
+}
 
 /**
  * Should not be used outside of core Mozilla code. This is a private API for

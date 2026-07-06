@@ -15,6 +15,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   createEnterpriseLogger:
     "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
   FeltCommon: "chrome://felt/content/FeltCommon.sys.mjs",
+  ProfileName: "chrome://felt/content/FeltCommon.sys.mjs",
   FeltStorage: "resource://gre/modules/enterprise/FeltStorage.sys.mjs",
 });
 
@@ -585,7 +586,7 @@ export class FeltProcessParent extends JSProcessActorParent {
         "@mozilla.org/toolkit/profile-service;1"
       ].getService(Ci.nsIToolkitProfileService);
 
-      let profileName = await this.profileName();
+      let profileName = await lazy.ProfileName(this.loggedInUserInfo);
       let foundProfile = null;
 
       for (let profile of profileService.profiles) {
@@ -808,22 +809,4 @@ export class FeltProcessParent extends JSProcessActorParent {
       })
     );
   }
-
-  async profileName() {
-    if (this.loggedInUserInfo !== null) {
-      return `${lazy.FeltCommon.ENTERPRISE_PROFILE}-${await hashTo40bits(this.loggedInUserInfo.id)}`;
-    }
-    lazy.log.error(`loggedInUserInfo not set`);
-    return lazy.FeltCommon.ENTERPRISE_PROFILE;
-  }
-}
-
-async function hashTo40bits(s) {
-  const msgUint8 = new TextEncoder().encode(s);
-  const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", msgUint8);
-  const base64 = new Uint8Array(hashBuffer).slice(0, 5).toBase64({
-    omitPadding: true,
-    alphabet: "base64url",
-  });
-  return base64;
 }

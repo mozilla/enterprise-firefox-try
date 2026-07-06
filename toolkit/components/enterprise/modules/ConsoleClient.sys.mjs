@@ -332,11 +332,10 @@ export const ConsoleClient = {
    * Collect the device posture data and send them to the console.
    *
    * @param {object} [options]
-   * @param {boolean} [options.waitForAddons=false]
    * @returns {Promise<{posture: string}>} Token reported by console.
    */
-  async sendDevicePosture({ waitForAddons = false } = {}) {
-    const devicePosture = await this.collectDevicePosture({ waitForAddons });
+  async sendDevicePosture() {
+    const devicePosture = await this.collectDevicePosture();
     const url = await this.constructURI(this._paths.DEVICE_POSTURE);
 
     const res = await this._xhrFetch(url, {
@@ -677,6 +676,9 @@ export const ConsoleClient = {
    * @returns {Promise<DevicePosture>} devicePosture
    */
   async collectDevicePosture({ waitForAddons = false } = {}) {
+    console.debug(
+      `Felt: ConsoleClient.sys.mjs: collectDevicePosture(): ADDONS`
+    );
     const getImeiValue = async () => {
       try {
         return await Cc["@mozilla.org/imei/provider;1"]
@@ -694,9 +696,6 @@ export const ConsoleClient = {
     // returns null if AddonManager isn't ready yet to avoid blocking.
     const getExtensions = async () => {
       try {
-        if (Services.felt.isFeltUI()) {
-          return null;
-        }
         if (!lazy.AddonManager.isReady) {
           if (waitForAddons) {
             await lazy.AddonManager.readyPromise;
@@ -711,13 +710,22 @@ export const ConsoleClient = {
           "plugin",
           "mlmodel",
         ]);
-        return addons.map(addon => ({
+        console.debug(
+          `Felt: ConsoleClient.sys.mjs: collectDevicePosture(): ADDONS`,
+          addons
+        );
+        const rv = addons.map(addon => ({
           id: addon.id,
           name: addon.name ?? "",
           type: addon.type,
           version: addon.version ?? "",
           enabled: addon.isActive,
         }));
+        console.debug(
+          `Felt: ConsoleClient.sys.mjs: collectDevicePosture(): ADDONS MAPPED`,
+          rv
+        );
+        return rv;
       } catch {
         return null;
       }
