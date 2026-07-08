@@ -12,6 +12,9 @@ const { IPPSignInWatcher } = ChromeUtils.importESModule(
   "moz-src:///toolkit/components/ipprotection/fxa/IPPSignInWatcher.sys.mjs"
 );
 
+const { AppConstants } = ChromeUtils.importESModule(
+  "resource://gre/modules/AppConstants.sys.mjs"
+);
 const { AddonTestUtils } = ChromeUtils.importESModule(
   "resource://testing-common/AddonTestUtils.sys.mjs"
 );
@@ -431,9 +434,15 @@ add_task(async function test_isEnrolling_during_enroll() {
 add_task(async function test_guardian_endpoint_updates_on_reinit() {
   await IPProtectionService.init();
 
+  // Enterprise builds ship an empty default endpoint, whereas
+  // upstream defaults to the production Guardian endpoint.
+  const defaultEndpoint = AppConstants.MOZ_ENTERPRISE
+    ? ""
+    : "https://vpn.mozilla.org/";
+
   Assert.equal(
     IPPFxaActivateAuthProvider.guardian.guardianEndpoint,
-    "https://vpn.mozilla.org/",
+    defaultEndpoint,
     "Guardian should have default endpoint"
   );
 
