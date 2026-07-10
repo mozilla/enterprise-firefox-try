@@ -1,0 +1,41 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"toolkit/components/enterprisepolicies/tests\", \"browser/components/enterprisepolicies/tests\"], \"xpcshell\": [\"toolkit/components/enterprisepolicies/tests\", \"browser/components/enterprisepolicies/tests\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-asan/opt-mochitest-browser-chrome-swr-*",
+                "test-linux2404-64-asan/opt-xpcshell-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64-tsan/opt-mochitest-browser-chrome-swr-*",
+                "test-linux2404-64-tsan/opt-xpcshell-*",
+                "test-linux2404-64/debug-mochitest-browser-chrome-swr-*",
+                "test-linux2404-64/debug-xpcshell-*",
+                "test-macosx1015-64-qr/debug-mochitest-browser-chrome-*",
+                "test-macosx1015-64-qr/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-mochitest-browser-chrome-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-mochitest-browser-chrome-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-aarch64-vms/debug-xpcshell-*",
+                "test-macosx1500-aarch64/debug-xpcshell-*",
+                "test-windows10-64-2009-qr/debug-xpcshell-*",
+                "test-windows11-32-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-32-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2-asan/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-msix-*",
+                "test-windows11-64-25h2/debug-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
