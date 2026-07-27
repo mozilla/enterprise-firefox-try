@@ -2,7 +2,7 @@
 head = "head_satchel.js"
 tags = "condprof"
 skip-if = [
-  "os == 'android'",
+  "os == 'android' || enterprise", # Bug 2058187 - SQLite Encryption migration not handled: test copies unencrypted data into profile where it is expected to be encrypted.
 ]
 support-files = [
   "asyncformhistory_expire.sqlite",
