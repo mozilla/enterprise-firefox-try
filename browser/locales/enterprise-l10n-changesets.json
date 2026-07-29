@@ -1,5 +1,71 @@
 {
+    "de": {
+        "pin": false,
+        "platforms": [
+            "linux64",
+            "linux64-enterprise",
+            "linux64-aarch64",
+            "linux64-aarch64-enterprise",
+            "linux64-aarch64-devedition",
+            "linux64-devedition",
+            "macosx64",
+            "macosx64-enterprise",
+            "macosx64-devedition",
+            "win32",
+            "win32-devedition",
+            "win64",
+            "win64-enterprise",
+            "win64-aarch64",
+            "win64-aarch64-devedition",
+            "win64-devedition"
+        ],
+        "revision": "d2f62140e1af2a350350d57813787418674236a1"
+    },
+    "es": {
+        "pin": false,
+        "platforms": [
+            "linux64",
+            "linux64-enterprise",
+            "linux64-aarch64",
+            "linux64-aarch64-enterprise",
+            "linux64-aarch64-devedition",
+            "linux64-devedition",
+            "macosx64",
+            "macosx64-enterprise",
+            "macosx64-devedition",
+            "win32",
+            "win32-devedition",
+            "win64",
+            "win64-enterprise",
+            "win64-aarch64",
+            "win64-aarch64-devedition",
+            "win64-devedition"
+        ],
+        "revision": "d2f62140e1af2a350350d57813787418674236a1"
+    },
     "fr": {
+        "pin": false,
+        "platforms": [
+            "linux64",
+            "linux64-enterprise",
+            "linux64-aarch64",
+            "linux64-aarch64-enterprise",
+            "linux64-aarch64-devedition",
+            "linux64-devedition",
+            "macosx64",
+            "macosx64-enterprise",
+            "macosx64-devedition",
+            "win32",
+            "win32-devedition",
+            "win64",
+            "win64-enterprise",
+            "win64-aarch64",
+            "win64-aarch64-devedition",
+            "win64-devedition"
+        ],
+        "revision": "d2f62140e1af2a350350d57813787418674236a1"
+    },
+    "it": {
         "pin": false,
         "platforms": [
             "linux64",

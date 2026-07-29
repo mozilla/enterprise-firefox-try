@@ -624,10 +624,10 @@ def _pad_macos_attribution_code(attribution_string):
 ENTERPRISE_REPACKS = {
     "moz": {
         "stageGCP": {
-            "locales": ["en-US", "fr"],
+            "locales": ["en-US", "de", "es", "fr", "it"],
         },
         "prodGCP": {
-            "locales": ["en-US", "fr"],
+            "locales": ["en-US", "de", "es", "fr", "it"],
         },
     },
     "hosted": {
