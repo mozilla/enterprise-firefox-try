@@ -1,0 +1,53 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "enterprise-repack-moz_prodGCP_en-US-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_prodGCP_en-US-moz_prodGCP_en-US-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_prodGCP_fr-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_prodGCP_fr-moz_prodGCP_fr-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_en-US-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_en-US-moz_stageGCP_en-US-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_fr-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-moz_stageGCP_fr-moz_stageGCP_fr-mac-notarization-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-win64-enterprise-shippable/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_prodGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_prodGCP_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_stageGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_stageGCP_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_prodGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_prodGCP_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_stageGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_stageGCP_fr/opt",
+                "repackage-enterprise-repack-msi-win64-enterprise-shippable-moz_prodGCP_en-US/opt",
+                "repackage-enterprise-repack-msi-win64-enterprise-shippable-moz_prodGCP_fr/opt",
+                "repackage-enterprise-repack-msi-win64-enterprise-shippable-moz_stageGCP_en-US/opt",
+                "repackage-enterprise-repack-msi-win64-enterprise-shippable-moz_stageGCP_fr/opt",
+                "repackage-signing-enterprise-repack-moz_prodGCP_en-US-msi-win64-enterprise-shippable/opt",
+                "repackage-signing-enterprise-repack-moz_prodGCP_fr-msi-win64-enterprise-shippable/opt",
+                "repackage-signing-enterprise-repack-moz_stageGCP_en-US-msi-win64-enterprise-shippable/opt",
+                "repackage-signing-enterprise-repack-moz_stageGCP_fr-msi-win64-enterprise-shippable/opt"
+            ]
+        }
+    },
+    "version": 2
+}
