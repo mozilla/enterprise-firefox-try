@@ -1,0 +1,29 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-hosted_pilotProd_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-hosted_pilotProd_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-hosted_pilotStage_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-hosted_pilotStage_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_prodGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_prodGCP_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_stageGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-moz_stageGCP_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-hosted_pilotProd_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-hosted_pilotProd_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-hosted_pilotStage_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-hosted_pilotStage_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_prodGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_prodGCP_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_stageGCP_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-moz_stageGCP_fr/opt"
+            ]
+        }
+    },
+    "version": 2
+}
