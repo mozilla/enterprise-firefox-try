@@ -35,6 +35,10 @@ ChromeUtils.defineLazyGetter(lazy, "log", () => {
   return lazy.createEnterpriseLogger("FeltProcessParent");
 });
 
+ChromeUtils.defineLazyGetter(lazy, "logProcess", () => {
+  return lazy.createEnterpriseLogger("FeltBrowser");
+});
+
 const PROCESS_START_REASON = {
   INITIAL_START: "initial-start",
   RESTART: "restart",
@@ -788,8 +792,7 @@ export class FeltProcessParent extends JSProcessActorParent {
     const firefoxRun = {
       command: firefoxBin,
       arguments: firefoxRunArgs,
-      stdout: "stdout",
-      stderr: "stderr",
+      stderr: "pipe",
       /* environmentAppend: true,
       environment: env, */
     };
@@ -802,7 +805,79 @@ export class FeltProcessParent extends JSProcessActorParent {
       throw e;
     }
 
+    this.onPipeDataAvailable(this.proc.stdout, this.proc.pid, (pid, chunk) => {
+      lazy.logProcess.info(`[${pid}]: ${chunk}`);
+    });
+
+    this.onPipeDataAvailable(this.proc.stderr, this.proc.pid, (pid, chunk) => {
+      lazy.logProcess.error(`[${pid}]: ${chunk}`);
+    });
+
     Services.felt.ipcChannel();
+  }
+
+  /**
+   * Drain a pipe when data is available. Not draining may result in pipe
+   * being blocked on the write side, blocking the browser.
+   *
+   * @callback dataCallback
+   *
+   * @param {object} pipe - The pipe to work on, from Subprocess.call() return value
+   * @param {int} pid - The PID pf the process which will be drained
+   * @param {dataCallback} callback - The callback handling what to do with the data
+   */
+  async onPipeDataAvailable(pipe, pid, callback) {
+    if (!pipe) {
+      return;
+    }
+
+    const decoder = new TextDecoder("utf-8");
+    let lineBuffer = "";
+
+    try {
+      while (true) {
+        let buffer = await pipe.read();
+        if (!buffer || buffer.byteLength === 0) {
+          break;
+        }
+
+        lineBuffer += decoder.decode(buffer, { stream: true });
+
+        // Split by lines so logProcess receives complete log messages
+        let lines = lineBuffer.split("\n");
+        // Keep the last incomplete line in the buffer
+        lineBuffer = lines.pop();
+
+        for (let line of lines) {
+          if (line.trim()) {
+            try {
+              callback(pid, line);
+            } catch (e) {
+              lazy.log.error(`Error while callback for pipe draining`, e);
+            }
+          }
+        }
+      }
+
+      // Flush remaining buffer & decoder tail when stream closes
+      lineBuffer += decoder.decode();
+      if (lineBuffer.trim()) {
+        try {
+          callback(pid, lineBuffer);
+        } catch (e) {
+          lazy.log.error(`Error while callback for pipe drain finalization`, e);
+        }
+      }
+    } catch (e) {
+      // Pipe explicitly closed or process killed
+    } finally {
+      // Force release underlying stream resources
+      try {
+        await pipe.close();
+      } catch (e) {
+        // Ignore if already closed
+      }
+    }
   }
 
   /**

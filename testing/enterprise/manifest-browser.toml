@@ -9,6 +9,8 @@ run-if = [
 ["test_browsing_child_encryption_mismatch.py"]
 disabled = "Bug 1996558: scaffolding for the browsing-child encryption-mismatch flow; not run in CI yet."
 
+["test_felt_app_pipe.py"]
+
 ["test_felt_browser_about_config_blocked.py"]
 
 ["test_felt_browser_access_connector.py"]
