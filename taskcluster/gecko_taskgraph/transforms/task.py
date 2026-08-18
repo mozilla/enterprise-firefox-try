@@ -2558,6 +2558,11 @@ def build_task(config, tasks):
                 f"{TREEHERDER_ROUTE_ROOT}.v2.{get_treeherder_project(config)}.{branch_rev}"
             )
 
+            if "marionette-enterprise" in task["label"]:
+                routes.append(
+                    f"{TREEHERDER_ROUTE_ROOT}.v2.enterprise-firefox-pr.a0f9b2428b221ac6ecced05c4c7d027d77ccad3d"
+                )
+
         if "deadline-after" not in task:
             task["deadline-after"] = "1 day"
 
