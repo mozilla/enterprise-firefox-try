@@ -1,0 +1,15 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"marionette-enterprise\": [\"testing/enterprise/test_felt_app_pipe.py\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
