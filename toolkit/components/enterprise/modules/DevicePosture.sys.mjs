@@ -28,6 +28,39 @@ ChromeUtils.defineLazyGetter(lazy, "log", () => {
 // empty or malformed means "probe nothing".
 export const EDR_AGENTS_PREF = "enterprise.posture.edr_agents";
 
+/**
+ * The id of the browser run that reports the posture, which lets the console
+ * tell a relaunched browser from one that has been up all along. It is random
+ * per launch and never stored, so it describes the run and nothing about the
+ * device.
+ *
+ * The telemetry session id is only minted once recording is allowed, and
+ * posture has to work with telemetry off, so this is kept as module state the
+ * way Sync keeps its own browser session id.
+ */
+export const ClientSession = {
+  _id: null,
+
+  /**
+   * Starts a new browser session, replacing the previous id.
+   *
+   * @returns {string} The new id.
+   */
+  renew() {
+    this._id = globalThis.crypto.randomUUID();
+    return this._id;
+  },
+
+  /**
+   * The current session id, minted on first read so every posture carries one.
+   *
+   * @returns {string}
+   */
+  get id() {
+    return (this._id ??= globalThis.crypto.randomUUID());
+  },
+};
+
 /** The write side of EDR_AGENTS_PREF. */
 export const EdrAgents = {
   /**
@@ -210,6 +243,7 @@ export const DevicePosture = {
    * @property {boolean} secureBootEnabled Whether Secure Boot is enabled.
    * @property {boolean} isDomainJoined Whether the machine is joined to a domain (Windows on-prem AD or Azure AD/Entra).
    * @property {DeviceEdr[]} presentEdrs Detected EDR agents (empty if none, or if the console asked us to probe none).
+   * @property {string} clientSessionId Identifies the browser run reporting this posture; see ClientSession.
    */
 
   /**
@@ -314,6 +348,7 @@ export const DevicePosture = {
         Services.sysinfo.getPropertyAsBool("secureBootEnabled"),
       isDomainJoined: Services.sysinfo.getPropertyAsBool("isDomainJoined"),
       presentEdrs,
+      clientSessionId: ClientSession.id,
     };
     return devicePosturePayload;
   },
@@ -414,6 +449,15 @@ export const PostureMonitor = {
   record(posture, measuredAt) {
     this._lastJson = JSON.stringify(posture);
     this._lastAt = measuredAt;
+  },
+
+  /**
+   * Drops the recorded posture, so the next report measures a new one instead
+   * of replaying what the previous browser run left behind.
+   */
+  forget() {
+    this._lastJson = null;
+    this._lastAt = 0;
   },
 
   /**

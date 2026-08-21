@@ -6,6 +6,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   Subprocess: "resource://gre/modules/Subprocess.sys.mjs",
+  ClientSession: "resource://gre/modules/enterprise/DevicePosture.sys.mjs",
   ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
   DevicePosture: "resource://gre/modules/enterprise/DevicePosture.sys.mjs",
   EDR_AGENTS_PREF: "resource://gre/modules/enterprise/DevicePosture.sys.mjs",
@@ -537,6 +538,19 @@ export class FeltProcessParent extends JSProcessActorParent {
   }
 
   async startFirefox(startReason, ssoCollectedCookies = []) {
+    // The login path mints the session id before it collects the posture that
+    // redeems the one-time token, so an initial start already runs under its
+    // own id. A relaunch mints one here and drops the posture the console
+    // holds, so the first refresh measures under the new id instead of
+    // replaying the dead browser's. A refresh the dead browser left in flight
+    // would re-record that posture, so let it settle first.
+    if (startReason !== PROCESS_START_REASON.INITIAL_START) {
+      await lazy.PostureMonitor.idle();
+      await gBrowserRefresh;
+      lazy.ClientSession.renew();
+      lazy.PostureMonitor.forget();
+    }
+
     this.restartReported = false;
     this.logoutReported = false;
     this.exitReported = false;
@@ -1104,6 +1118,9 @@ export class FeltProcessParent extends JSProcessActorParent {
           const { path: profileDir } = await this._resolveProfile();
           let posture;
           const measuredAt = Date.now();
+          // Minted before the posture is collected, so the posture that redeems
+          // the token already names the browser this login starts.
+          lazy.ClientSession.renew();
           try {
             posture = await lazy.DevicePosture.collect({ profileDir });
           } catch (e) {
