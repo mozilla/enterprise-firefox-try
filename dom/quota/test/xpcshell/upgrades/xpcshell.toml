@@ -85,3 +85,4 @@ prefs = ["security.storage.encryption.sqlite.enabled=false"]
 ["test_upgradeStorageFrom2_2.js"]
 
 ["test_upgradeStorageFrom3to4.js"]
+skip-if = ["enterprise"] # Bug 2065476: skip tests for enterprise builds

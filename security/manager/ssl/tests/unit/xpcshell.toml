@@ -160,6 +160,7 @@ run-if = [
 run-if = [
   "debug", # Requires hard-coded debug-only data
 ]
+skip-if = ["enterprise"] # Bug 2065476: skip tests for enterprise builds
 
 ["test_ct.js"]
 run-if = [

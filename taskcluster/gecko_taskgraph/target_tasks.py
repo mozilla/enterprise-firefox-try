@@ -585,9 +585,7 @@ def target_tasks_enterprise_firefox_with_tests(
         if test_platform and "macos" in test_platform:
             if "enterprise" in test_platform:
                 # For enterprise builds, keep what is green at least
-                if "test" in task.kind and (
-                    "browser-chrome" in task.label or "xpcshell" in task.label
-                ):
+                if "test" in task.kind and ("browser-chrome" in task.label):
                     return False
             else:
                 # For non enterprise builds do not run macOS tests.
