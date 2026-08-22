@@ -165,8 +165,8 @@ add_task(async function test_button_position() {
     );
     Assert.equal(
       enterpriseActions.nextElementSibling?.id,
-      "pageActionButton",
-      "Enterprise urlbar actions container should be positioned just before the page action button"
+      "share-button",
+      "Enterprise urlbar actions container should be positioned just before the share button"
     );
   });
 });
