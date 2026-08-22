@@ -78,67 +78,132 @@ add_task(async function testAccountGroupSignedOut() {
   );
 });
 
-add_task(async function testAccountGroupSignedIn() {
-  await runSyncPaneTest(
-    {
-      status: UIState.STATUS_SIGNED_IN,
-      email: "test@example.com",
-      displayName: "Test User",
-      avatarURL: null,
-      syncEnabled: true,
-    },
-    async doc => {
-      let fxaSignedInGroup = doc.getElementById("fxaSignedInGroup");
-      ok(
-        BrowserTestUtils.isVisible(fxaSignedInGroup),
-        "Signed in group is displayed when user is signed in."
-      );
+add_task(
+  // In enterprise builds FxA is replaced by Enterprise Accounts,
+  // and doesn't support unlinking/signing out.
+  { skip_if: () => AppConstants.MOZ_ENTERPRISE },
+  async function testAccountGroupSignedIn() {
+    await runSyncPaneTest(
+      {
+        status: UIState.STATUS_SIGNED_IN,
+        email: "test@example.com",
+        displayName: "Test User",
+        avatarURL: null,
+        syncEnabled: true,
+      },
+      async doc => {
+        let fxaSignedInGroup = doc.getElementById("fxaSignedInGroup");
+        ok(
+          BrowserTestUtils.isVisible(fxaSignedInGroup),
+          "Signed in group is displayed when user is signed in."
+        );
 
-      let fxaLoginVerified =
-        fxaSignedInGroup.querySelector("#fxaLoginVerified");
-      ok(
-        BrowserTestUtils.isVisible(fxaLoginVerified),
-        "Verified account info is displayed."
-      );
+        let fxaLoginVerified =
+          fxaSignedInGroup.querySelector("#fxaLoginVerified");
+        ok(
+          BrowserTestUtils.isVisible(fxaLoginVerified),
+          "Verified account info is displayed."
+        );
 
-      // Verify that the display name and email are shown in the UI
-      ok(
-        fxaLoginVerified.label.includes("Test User"),
-        "Display name is shown in the account info."
-      );
-      ok(
-        fxaLoginVerified.description.includes("test@example.com"),
-        "Email is shown in the account info."
-      );
+        // Verify that the display name and email are shown in the UI
+        ok(
+          fxaLoginVerified.label.includes("Test User"),
+          "Display name is shown in the account info."
+        );
+        ok(
+          fxaLoginVerified.description.includes("test@example.com"),
+          "Email is shown in the account info."
+        );
 
-      let verifiedManage = fxaSignedInGroup.querySelector("#verifiedManage");
-      ok(
-        BrowserTestUtils.isVisible(verifiedManage),
-        "Manage account link is displayed."
-      );
+        let verifiedManage = fxaSignedInGroup.querySelector("#verifiedManage");
+        ok(
+          BrowserTestUtils.isVisible(verifiedManage),
+          "Manage account link is displayed."
+        );
 
-      // Verify the manage account link has the correct href
-      await assertLinkHasHref(
-        verifiedManage,
-        "accounts.firefox.com",
-        "Manage account link points to Firefox Accounts settings"
-      );
+        // Verify the manage account link has the correct href
+        await assertLinkHasHref(
+          verifiedManage,
+          "accounts.firefox.com",
+          "Manage account link points to Firefox Accounts settings"
+        );
 
-      let fxaUnlinkButton = fxaSignedInGroup.querySelector("#fxaUnlinkButton");
-      ok(
-        BrowserTestUtils.isVisible(fxaUnlinkButton),
-        "Unlink account button is displayed."
-      );
+        let fxaUnlinkButton =
+          fxaSignedInGroup.querySelector("#fxaUnlinkButton");
+        ok(
+          BrowserTestUtils.isVisible(fxaUnlinkButton),
+          "Unlink account button is displayed."
+        );
 
-      // Other account groups should be hidden
-      assertAccountGroupsHidden(doc, [
-        "noFxaAccountGroup",
-        "fxaUnverifiedGroup",
-        "fxaLoginRejectedGroup",
-      ]);
-    }
-  );
-});
+        // Other account groups should be hidden
+        assertAccountGroupsHidden(doc, [
+          "noFxaAccountGroup",
+          "fxaUnverifiedGroup",
+          "fxaLoginRejectedGroup",
+        ]);
+      }
+    );
+  }
+);
+
+// An Enterprise Account shows the signed-in account info but
+// hides the account management link and unlink button
+add_task(
+  { skip_if: () => !AppConstants.MOZ_ENTERPRISE },
+  async function testAccountGroupSignedInEnterprise() {
+    await runSyncPaneTest(
+      {
+        status: UIState.STATUS_SIGNED_IN,
+        email: "test@example.com",
+        displayName: "Test User",
+        avatarURL: null,
+        syncEnabled: true,
+      },
+      async doc => {
+        let signedInGroup = doc.getElementById("fxaSignedInGroup");
+        ok(
+          BrowserTestUtils.isVisible(signedInGroup),
+          "Signed in group is displayed for the Enterprise account."
+        );
+
+        let loginVerified = signedInGroup.querySelector("#fxaLoginVerified");
+        ok(
+          BrowserTestUtils.isVisible(loginVerified),
+          "Enterprise account info is displayed."
+        );
+
+        // Verify that the display name and email are shown in the UI
+        ok(
+          loginVerified.label.includes("Test User"),
+          "Display name is shown in the Enterprise account info."
+        );
+        ok(
+          loginVerified.description.includes("test@example.com"),
+          "Email is shown in the Enterprise account info."
+        );
+
+        let verifiedManage = signedInGroup.querySelector("#verifiedManage");
+        ok(
+          !BrowserTestUtils.isVisible(verifiedManage),
+          "Account management link is hidden for Enterprise Accounts."
+        );
+
+        let unlinkButton = signedInGroup.querySelector("#fxaUnlinkButton");
+        ok(
+          !BrowserTestUtils.isVisible(unlinkButton),
+          "Unlink account button is hidden for Enterprise Accounts."
+        );
+
+        // Other account groups should be hidden
+        assertAccountGroupsHidden(doc, [
+          "noFxaAccountGroup",
+          "fxaUnverifiedGroup",
+          "fxaLoginRejectedGroup",
+        ]);
+      }
+    );
+  }
+);
 
 add_task(async function testAccountGroupUnverified() {
   await runSyncPaneTest(
@@ -398,46 +463,55 @@ add_task(async function testBackupSettingsHiddenWhenDisabled() {
   BrowserTestUtils.removeTab(gBrowser.selectedTab);
 });
 
-add_task(async function testBackupSettingsVisibleWhenArchiveEnabled() {
-  await SpecialPowers.pushPrefEnv({
-    set: [
-      ["browser.backup.archive.enabled", true],
-      ["browser.backup.restore.enabled", false],
-    ],
-  });
+// Enterprise builds enable SQLite at-rest encryption
+// (security.storage.encryption.sqlite.enabled defaults to true),
+// which disables profile backup/restore.
+add_task(
+  { skip_if: () => AppConstants.MOZ_ENTERPRISE },
+  async function testBackupSettingsVisibleWhenArchiveEnabled() {
+    await SpecialPowers.pushPrefEnv({
+      set: [
+        ["browser.backup.archive.enabled", true],
+        ["browser.backup.restore.enabled", false],
+      ],
+    });
 
-  await openPreferencesViaOpenPreferencesAPI("paneSync", {
-    leaveOpen: true,
-  });
-  let doc = gBrowser.contentDocument;
+    await openPreferencesViaOpenPreferencesAPI("paneSync", {
+      leaveOpen: true,
+    });
+    let doc = gBrowser.contentDocument;
 
-  let backupSettings = doc.getElementById("backupSettings");
-  ok(
-    BrowserTestUtils.isVisible(backupSettings),
-    "Backup settings is visible when archive is enabled."
-  );
+    let backupSettings = doc.getElementById("backupSettings");
+    ok(
+      BrowserTestUtils.isVisible(backupSettings),
+      "Backup settings is visible when archive is enabled."
+    );
 
-  BrowserTestUtils.removeTab(gBrowser.selectedTab);
-});
+    BrowserTestUtils.removeTab(gBrowser.selectedTab);
+  }
+);
 
-add_task(async function testBackupSettingsVisibleWhenRestoreEnabled() {
-  await SpecialPowers.pushPrefEnv({
-    set: [
-      ["browser.backup.archive.enabled", false],
-      ["browser.backup.restore.enabled", true],
-    ],
-  });
+add_task(
+  { skip_if: () => AppConstants.MOZ_ENTERPRISE },
+  async function testBackupSettingsVisibleWhenRestoreEnabled() {
+    await SpecialPowers.pushPrefEnv({
+      set: [
+        ["browser.backup.archive.enabled", false],
+        ["browser.backup.restore.enabled", true],
+      ],
+    });
 
-  await openPreferencesViaOpenPreferencesAPI("paneSync", {
-    leaveOpen: true,
-  });
-  let doc = gBrowser.contentDocument;
+    await openPreferencesViaOpenPreferencesAPI("paneSync", {
+      leaveOpen: true,
+    });
+    let doc = gBrowser.contentDocument;
 
-  let backupSettings = doc.getElementById("backupSettings");
-  ok(
-    BrowserTestUtils.isVisible(backupSettings),
-    "Backup settings is visible when restore is enabled."
-  );
+    let backupSettings = doc.getElementById("backupSettings");
+    ok(
+      BrowserTestUtils.isVisible(backupSettings),
+      "Backup settings is visible when restore is enabled."
+    );
 
-  BrowserTestUtils.removeTab(gBrowser.selectedTab);
-});
+    BrowserTestUtils.removeTab(gBrowser.selectedTab);
+  }
+);
