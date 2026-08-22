@@ -38,7 +38,7 @@ add_task(async function test_policyDisabled_hides_report_ui() {
 
   let submitCalls = 0;
   let { CrashSubmit } = ChromeUtils.importESModule(
-    "resource://gre/modules/CrashSubmit.sys.mjs"
+    "moz-src:///toolkit/crashreporter/CrashSubmit.sys.mjs"
   );
   let originalSubmit = CrashSubmit.submit;
   CrashSubmit.submit = function () {
