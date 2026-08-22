@@ -9,10 +9,6 @@ const { AppMenuNotifications } = ChromeUtils.importESModule(
   "resource://gre/modules/AppMenuNotifications.sys.mjs"
 );
 
-const { AddonSettings } = ChromeUtils.importESModule(
-  "resource://gre/modules/addons/AddonSettings.sys.mjs"
-);
-
 function promisePostInstallNotificationShown() {
   // The themes are unsigned, so we need to confirm we're okay with that first
   // This is why we need to accept a prompt, and then continue to the prompt
@@ -91,6 +87,12 @@ async function promisePostInstallShown() {
 // Test that clicking the undo button on the post install notification reverts
 // the theme
 add_task(async function test_undoTheme() {
+  // Capture the theme active at the start of the test
+  // as the browser's default theme.
+  const INITIAL_THEME_ID = Services.prefs.getCharPref(
+    "extensions.activeThemeID"
+  );
+
   const RED_THEME_ID = "red@test.mozilla.org";
   let redTheme = await AddonTestUtils.createTempWebExtensionFile({
     manifest: {
@@ -149,8 +151,8 @@ add_task(async function test_undoTheme() {
   );
   Assert.strictEqual(
     (await AddonManager.getAddonByID(RED_THEME_ID)).previousActiveThemeID,
-    AddonSettings.DEFAULT_THEME_ID,
-    "Expected previous active theme ID to be the default theme"
+    INITIAL_THEME_ID,
+    "Expected previous active theme ID to be the initial (default) theme"
   );
 
   // After first theme is installed, trigger a second install but "undo" it
