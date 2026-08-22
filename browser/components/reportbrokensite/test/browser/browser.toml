@@ -7,9 +7,11 @@ support-files = [
 ]
 
 ["browser_a11y.js"]
+skip-if = ["enterprise"] # Bug 2065847: disable test in enterprise builds
 
 ["browser_addon_data_sent.js"]
 support-files = [ "send_more_info.js" ]
+skip-if = ["enterprise"] # Bug 2065847: disable test in enterprise builds
 
 ["browser_antitracking_data_sent.js"]
 support-files = [ "send_more_info.js" ]
@@ -33,6 +35,7 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1867132
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && asan", # Bug 1867132
   "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && asan", # Bug 1867132
+  "enterprise" # Bug 2065847: disable test in enterprise builds
 ]
 
 ["browser_learn_more_link.js"]
