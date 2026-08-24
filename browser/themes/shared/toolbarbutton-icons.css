@@ -415,24 +415,6 @@
       opacity: 0;
     }
   }
-  > .toolbarbutton-icon {
-    list-style-image: url("chrome://browser/content/ipprotection/assets/ac-icon.svg");
-  }
-  &:not(:is([overflowedItem="true"], [cui-areatype="panel"])) {
-    > .toolbarbutton-icon {
-      width: calc(2 * var(--toolbarbutton-padding-inner) + var(--icon-size-small));
-    }
-  }
-  &.ipprotection-on {
-    > .toolbarbutton-icon {
-      fill: var(--icon-color-success);
-    }
-  }
-  &.ipprotection-excluded {
-    > .toolbarbutton-icon {
-      fill: var(--toolbarbutton-icon-fill);
-    }
-  }
 }
 
 #tab-groups-button {
