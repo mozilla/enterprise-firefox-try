@@ -225,8 +225,23 @@ linux-tests-enterprise:
     - gtest
     - marionette-integration
     - marionette-enterprise
+    - mochitest-a11y
+    - mochitest-browser-a11y
     - mochitest-browser-chrome
+    - mochitest-browser-chrome-ml-models
+    - mochitest-browser-media
+    - mochitest-browser-translations
+    - mochitest-chrome
+    - mochitest-chrome-gpu
+    - mochitest-devtools-chrome
+    - mochitest-media
     - mochitest-plain
+    - mochitest-plain-gpu
+    - mochitest-remote
+    - mochitest-webgl1-core
+    - mochitest-webgl1-ext
+    - mochitest-webgl2-core
+    - mochitest-webgl2-ext
     - xpcshell
 
 linux-2404-tsan-tests:
@@ -384,8 +399,22 @@ windows11-25h2-tests-enterprise:
     - gtest
     - marionette-integration
     - marionette-enterprise
+    - mochitest-a11y
+    - mochitest-browser-a11y
     - mochitest-browser-chrome
+    - mochitest-browser-media
+    - mochitest-browser-translations
+    - mochitest-chrome
+    - mochitest-chrome-gpu
+    - mochitest-devtools-chrome
+    - mochitest-media
     - mochitest-plain
+    - mochitest-plain-gpu
+    - mochitest-remote
+    - mochitest-webgl1-core
+    - mochitest-webgl1-ext
+    - mochitest-webgl2-core
+    - mochitest-webgl2-ext
     - xpcshell
 
 mingwclang-tests-debug:
@@ -499,8 +528,22 @@ macosx1500-64-tests-enterprise:
     - gtest
     - marionette-integration
     - marionette-enterprise
+    - mochitest-a11y
+    - mochitest-browser-a11y
     - mochitest-browser-chrome
+    - mochitest-browser-media
+    - mochitest-browser-translations
+    - mochitest-chrome
+    - mochitest-chrome-gpu
+    - mochitest-devtools-chrome
+    - mochitest-media
     - mochitest-plain
+    - mochitest-plain-gpu
+    - mochitest-remote
+    - mochitest-webgl1-core
+    - mochitest-webgl1-ext
+    - mochitest-webgl2-core
+    - mochitest-webgl2-ext
     - xpcshell
 
 macosx1500-aarch64-tests:
