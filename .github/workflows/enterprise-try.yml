@@ -2,6 +2,15 @@ name: Try status
 on:
   pull_request_target:
     types: [opened, reopened, synchronize]
+
+  # ITERATION ONLY, drop before landing. pull_request_target runs the copy of
+  # this file and of the action that lives on the PR's base branch, so edits to
+  # either are invisible until they land there. pull_request runs the copy from
+  # the PR itself, which makes the loop editable. Keeping both once landed would
+  # have two runs racing to write the same status contexts.
+  pull_request:
+    types: [opened, reopened, synchronize]
+
   # Try pushes outlive the workflow run that reports on them, so allow asking
   # for a refreshed status.
   workflow_dispatch:
@@ -17,7 +26,9 @@ permissions:
   statuses: write
 
 concurrency:
-  group: try-status-${{ github.event.pull_request.number || github.event.inputs.pull_request }}
+  # The event name is part of the group so that the pull_request_target run and
+  # the pull_request one do not cancel each other while both triggers exist.
+  group: try-status-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.inputs.pull_request }}
   cancel-in-progress: true
 
 env:
@@ -29,7 +40,7 @@ jobs:
     name: Try status
     if: github.repository == 'mozilla/enterprise-firefox' || github.repository == 'lissyx/enterprise-firefox'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 355
     steps:
       - name: Resolve the pull request
         id: pr
@@ -58,7 +69,7 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
-      - name: Collect the try status
+      - name: Collect and publish the try status
         id: try
         uses: ./.github/actions/enterprise-try-action
         with:
@@ -67,54 +78,9 @@ jobs:
           # show up on Treeherder. Lower this if the wait is not worth it.
           wait-for-push: 600
           poll-interval: 60
-
-      # One commit status per try job. The statuses file is ordered worst first,
-      # so MAX_STATUSES truncates the passing tail rather than the failures.
-      #
-      # Statuses are writes, which GitHub secondary rate limits to 80 per
-      # minute, hence the pacing below. They also cannot be deleted, only
-      # overwritten by context: on a workflow_dispatch refresh of a sha whose
-      # try push no longer schedules a job, that job keeps the status it last
-      # got.
-      - name: Publish one commit status per job
-        if: steps.try.outputs.verdict != 'not-found'
-        env:
-          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
-          STATUSES: ${{ steps.try.outputs.statuses }}
-          STATUS_COUNT: ${{ steps.try.outputs.status-count }}
-          MAX_STATUSES: 250
-        run: |
-          published=0
-          skipped=0
-
-          publish() {
-            local attempt
-            for attempt in 1 2; do
-              if gh api --silent --method POST "repos/${GH_REPO}/statuses/${HEAD_SHA}" \
-                   -f state="$1" -f context="$2" -f description="$3" -f target_url="$4"; then
-                return 0
-              fi
-              echo "status POST for ${2} failed on attempt ${attempt}"
-              sleep 20
-            done
-            return 1
-          }
-
-          while IFS=$'\t' read -r _ state context description target_url; do
-            if [[ "${published}" -ge "${MAX_STATUSES}" ]]; then
-              skipped=$((skipped + 1))
-              continue
-            fi
-            if publish "${state}" "${context}" "${description}" "${target_url}"; then
-              published=$((published + 1))
-            else
-              echo "::warning::could not publish a status for ${context}"
-              skipped=$((skipped + 1))
-            fi
-            sleep 0.8
-          done <"${STATUSES}"
-
-          echo "Published ${published} of ${STATUS_COUNT} status(es)"
-          if [[ "${skipped}" -gt 0 ]]; then
-            echo "::warning::${skipped} job(s) got no status, see the try push for the full picture"
-          fi
+          # Keep polling until every job of the push has completed, publishing
+          # each result as it lands. GitHub kills a job at six hours, so stop
+          # just under that and leave room for the wait above.
+          poll-timeout: 20400
+          head-sha: ${{ steps.pr.outputs.head_sha }}
+          github-token: ${{ github.token }}

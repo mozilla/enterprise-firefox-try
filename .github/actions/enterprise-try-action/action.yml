@@ -24,8 +24,30 @@ inputs:
       Seconds to keep retrying while Treeherder has not indexed the push yet.
     default: "0"
   poll-interval:
-    description: Seconds between retries while waiting for the push.
+    description: >-
+      Seconds between polls, both while waiting for the push to be indexed and
+      while waiting for its jobs to complete.
     default: "30"
+  poll-timeout:
+    description: >-
+      Seconds to keep polling until every job of the push has completed. 0 takes
+      a single snapshot instead. GitHub caps a job at six hours, so the caller is
+      expected to stay under that.
+    default: "0"
+  head-sha:
+    description: >-
+      Commit to attach the statuses to. Required to publish anything.
+    default: ""
+  github-token:
+    description: >-
+      Token used to publish the statuses. Without it the action only reports,
+      which is also how it runs outside of Actions.
+    default: ""
+  max-statuses-per-poll:
+    description: >-
+      Most statuses to publish in a single poll. Rows left over are retried on
+      the next one, worst first.
+    default: "250"
 
 outputs:
   verdict:
@@ -72,6 +94,15 @@ outputs:
   status-count:
     description: Number of rows in the statuses file.
     value: ${{ steps.jobs.outputs.status-count }}
+  published:
+    description: Number of statuses actually published.
+    value: ${{ steps.jobs.outputs.published }}
+  polls:
+    description: Number of times Treeherder was polled for job results.
+    value: ${{ steps.jobs.outputs.polls }}
+  complete:
+    description: true when every job of the push had completed before returning.
+    value: ${{ steps.jobs.outputs.complete }}
 
 runs:
   using: composite
@@ -219,6 +250,11 @@ runs:
         REVISION: ${{ steps.push.outputs.revision }}
         TRY_REF: ${{ steps.push.outputs.ref }}
         REPORT: ${{ steps.push.outputs.report }}
+        POLL_INTERVAL: ${{ inputs.poll-interval }}
+        POLL_TIMEOUT: ${{ inputs.poll-timeout }}
+        MAX_PER_POLL: ${{ inputs.max-statuses-per-poll }}
+        HEAD_SHA: ${{ inputs.head-sha }}
+        GH_TOKEN: ${{ inputs.github-token }}
       run: |
         set -euo pipefail
 
@@ -228,9 +264,10 @@ runs:
         WORK="${RUNNER_TEMP:-/tmp}/enterprise-try"
         mkdir -p "${WORK}"
 
+        # The report is rendered once, after polling, and flushed to the step
+        # summary then.
         report() {
-          printf '%s\n' "$*" | tee -a "${REPORT}" "${GITHUB_STEP_SUMMARY:-/dev/null}" >/dev/null
-          printf '%s\n' "$*"
+          printf '%s\n' "$*" >>"${REPORT}"
         }
 
         die() {
@@ -252,16 +289,16 @@ runs:
 
         # The jobs endpoint returns positional rows plus the property names to
         # zip them with. Flatten to TSV, following pagination.
-        url="${TREEHERDER_URL}/api/jobs/?push_id=${PUSH_ID}&count=2000"
-        page=0
-        : >"${WORK}/jobs.tsv"
-        while [[ -n "${url}" ]]; do
-          if [[ "${page}" -ge "${MAX_JOB_PAGES}" ]]; then
-            echo "::warning::stopped after ${MAX_JOB_PAGES} pages of jobs, counts are partial"
-            break
-          fi
-          api_get "${url}" "${WORK}/jobs.json"
-          jq -r '
+        fetch_jobs() {
+          local url="${TREEHERDER_URL}/api/jobs/?push_id=${PUSH_ID}&count=2000" page=0
+          : >"${WORK}/jobs.tsv"
+          while [[ -n "${url}" ]]; do
+            if [[ "${page}" -ge "${MAX_JOB_PAGES}" ]]; then
+              echo "::warning::stopped after ${MAX_JOB_PAGES} pages of jobs, counts are partial"
+              break
+            fi
+            api_get "${url}" "${WORK}/jobs.json"
+            jq -r '
             (.job_property_names // []) as $names
             | .results[]
             | [$names, .] | transpose | map({key: .[0], value: .[1]}) | from_entries
@@ -270,10 +307,11 @@ runs:
                 ((.platform // "?") + "/" + (.platform_option // "?")),
                 (.job_type_name // .job_type_symbol // "?") ]
             | @tsv
-          ' "${WORK}/jobs.json" >>"${WORK}/jobs.tsv"
-          url=$(jq -r '.next // empty' "${WORK}/jobs.json")
-          page=$((page + 1))
-        done
+            ' "${WORK}/jobs.json" >>"${WORK}/jobs.tsv"
+            url=$(jq -r '.next // empty' "${WORK}/jobs.json")
+            page=$((page + 1))
+          done
+        }
 
         # Retried and superseded jobs carry no verdict for the push. A failure
         # only blocks if it is at a tier we gate on (tier 3 is not sheriffed)
@@ -282,11 +320,9 @@ runs:
         # by commit, 3 expected fail, 4 intermittent, 5 infra, 7 autoclassified
         # intermittent, 8 intermittent needs bugid) have all been looked at.
         # See ${TREEHERDER_URL}/api/failureclassification/ for the full list.
-        : >"${WORK}/failures.tsv"
-        declare -A count=()
-        while read -r key value; do
-          count[${key}]=${value}
-        done < <(awk -v max_tier="${MAX_TIER}" -v failures="${WORK}/failures.tsv" '
+        summarize() {
+          : >"${WORK}/failures.tsv"
+          awk -v max_tier="${MAX_TIER}" -v failures="${WORK}/failures.tsv" '
           BEGIN { FS = OFS = "\t" }
           {
             if ($2 != "completed") { running++; next }
@@ -311,9 +347,8 @@ runs:
             print "retried", retried + 0
             print "blocking", blocking + 0
           }
-        ' "${WORK}/jobs.tsv")
-
-        echo "Push ${PUSH_ID} has ${count[total]} job(s)"
+          ' "${WORK}/jobs.tsv"
+        }
 
         # One commit status per job, as prio/state/context/description/url.
         # Sorted worst first so that a cap applied by the caller keeps the rows
@@ -321,7 +356,8 @@ runs:
         # shows up more than once under the same name, so duplicates collapse
         # onto their worst result rather than letting a green retrigger
         # overwrite the red run it came from.
-        awk -v max_tier="${MAX_TIER}" -v push_url="${PUSH_URL}" '
+        build_statuses() {
+          awk -v max_tier="${MAX_TIER}" -v push_url="${PUSH_URL}" '
           BEGIN {
             FS = OFS = "\t"
             class[1] = "untriaged"
@@ -354,14 +390,105 @@ runs:
             print prio, status, "Try / " name, desc, \
               push_url "&selectedTaskRun=" task "." retry
           }
-        ' "${WORK}/jobs.tsv" |
-          sort -t$'\t' -k1,1n -k3,3 |
-          awk -F'\t' '!seen[$3]++' >"${WORK}/statuses.tsv"
+          ' "${WORK}/jobs.tsv" |
+            sort -t$'\t' -k1,1n -k3,3 |
+            awk -F'\t' '!seen[$3]++' >"${WORK}/statuses.tsv"
+        }
 
-        {
-          echo "statuses=${WORK}/statuses.tsv"
-          echo "status-count=$(wc -l <"${WORK}/statuses.tsv")"
-        } >>"${GITHUB_OUTPUT}"
+        publish_status() {
+          local attempt
+          for attempt in 1 2; do
+            if gh api --silent --method POST \
+                 "repos/${GITHUB_REPOSITORY:-}/statuses/${HEAD_SHA}" \
+                 -f state="$1" -f context="$2" -f description="$3" \
+                 -f target_url="$4"; then
+              return 0
+            fi
+            echo "status POST for ${2} failed on attempt ${attempt}"
+            sleep 20
+          done
+          return 1
+        }
+
+        # Publish only what changed since the last poll. A row that could not be
+        # posted stays out of published.tsv, so the next poll retries it, and the
+        # per-poll cap keeps the worst rows at the front of the queue. Statuses
+        # are writes, which GitHub secondary rate limits to 80 per minute, hence
+        # the pacing.
+        publish_delta() {
+          posted=0
+          if [[ -z "${GH_TOKEN}" || -z "${HEAD_SHA}" ]]; then
+            return 0
+          fi
+          local state context description target_url
+          while IFS=$'\t' read -r _ state context description target_url; do
+            if publish_status "${state}" "${context}" "${description}" "${target_url}"; then
+              printf '%s\t%s\t%s\n' "${context}" "${state}" "${description}" \
+                >>"${WORK}/published.tsv"
+              posted=$((posted + 1))
+            else
+              echo "::warning::could not publish a status for ${context}"
+            fi
+            sleep 0.8
+          done < <(awk -F'\t' -v OFS='\t' -v published="${WORK}/published.tsv" '
+            FILENAME == published { seen[$1] = $2 OFS $3; state[$1] = $2; next }
+            seen[$3] == ($2 OFS $4) { next }
+            # A job moving from pending to running only changes the wording, and
+            # doing that for every job of a push is a third of the write budget.
+            $2 == "pending" && state[$3] == "pending" { next }
+            { print }
+          ' "${WORK}/published.tsv" "${WORK}/statuses.tsv" | head -n "${MAX_PER_POLL}")
+        }
+
+        : >"${WORK}/published.tsv"
+        declare -A count=()
+        deadline=$(( $(date +%s) + POLL_TIMEOUT ))
+        polls=0
+        published=0
+        previous_total=-1
+
+        while true; do
+          polls=$((polls + 1))
+          fetch_jobs
+          while read -r key value; do
+            count[${key}]=${value}
+          done < <(summarize)
+          build_statuses
+          publish_delta
+          published=$((published + posted))
+
+          echo "poll ${polls}: ${count[total]} job(s), ${count[running]} running," \
+            "${count[failed]} failed, ${count[succeeded]} passed," \
+            "${posted} status(es) published"
+
+          # A push starts out with nothing but its decision task, so jobs
+          # briefly all look done. Only stop once the job count has settled too.
+          if [[ "${count[running]}" -eq 0 && "${count[total]}" -gt 0 &&
+                "${count[total]}" -eq "${previous_total}" ]]; then
+            break
+          fi
+          previous_total="${count[total]}"
+
+          if [[ "${count[total]}" -eq 0 && "${polls}" -ge 5 ]]; then
+            echo "::warning::push ${PUSH_ID} still has no job after ${polls} poll(s)"
+            break
+          fi
+
+          if [[ "$(date +%s)" -ge "${deadline}" ]]; then
+            if [[ "${POLL_TIMEOUT}" -gt 0 ]]; then
+              echo "::warning::stopped polling after ${polls} poll(s) with" \
+                "${count[running]} job(s) still running"
+            fi
+            break
+          fi
+
+          sleep "${POLL_INTERVAL}"
+        done
+
+        complete=false
+        if [[ "${count[running]}" -eq 0 && "${count[total]}" -gt 0 ]]; then
+          complete=true
+        fi
 
         if [[ "${count[total]}" -eq 0 ]]; then
           verdict=no-jobs state=pending icon=":grey_question:"
@@ -409,6 +536,13 @@ runs:
           done <"${WORK}/failures.tsv"
         fi
 
+        cat "${REPORT}"
+        if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          cat "${REPORT}" >>"${GITHUB_STEP_SUMMARY}"
+        fi
+
+        echo "Polled ${polls} time(s), published ${published} status(es)"
+
         {
           echo "verdict=${verdict}"
           echo "state=${state}"
@@ -417,4 +551,9 @@ runs:
           echo "succeeded=${count[succeeded]}"
           echo "running=${count[running]}"
           echo "blocking=${count[blocking]}"
+          echo "statuses=${WORK}/statuses.tsv"
+          echo "status-count=$(wc -l <"${WORK}/statuses.tsv")"
+          echo "published=${published}"
+          echo "polls=${polls}"
+          echo "complete=${complete}"
         } >>"${GITHUB_OUTPUT}"
