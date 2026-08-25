@@ -16,7 +16,6 @@ browser.jar:
   content/branding/enterprise-icon-cropped.svg
   content/branding/enterprise-wordmark.svg
   content/branding/firefox-wordmark.svg
-  content/branding/browser-tokens.css
   content/branding/felt-tokens.css
   content/branding/icon16.png                    (../default16.png)
   content/branding/icon32.png                    (../default32.png)

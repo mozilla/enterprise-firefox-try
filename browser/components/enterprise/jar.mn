@@ -9,6 +9,7 @@ browser.jar:
   content/browser/enterprise/enterprise-panel.css           (content/enterprise-panel.css)
   content/browser/enterprise/alert.svg                      (content/icons/alert.svg)
   content/browser/enterprise/enterprise-urlbar-actions.css  (content/enterprise-urlbar-actions.css)
+  content/browser/enterprise/enterprise-tokens.css          (content/enterprise-tokens.css)
   content/browser/enterprise/site-restrictions.svg          (content/icons/site-restrictions.svg)
   content/browser/enterprise/user-avatar.svg                (content/icons/user-avatar.svg)
   content/browser/enterprise/enterprise-close-dialog.xhtml  (content/enterprise-close-dialog.xhtml)
