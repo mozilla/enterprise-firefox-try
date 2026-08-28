@@ -1623,7 +1623,11 @@ export const LoginHelper = {
   isEnterpriseManagedPrimaryPassword() {
     return (
       AppConstants.MOZ_ENTERPRISE &&
-      Services.prefs.getBoolPref("security.storage.encryption.enabled", false)
+      Services.prefs.getBoolPref(
+        "security.storage.encryption.enabled",
+        false
+      ) &&
+      Services.felt.isFeltBrowser()
     );
   },
 
