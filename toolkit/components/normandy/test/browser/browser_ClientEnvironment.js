@@ -71,8 +71,6 @@ add_task(async function testDistribution() {
     Services.sysinfo.getProperty("hasWinPackageId")
   ) {
     expectedDistribution = "mozilla-MSIX";
-  } else if (AppConstants.MOZ_ENTERPRISE) {
-    expectedDistribution = "enterprise-local";
   } else if (AppConstants.BUILT_BY_MOZILLA) {
     expectedDistribution = "mozilla-official";
   }
