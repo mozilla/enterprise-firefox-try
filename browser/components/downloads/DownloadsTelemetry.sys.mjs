@@ -11,20 +11,20 @@
  * - In regular builds: No-op implementation (enterprise code completely absent)
  */
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+
 let DownloadsTelemetryImpl;
 
-try {
-  // Attempt to import enterprise implementation (only available in MOZ_ENTERPRISE builds)
+// The enterprise module is only packaged in MOZ_ENTERPRISE builds. Gate on
+// AppConstants rather than catching an import failure: in automation, loading a
+// missing chrome/moz-src URL aborts via CheckForBrokenChromeURL before any
+// exception can be caught.
+if (AppConstants.MOZ_ENTERPRISE) {
   const { DownloadsTelemetryEnterprise } = ChromeUtils.importESModule(
     "moz-src:///browser/components/downloads/DownloadsTelemetry.enterprise.sys.mjs"
   );
   DownloadsTelemetryImpl = DownloadsTelemetryEnterprise;
-} catch (ex) {
-  console.warn(
-    "[DownloadsTelemetry] Enterprise implementation not available, using no-op shim. Error:",
-    ex.message
-  );
-  // Enterprise implementation not available, use no-op shim
+} else {
   DownloadsTelemetryImpl = {
     recordFileDownloaded: _download => {},
   };
