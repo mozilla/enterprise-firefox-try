@@ -12,7 +12,7 @@ const { EnterprisePolicyTesting, PoliciesPrefTracker } =
   );
 
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
+  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 // On debug builds, crashing tabs results in much thinking, which
