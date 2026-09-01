@@ -5,7 +5,16 @@
 <html:link rel="stylesheet" href="chrome://enterprise/content/enterprise-badge.css" overflows="false"/>
 <html:link rel="localization" href="toolkit/enterprise/enterprise.ftl" overflows="false"/>
 
-<toolbarbutton id="enterprise-badge-toolbar-button" class="toolbarbutton-1 chromeclass-toolbar-additional" delegatesanchor="true" data-l10n-id="enterprise-toolbar-button" removable="true" cui-areatype="toolbar" tabindex="0">
+<toolbarbutton id="enterprise-badge-toolbar-button"
+               class="toolbarbutton-1 chromeclass-toolbar-additional"
+               delegatesanchor="true"
+               data-l10n-id="enterprise-toolbar-button"
+               removable="true"
+               cui-areatype="toolbar"
+#ifdef MOZ_THUNDERBIRD
+               tabindex="0"
+#endif
+               >
   <hbox>
     <div class="enterprise-badge">
       <div id="enterprise-company-logo__wrapper" class="is-hidden">
