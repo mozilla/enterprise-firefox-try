@@ -1458,7 +1458,7 @@ class Artifacts:
             self._substs.get("MOZ_ENTERPRISE")
             and not self._substs.get("MOZ_BUILD_APP", "") == "comm/mail"
         ):
-            target_suffix = "-enteprise" + target_suffix
+            target_suffix = "-enterprise" + target_suffix
 
         if self._substs.get("MOZ_BUILD_APP", "") == "mobile/android":
             if self._substs["ANDROID_CPU_ARCH"] == "x86_64":
