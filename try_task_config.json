@@ -1,0 +1,15 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "source-test-puppeteer-puppeteer-1",
+                "source-test-puppeteer-puppeteer-2"
+            ]
+        }
+    },
+    "version": 2
+}
