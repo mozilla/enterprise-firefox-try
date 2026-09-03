@@ -1,0 +1,29 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-*",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-nofis-*",
+                "test-android-em-14-x86_64/debug-isolated-process-geckoview-xpcshell-*",
+                "test-linux2404-64-asan/opt-xpcshell-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64-tsan/opt-xpcshell-*",
+                "test-linux2404-64/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows10-64-2009-qr/debug-xpcshell-*",
+                "test-windows11-32-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2/debug-xpcshell-msix-*"
+            ]
+        }
+    },
+    "version": 2
+}
