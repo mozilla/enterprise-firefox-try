@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import mozpack.path as mozpath
 from mozunit import main
 
 from mozbuild.frontend.l10n_manifest import (
@@ -16,10 +17,15 @@ from mozbuild.frontend.l10n_manifest import (
     L10nManifestContextData,
     LocalizedFileGroup,
     LocalizedGenScript,
+    _locale_relsrcdir,
     build_l10n_manifest_from_substs,
     load_l10n_manifest,
     write_l10n_manifest,
 )
+from mozbuild.test.common import MockConfig
+
+TOPSRCDIR = mozpath.abspath("/src")
+COMMTOPSRCDIR = mozpath.join(TOPSRCDIR, "comm")
 
 
 class TestL10nManifestRoundTrip(unittest.TestCase):
@@ -33,6 +39,7 @@ class TestL10nManifestRoundTrip(unittest.TestCase):
             contexts=[
                 L10nManifestContextData(
                     relsrcdir="browser/locales",
+                    locale_relsrcdir="browser/locales",
                     install_subdir="",
                     defines={"FOO": "bar"},
                     locale_pp_defines={
@@ -112,6 +119,7 @@ class TestBuildL10nManifestFromSubsts(unittest.TestCase):
         }
         ctx = L10nManifestContextData(
             relsrcdir="browser/locales",
+            locale_relsrcdir="browser/locales",
             install_subdir="",
             defines={},
             locale_pp_defines={},
@@ -134,10 +142,39 @@ class TestBuildL10nManifestFromSubsts(unittest.TestCase):
         self.assertEqual(manifest.contexts, [])
 
 
+class TestLocaleRelsrcdir(unittest.TestCase):
+    def _comm_config(self):
+        return MockConfig(TOPSRCDIR, extra_substs={"commtopsrcdir": COMMTOPSRCDIR})
+
+    def test_without_commtopsrcdir_relsrcdir_is_unchanged(self):
+        config = MockConfig(TOPSRCDIR)
+        self.assertEqual(
+            _locale_relsrcdir(config, "toolkit/locales"), "toolkit/locales"
+        )
+
+    def test_comm_directories_drop_the_comm_prefix(self):
+        config = self._comm_config()
+        self.assertEqual(_locale_relsrcdir(config, "comm/mail/locales"), "mail/locales")
+        self.assertEqual(
+            _locale_relsrcdir(config, "comm/mail/branding/thunderbird/locales"),
+            "mail/branding/thunderbird/locales",
+        )
+
+    def test_gecko_directories_of_a_comm_build_are_unchanged(self):
+        config = self._comm_config()
+        self.assertEqual(
+            _locale_relsrcdir(config, "toolkit/locales"), "toolkit/locales"
+        )
+        self.assertEqual(
+            _locale_relsrcdir(config, "community/locales"), "community/locales"
+        )
+
+
 class TestL10nManifestRoots(unittest.TestCase):
     def _context(self, relsrcdir):
         return L10nManifestContextData(
             relsrcdir=relsrcdir,
+            locale_relsrcdir=relsrcdir,
             install_subdir="",
             defines={},
             locale_pp_defines={},

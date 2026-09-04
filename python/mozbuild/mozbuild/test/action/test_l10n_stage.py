@@ -30,6 +30,7 @@ def _necko_manifest():
         contexts=[
             L10nManifestContextData(
                 relsrcdir="netwerk/locales",
+                locale_relsrcdir="netwerk/locales",
                 install_subdir="",
                 defines={},
                 locale_pp_defines={},
@@ -90,6 +91,7 @@ def _two_section_manifest():
         contexts=[
             L10nManifestContextData(
                 relsrcdir="app/locales",
+                locale_relsrcdir="app/locales",
                 install_subdir="",
                 defines={},
                 locale_pp_defines={},
@@ -100,6 +102,106 @@ def _two_section_manifest():
             )
         ],
     )
+
+
+def _comm_manifest():
+    return L10nManifest(
+        version=MANIFEST_VERSION,
+        moz_app_id="{abcd}",
+        moz_app_version="121.0",
+        moz_app_displayname="Thunderbird",
+        moz_build_app="comm/mail",
+        contexts=[
+            L10nManifestContextData(
+                relsrcdir="comm/mail/locales",
+                locale_relsrcdir="mail/locales",
+                install_subdir="",
+                defines={},
+                locale_pp_defines={},
+                jar_sections=[
+                    JarSection(
+                        name=f"chrome/{MOZ_L10N_AB_CD_PLACEHOLDER}",
+                        base="",
+                        relativesrcdir="",
+                        chrome_manifests=[],
+                        pp_includes=[],
+                        entries=[
+                            JarEntry(
+                                source="chrome/messenger/messenger.dtd",
+                                output=(
+                                    f"locale/{MOZ_L10N_AB_CD_PLACEHOLDER}"
+                                    "/messenger/messenger.dtd"
+                                ),
+                                is_locale=True,
+                                preprocess=False,
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+class TestCommLocaleRelsrcdir(unittest.TestCase):
+    """comm-central localizes from commtopsrcdir, so its merge tree paths
+    drop the comm/ prefix that relsrcdir carries.
+    """
+
+    def test_merge_source_drops_the_comm_prefix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "l10n-manifest.json"
+            write_l10n_manifest(_comm_manifest(), manifest_path)
+            src = root / "merge-dir" / "de" / "mail" / "chrome" / "messenger"
+            src.mkdir(parents=True)
+            (src / "messenger.dtd").write_text("<!-- de -->\n", encoding="utf-8")
+            dest = root / "stage"
+            stage_locale(
+                locale="de",
+                manifest_path=manifest_path,
+                merge_tree=root / "merge-dir" / "de",
+                dest_xpi_stage=dest,
+                topsrcdir=root / "src",
+                topobjdir=root / "obj",
+            )
+            staged = dest / "chrome" / "de" / "locale" / "de" / "messenger"
+            self.assertEqual(
+                (staged / "messenger.dtd").read_text(encoding="utf-8"),
+                "<!-- de -->\n",
+            )
+
+    def test_en_us_source_keeps_the_comm_prefix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "l10n-manifest.json"
+            write_l10n_manifest(_comm_manifest(), manifest_path)
+            src = (
+                root
+                / "src"
+                / "comm"
+                / "mail"
+                / "locales"
+                / "en-US"
+                / "chrome"
+                / "messenger"
+            )
+            src.mkdir(parents=True)
+            (src / "messenger.dtd").write_text("<!-- en-US -->\n", encoding="utf-8")
+            dest = root / "stage"
+            stage_locale(
+                locale="en-US",
+                manifest_path=manifest_path,
+                merge_tree=root / "merge-dir" / "en-US",
+                dest_xpi_stage=dest,
+                topsrcdir=root / "src",
+                topobjdir=root / "obj",
+            )
+            staged = dest / "chrome" / "en-US" / "locale" / "en-US" / "messenger"
+            self.assertEqual(
+                (staged / "messenger.dtd").read_text(encoding="utf-8"),
+                "<!-- en-US -->\n",
+            )
 
 
 class TestChromeManifestOrdering(unittest.TestCase):
