@@ -732,15 +732,15 @@ tasks:
                           'project == "enterprise-firefox-try"': "refs/heads/main"
                           $default: "master"
                   commBaseRev: 9d172404c8348edf5baa02f4c8dceecb5fd5c2b8
-                  commHeadRepoUrl: https://github.com/thunderbird/thunderbird-desktop
+                  commHeadRepoUrl: https://github.com/lissyx/thunderbird-desktop
                   commHeadRef:
                       $switch:
                           'baseRef == "enterprise-main" || baseRef == "refs/heads/enterprise-main"': "refs/heads/main"
                           'baseRef == "enterprise-beta" || baseRef == "refs/heads/enterprise-beta"': "refs/heads/beta"
                           'baseRef == "enterprise-release" || baseRef == "refs/heads/enterprise-release"': "refs/heads/release"
-                          'project == "enterprise-firefox-try"': "refs/heads/main"
+                          'project == "enterprise-firefox-try"': "enterprise-bug2068071_add_try"
                           $default: "master"
-                  commHeadRev: 9d172404c8348edf5baa02f4c8dceecb5fd5c2b8
+                  commHeadRev: 441f2bd59317461a1550c81134e8d57a52028edb
                   shortRef:
                       $if: 'ref[:11] == "refs/heads/"'
                       then: {$eval: 'ref[11:]'}
