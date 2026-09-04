@@ -718,6 +718,7 @@ tasks:
                   repoType:
                       $switch:
                           'repoUrl == "https://github.com/mozilla/enterprise-firefox"': "enterprise"
+                          'repoUrl == "https://github.com/mozilla/enterprise-firefox-try"': "dev"
                           'repoUrl == "https://github.com/mozilla/firefox-dev"': "dev"
                           'repoUrl == "https://github.com/mozilla-releng/staging-firefox"': "dev"
                           'repoUrl == "https://github.com/mozilla-firefox/firefox"': "prod"
@@ -753,7 +754,7 @@ tasks:
                   $if: >
                     eventType in ["action", "cron"]
                     || (eventType == "push" && repoType == "enterprise" && shortRef in ["enterprise-main", "enterprise-beta", "enterprise-release"])
-                    || (eventType == "push" && project == "enterprise-firefox-try")
+                    || (eventType == "push" && repoType == "dev")
                     || (isPullRequest && eventAction in ["opened", "reopened", "synchronize"])
                   then:
                       $let:
@@ -872,7 +873,13 @@ tasks:
                                   - bash
                                   - -cx
                                   - $let:
-                                        extraArgs: {$if: 'tasks_for == "cron"', then: '${cron.quoted_args}', else: ''}
+                                        extraArgs:
+                                            $switch:
+                                                'tasks_for == "cron"': '${cron.quoted_args}'
+                                                $default:
+                                                    $switch:
+                                                        'repoType == "dev"': '--allow-parameter-override'
+                                                        $default: ''
                                     in:
                                         $if: 'eventType == "action"'
                                         then: >
