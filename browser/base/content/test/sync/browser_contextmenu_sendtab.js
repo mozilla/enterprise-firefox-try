@@ -108,7 +108,11 @@ add_task(async function test_sendTabToDevice_showsConfirmationHint_fxa() {
     "FxA button is hidden"
   );
   document.documentElement.setAttribute("fxastatus", "foo");
-  await checkForConfirmationHint("fxa-toolbar-menu-button");
+  await checkForConfirmationHint(
+    AppConstants.MOZ_ENTERPRISE
+      ? "enterprise-badge-toolbar-button"
+      : "fxa-toolbar-menu-button"
+  );
   document.documentElement.setAttribute("fxastatus", "not_configured");
 });
 

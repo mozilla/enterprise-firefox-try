@@ -2686,8 +2686,9 @@ var gSync = {
 
   /**
    * Sends the given tabs to the target devices and, if any send succeeds,
-   * shows the "Sent!" confirmation hint anchored to the FxA toolbar button
-   * (falling back to the app menu button when it isn't available).
+   * shows the "Sent!" confirmation hint anchored to the FxA toolbar button -
+   * in enterprise builds it's anchored to the enterprise badge. (falling back
+   * to the app menu button when it isn't available).
    *
    * @param {object[]} tabsToSend - tabs (as passed to sendTabToDevice) to send.
    * @param {object[]} targets - the devices to send the tabs to.
@@ -2700,16 +2701,26 @@ var gSync = {
     );
     // Show the Sent! confirmation if any of the sends succeeded.
     if (results.includes(true)) {
-      // FxA button could be hidden with CSS since the user is logged out,
-      // although it seems likely this would only happen in testing...
-      let fxastatus = document.documentElement.getAttribute("fxastatus");
-      let anchorNode =
-        (fxastatus &&
-          fxastatus != "not_configured" &&
-          document.getElementById("fxa-toolbar-menu-button")?.parentNode?.id !=
-            "widget-overflow-list" &&
-          document.getElementById("fxa-toolbar-menu-button")) ||
-        document.getElementById("PanelUI-menu-button");
+      let anchorNode;
+      if (AppConstants.MOZ_ENTERPRISE) {
+        // The FxA button is replaced by the enterprise badge, so anchor the
+        // hint there (falling back to the app menu button if it overflowed).
+        let badge = document.getElementById("enterprise-badge-toolbar-button");
+        anchorNode =
+          (badge?.parentNode?.id != "widget-overflow-list" && badge) ||
+          document.getElementById("PanelUI-menu-button");
+      } else {
+        // FxA button could be hidden with CSS since the user is logged out,
+        // although it seems likely this would only happen in testing...
+        let fxastatus = document.documentElement.getAttribute("fxastatus");
+        anchorNode =
+          (fxastatus &&
+            fxastatus != "not_configured" &&
+            document.getElementById("fxa-toolbar-menu-button")?.parentNode
+              ?.id != "widget-overflow-list" &&
+            document.getElementById("fxa-toolbar-menu-button")) ||
+          document.getElementById("PanelUI-menu-button");
+      }
       ConfirmationHint.show(anchorNode, "confirmation-hint-send-to-device");
     }
     fxAccounts.flushLogFile();
