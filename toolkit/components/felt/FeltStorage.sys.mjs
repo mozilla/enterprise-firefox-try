@@ -9,11 +9,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 /**
- * Storage helper for reading and writing felt-related profile data to felt.json
+ * Storage helper for reading and writing felt-related data to felt.json
  */
 export const FeltStorage = {
   /**
-   * Absolute path to the felt.json file in the current profile.
+   * Absolute path to the felt.json file in the user's app-data directory (UAppData).
    *
    * @type {string}
    */
