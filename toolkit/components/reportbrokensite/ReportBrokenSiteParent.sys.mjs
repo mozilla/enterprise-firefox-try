@@ -640,9 +640,14 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
   #getSecurityInfo(troubleshootingInfo) {
     const result = {};
     for (const [k, v] of Object.entries(troubleshootingInfo.securitySoftware)) {
-      result[k.replace("registered", "").toLowerCase()] = v
-        ? v.split(";")
-        : null;
+      const key = k.replace("registered", "").toLowerCase();
+      if (Array.isArray(v)) {
+        result[key] = v;
+      } else if (v) {
+        result[key] = v.split(";");
+      } else {
+        result[key] = null;
+      }
     }
 
     // Right now, security data is only available for Windows builds, and
