@@ -1,0 +1,15 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "rebuild": 3,
+            "tasks": [
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
