@@ -1,0 +1,49 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-enterprise-rusttests/opt",
+                "test-linux2404-64-enterprise/debug-gtest-1proc",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/debug-mochitest-plain-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-gtest-1proc",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-integration",
+                "test-linux2404-64-enterprise/opt-mochitest-plain-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-gtest-1proc",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-marionette-integration",
+                "test-macosx1500-64-enterprise/debug-marionette-integration-swr",
+                "test-macosx1500-64-enterprise/debug-mochitest-plain-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-gtest-1proc",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-marionette-integration",
+                "test-macosx1500-64-enterprise/opt-mochitest-plain-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration-swr",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-plain-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-integration",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-plain-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
