@@ -176,6 +176,11 @@ add_task(async function test_firefoxhome_preferences_set() {
           Highlights:
             "browser.newtabpage.activity-stream.feeds.section.highlights",
         };
+    if (AppConstants.MOZ_ENTERPRISE) {
+      // SponsoredTopSites isn't applied in enterprise builds because sponsored content
+      // is disabled. Hence the policy can't lock its control.
+      delete data.SponsoredTopSites;
+    }
     for (let [section, key] of Object.entries(data)) {
       const el = srdEnabled
         ? browser.contentDocument.getElementById(key)

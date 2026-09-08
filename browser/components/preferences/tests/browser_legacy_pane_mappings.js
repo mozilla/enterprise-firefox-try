@@ -253,6 +253,11 @@ add_task(async function test_legacy_name_routing_and_subcategory_attr() {
     ],
     ["privacy-logins", "#passwordsAutofill", "panePasswordsAutofill", "logins"],
   ]) {
+    // Stories are disabled in enterprise builds, so the topstories subcategory
+    // isn't rendered; only verify routing (hash/pane), not the highlight.
+    if (AppConstants.MOZ_ENTERPRISE && expectedSubcategory === "topstories") {
+      expectedSubcategory = null;
+    }
     let friendlyCategoryName = getFriendlyPaneName(expectedPane);
     let loaded = TestUtils.topicObserved(`${friendlyCategoryName}-pane-loaded`);
     let prefs = await openPreferencesViaOpenPreferencesAPI(arg, {

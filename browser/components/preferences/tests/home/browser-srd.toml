@@ -36,25 +36,35 @@ tags = "os_integration"
 
 ["browser_homepage_firefox_home_disabled_windows_on.js"]
 
+["browser_homepage_firefox_home_enterprise_defaults.js"]
+run-if = ["enterprise"]
+
 ["browser_homepage_firefox_home_firefox_logo.js"]
 
 ["browser_homepage_firefox_home_manage_topics_opens_in_tab.js"]
+skip-if = ["enterprise"] # Manage Topics requires stories, disabled in enterprise builds
 
 ["browser_homepage_firefox_home_manage_topics_opens_in_window.js"]
+skip-if = ["enterprise"] # Manage Topics requires stories, disabled in enterprise builds
 
 ["browser_homepage_firefox_home_recent_activity.js"]
 
 ["browser_homepage_firefox_home_shortcuts.js"]
 
 ["browser_homepage_firefox_home_sponsored_shortcuts.js"]
+skip-if = ["enterprise"] # Sponsored content is disabled in enterprise builds
 
 ["browser_homepage_firefox_home_sponsored_stories.js"]
+skip-if = ["enterprise"] # Sponsored content is disabled in enterprise builds
 
 ["browser_homepage_firefox_home_stories.js"]
+skip-if = ["enterprise"] # Curated stories are disabled in enterprise builds
 
 ["browser_homepage_firefox_home_stories_personalization.js"]
+skip-if = ["enterprise"] # Curated stories are disabled in enterprise builds
 
 ["browser_homepage_firefox_home_support_firefox.js"]
+skip-if = ["enterprise"] # Sponsored content is disabled in enterprise builds
 
 ["browser_homepage_firefox_home_widgets.js"]
 

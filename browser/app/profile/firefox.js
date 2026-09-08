@@ -2237,6 +2237,14 @@ pref("browser.newtabpage.activity-stream.improvesearch.handoffToAwesomebar", tru
 
 pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
 
+#ifdef MOZ_ENTERPRISE
+// Enterprise removes its stories and sponsored content
+pref("browser.newtabpage.activity-stream.feeds.system.topstories", false, locked);
+pref("browser.newtabpage.activity-stream.showSponsored", false, locked);
+pref("browser.newtabpage.activity-stream.showSponsoredCheckboxes", false, locked);
+pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false, locked);
+#endif
+
 // URLs from the user's history that contain this search param will be hidden
 // from the top sites. The value is a string with one of the following forms:
 // - "" (empty) - Disable this feature

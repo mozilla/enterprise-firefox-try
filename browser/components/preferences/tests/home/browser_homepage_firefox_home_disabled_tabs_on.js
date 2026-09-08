@@ -48,7 +48,8 @@ async function assertSectionEnabled(win) {
     "widgets",
     "shortcuts",
     "stories",
-    "supportFirefox",
+    // supportFirefox is locked off in enterprise builds, so it is never enabled.
+    ...(AppConstants.MOZ_ENTERPRISE ? [] : ["supportFirefox"]),
     "recentActivity",
     ...(novaEnabled ? ["firefoxLogo"] : []),
   ]) {
