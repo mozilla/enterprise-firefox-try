@@ -34,7 +34,6 @@ support-files = ["browser_fxa_web_channel.html"]
 skip-if = ["enterprise"] # Enterprise Accounts replaces Firefox Accounts; there is no fxa sign-in or signed-out flow.
 
 ["browser_sendtab_toolbarbutton.js"]
-skip-if = ["enterprise"] # Enterprise Accounts replaces Firefox Accounts; there is no fxa sign-in or signed-out flow.
 
 ["browser_signed_out_avatar_variants.js"]
 skip-if = ["enterprise"] # Enterprise Accounts replaces Firefox Accounts; there is no fxa sign-in or signed-out flow.
