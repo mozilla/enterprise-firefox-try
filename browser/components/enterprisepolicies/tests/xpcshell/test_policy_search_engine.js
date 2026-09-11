@@ -476,3 +476,42 @@ add_task(async function test_reset_default() {
 
   EnterprisePolicyTesting.resetRunOnceState();
 });
+
+add_task(async function test_remove_ignores_preseeded_marker() {
+  // A user must not be able to suppress SearchEngines.Remove by pre-seeding the
+  // runOncePerModification marker on the user pref branch (Bug 2071117). Start
+  // with the engine visible so the assertion proves the policy actually removed
+  // it rather than finding it already hidden.
+  await SearchService.restoreDefaultEngines();
+  let engine = SearchService.getEngineByName("DuckDuckGo");
+  Assert.equal(
+    engine.hidden,
+    false,
+    "Engine is visible before the policy runs"
+  );
+
+  Services.prefs.setStringPref(
+    "browser.policies.runOncePerModification.removeSearchEngines",
+    JSON.stringify(["DuckDuckGo"])
+  );
+
+  await setupPolicyEngineWithJsonForSearch({
+    policies: {
+      SearchEngines: {
+        Remove: ["DuckDuckGo"],
+      },
+    },
+  });
+  // Get in line, because the Search policy callbacks are async.
+  await TestUtils.waitForTick();
+
+  engine = SearchService.getEngineByName("DuckDuckGo");
+  Assert.equal(
+    engine.hidden,
+    true,
+    "Engine is removed despite the pre-seeded runOncePerModification marker"
+  );
+
+  await setupPolicyEngineWithJsonForSearch({});
+  EnterprisePolicyTesting.resetRunOnceState();
+});

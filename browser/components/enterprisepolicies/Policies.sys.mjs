@@ -3581,29 +3581,28 @@ export var Policies = {
         // to replace the application provided engines, even if they have been
         // removed.
         if (param.Remove) {
-          // Only rerun if the list of engine names has changed.
-          await lazy.runOncePerModification(
-            "removeSearchEngines",
-            JSON.stringify(param.Remove),
-            async function () {
-              for (const engineName of param.Remove) {
-                const engine = lazy.SearchService.getEngineByName(engineName);
-                if (engine) {
-                  try {
-                    await lazy.SearchService.removeEngine(
-                      engine,
-                      lazy.SearchService.CHANGE_REASON.ENTERPRISE
-                    );
-                  } catch (ex) {
-                    lazy.reportFailure(
-                      "SearchEngines",
-                      `Unable to remove the search engine ${engineName} - ${ex}`
-                    );
-                  }
-                }
+          // Run on every startup rather than once per list change. The marker
+          // runOncePerModification uses lives on the user pref branch, so a
+          // user could pre-seed it to make removal look already-applied, or use
+          // "Restore Default Search Engines" to bring a policy-removed engine
+          // back and rely on the marker to keep it. Re-removing an engine that
+          // is already gone or hidden is a no-op, so the loop is idempotent.
+          for (const engineName of param.Remove) {
+            const engine = lazy.SearchService.getEngineByName(engineName);
+            if (engine) {
+              try {
+                await lazy.SearchService.removeEngine(
+                  engine,
+                  lazy.SearchService.CHANGE_REASON.ENTERPRISE
+                );
+              } catch (ex) {
+                lazy.reportFailure(
+                  "SearchEngines",
+                  `Unable to remove the search engine ${engineName} - ${ex}`
+                );
               }
             }
-          );
+          }
         }
         if (param.Default) {
           await lazy.runOncePerModification(
