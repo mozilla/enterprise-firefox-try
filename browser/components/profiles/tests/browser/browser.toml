@@ -45,6 +45,7 @@ run-if = [
 skip-if = ["enterprise"] # Enterprise builds do not support the FxA menu.
 
 ["browser_fxa_menu_profiles_telemetry.js"]
+skip-if = ["enterprise"] # Enterprise builds do not support the FxA menu.
 
 ["browser_icon_avatar_test.js"]
 
