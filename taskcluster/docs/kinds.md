@@ -1025,3 +1025,7 @@ Mac notarization of customized versions of releases for enterprises.
 ## enterprise-repack-mac-signing
 
 Mac signature of customized versions of releases for enterprises.
+
+## enterprise-repack-repackage-signing
+
+Signature of MAR update file after customer-specific repackaging.

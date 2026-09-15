@@ -78,20 +78,13 @@ ENTERPRISE_PLATFORM_MAP = {
 # relative to the dependency's own ``artifact_prefix`` and is looked up in its
 # ``release_artifacts``, so where each kind publishes is not repeated here.
 BLOB_SPECS = {
-    # `mar-signing` signs the MAR of the en-US build and publishes it at the
-    # root; every other locale is a separate `mar-signing-l10n` task that
-    # publishes under the locale. Returning `None` keeps the en-US MAR from
-    # being handed to the other locales, which would otherwise match since the
-    # task does publish that path.
-    "mar-signing": (
+    # The MAR of the repack, not of the generic build: `mar-signing` and
+    # `mar-signing-l10n` sign the generic one, whose `firefox.cfg` carries the
+    # `FIREFOX_ENTERPRISE_GENERIC` placeholder instead of a console address
+    # (bug 2072087).
+    "enterprise-repack-repackage-signing": (
         "complete_mar",
-        lambda repack_config, locale: (
-            "target.complete.mar" if locale == "en-US" else None
-        ),
-    ),
-    "mar-signing-l10n": (
-        "complete_mar",
-        lambda repack_config, locale: f"{locale}/target.complete.mar",
+        lambda repack_config, locale: f"{repack_config}/{locale}/target.complete.mar",
     ),
     "repackage-signing-msi": (
         "windows_msi",
@@ -106,12 +99,6 @@ BLOB_SPECS = {
         lambda repack_config, locale: f"{repack_config}/{locale}/target.pkg",
     ),
 }
-
-# Kinds whose tasks belong to no repack: they are keyed by build platform, and
-# for `mar-signing-l10n` by locale too, so their artifacts are shared by every
-# repack of that platform. `_collect_releases` attaches them to the variants
-# the per-repack dependencies created.
-SHARED_KINDS = ("mar-signing", "mar-signing-l10n")
 
 # How a blob addresses its artifact: through the taskcluster proxy, which
 # authenticates with the reading task's own scopes and redirects to wherever
@@ -174,18 +161,12 @@ def _repack(dep):
 def _artifact_path(dep, relpath):
     """``relpath`` as ``dep`` publishes it, or ``None`` if it does not.
 
-    A ``None`` ``relpath`` is a spec declining the locale outright, as
-    ``mar-signing`` does for everything but en-US.
-
     ``release_artifacts`` is the list of artifacts a task promises to the
     release pipeline, spelled exactly as the queue serves them, so it settles
     both where a kind publishes -- the enterprise repack prefix, the per-repack
     subdirectories of the chunked mac notarization tasks -- and whether the
     artifact exists at all.
     """
-    if relpath is None:
-        return None
-
     path = get_artifact_path(dep, relpath)
     if path in dep.attributes.get("release_artifacts", []):
         return path
@@ -203,31 +184,19 @@ def _collect_releases(deps):
     tokens in the URLs are resolved to task IDs later via ``task-reference``
     substitution.
 
-    ``SHARED_KINDS`` dependencies belong to no repack, so they are held back
-    and then attached to the variants the per-repack dependencies created for
-    the same build target. A variant therefore only exists if a per-repack
-    artifact backs it, and is never a MAR on its own.
+    Every blob belongs to exactly one repack, so a variant only exists if that
+    repack produced an artifact for it.
 
     A blob is only emitted for an artifact the dependency lists in
-    ``release_artifacts``, which is also what restricts a per-locale
-    ``mar-signing-l10n`` task to its own locale. A locale no MAR signing task
-    covers simply has no MAR, rather than a URL to a file nobody published.
+    ``release_artifacts``. A locale a kind does not cover simply has no blob of
+    that type, rather than a URL to a file nobody published.
     """
     releases = {}
-    shared = []
 
     for dep in deps:
         build_target = ENTERPRISE_PLATFORM_MAP.get(dep.attributes.get("build_platform"))
         spec = BLOB_SPECS.get(dep.kind)
         if build_target is None or spec is None:
-            continue
-
-        # The MAR signing kinds are per build platform, not per repack, so
-        # their artifacts are shared by every repack of that platform. Naming
-        # the kinds is the only way to tell: the plain MSIs on an enterprise
-        # platform also carry no repack config and publish the same paths.
-        if dep.kind in SHARED_KINDS:
-            shared.append((build_target, dep, spec))
             continue
 
         blob_type, relpath_for = spec
@@ -243,19 +212,6 @@ def _collect_releases(deps):
                 ARTIFACT_URL.format(label=dep.label, path=path)
             )
             labels.add(dep.label)
-
-    for repack_config, (variants, labels) in releases.items():
-        for shared_target, dep, (blob_type, relpath_for) in shared:
-            for build_target, locale in variants:
-                if build_target != shared_target:
-                    continue
-                path = _artifact_path(dep, relpath_for(repack_config, locale))
-                if path is None:
-                    continue
-                variants[(build_target, locale)][blob_type] = ARTIFACT_URL.format(
-                    label=dep.label, path=path
-                )
-                labels.add(dep.label)
 
     return releases
 

@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import pytest
 from mozunit import main
 from taskgraph.task import Task
 
@@ -53,39 +52,44 @@ def installer_task(kind, repack_config, locales):
     )
 
 
-def mar_signing_task(build_platform):
-    """Signs the en-US MAR only, and publishes it at the root."""
+MAR_KIND = "enterprise-repack-repackage-signing"
+
+
+def mar_signing_task(build_platform, repack_config, locales, published=None):
+    """Signs the MARs the repack produced, one per locale, under the repack.
+
+    ``published`` lets a test publish a different set than the repack asked
+    for, which is how the artifact lookup gets exercised.
+    """
     return Task(
-        kind="mar-signing",
-        label=f"mar-signing-{build_platform}/opt",
+        kind=MAR_KIND,
+        label=f"{MAR_KIND}-{repack_config.replace('/', '_')}-{build_platform}/opt",
         attributes={
             "build_platform": build_platform,
-            "release_artifacts": ["public/build/target.complete.mar"],
+            "artifact_prefix": REPACK_PREFIX,
+            "release_artifacts": [
+                f"{REPACK_PREFIX}/{repack_config}/{locale}/target.complete.mar"
+                for locale in (locales if published is None else published)
+            ],
         },
-        task={"extra": {}},
+        task={"extra": {"repack_config": repack_config, "repack_locales": locales}},
     )
 
 
-def mar_signing_l10n_task(build_platform, locale):
-    return Task(
-        kind="mar-signing-l10n",
-        label=f"mar-signing-l10n-{locale}-{build_platform}/opt",
-        attributes={
-            "build_platform": build_platform,
-            "release_artifacts": [f"public/build/{locale}/target.complete.mar"],
-        },
-        task={"extra": {}},
-    )
-
-
-def make_deps(repack_configs=(REPACK_CONFIG,), locales=LOCALES, extra_locales=()):
+def make_deps(
+    repack_configs=(REPACK_CONFIG,), locales=LOCALES, mar_locales=None, skip_mar=()
+):
     deps = []
     for repack_config in repack_configs:
         deps += [installer_task(kind, repack_config, locales) for kind in INSTALLERS]
-    for build_platform, _ in INSTALLERS.values():
-        deps.append(mar_signing_task(build_platform))
-        for locale in [l for l in locales if l != "en-US"] + list(extra_locales):
-            deps.append(mar_signing_l10n_task(build_platform, locale))
+        for build_platform, _ in INSTALLERS.values():
+            if build_platform in skip_mar:
+                continue
+            deps.append(
+                mar_signing_task(
+                    build_platform, repack_config, locales, published=mar_locales
+                )
+            )
     return deps
 
 
@@ -107,31 +111,29 @@ def test_every_requested_locale_gets_an_installer_and_a_mar():
         ]), f"{build_target}/{locale}"
 
 
-def test_en_us_and_localized_mars_come_from_their_own_kinds():
-    """`mar-signing` publishes the en-US MAR at the root and `mar-signing-l10n`
-    publishes one per locale. The en-US path must not be handed to the other
-    locales, which it would be if the spec stopped checking the locale."""
-    variants, _ = erd._collect_releases(make_deps())[REPACK_CONFIG]
+def test_the_mar_comes_from_the_repack_not_the_generic_build():
+    """The console must get the repacked MAR, whose `firefox.cfg` names the
+    customer's console. The generic build's MAR carries a placeholder instead
+    (bug 2072087), so the path has to be under the repack config."""
+    variants, labels = erd._collect_releases(make_deps())[REPACK_CONFIG]
 
-    assert variants[("Linux_x86_64-gcc3", "en-US")]["complete_mar"].endswith(
-        "<mar-signing-linux64-enterprise-shippable/opt>"
-        "/artifacts/public/build/target.complete.mar"
-    )
-    for locale in ("de", "fr"):
+    for locale in LOCALES:
         url = variants[("Linux_x86_64-gcc3", locale)]["complete_mar"]
-        assert f"mar-signing-l10n-{locale}-linux64-enterprise-shippable" in url
-        assert url.endswith(f"public/build/{locale}/target.complete.mar")
+        assert f"<{MAR_KIND}-moz_stageGCP-linux64-enterprise-shippable/opt>" in url
+        assert url.endswith(
+            f"{REPACK_PREFIX}/{REPACK_CONFIG}/{locale}/target.complete.mar"
+        )
+    assert not [label for label in labels if label.startswith("mar-signing")]
 
 
 def test_locales_outside_the_repack_are_ignored():
-    """A MAR signing task exists per locale the build ships, which is a
-    superset of what a repack asks for."""
-    variants, labels = erd._collect_releases(make_deps(extra_locales=("ja", "pl")))[
+    """Only the locales the repack asked for become variants, even if a task
+    published more."""
+    variants, _ = erd._collect_releases(make_deps(mar_locales=LOCALES + ["ja", "pl"]))[
         REPACK_CONFIG
     ]
 
     assert {locale for _, locale in variants} == set(LOCALES)
-    assert not [label for label in labels if "-ja-" in label or "-pl-" in label]
 
 
 def test_releases_do_not_leak_across_repacks():
@@ -147,14 +149,11 @@ def test_releases_do_not_leak_across_repacks():
 
 
 def test_a_locale_with_no_mar_still_ships_its_installer():
-    """A variant exists because a per-repack artifact backs it; a missing MAR
-    degrades that variant rather than dropping it or inventing a URL."""
-    deps = [
-        dep
-        for dep in make_deps()
-        if not (dep.kind == "mar-signing-l10n" and "-fr-" in dep.label)
+    """A missing MAR degrades that variant rather than dropping it or
+    inventing a URL."""
+    variants, _ = erd._collect_releases(make_deps(mar_locales=["de", "en-US"]))[
+        REPACK_CONFIG
     ]
-    variants, _ = erd._collect_releases(deps)[REPACK_CONFIG]
 
     assert sorted(variants[("Linux_x86_64-gcc3", "fr")]) == ["linux_deb"]
     assert sorted(variants[("Linux_x86_64-gcc3", "de")]) == [
@@ -163,18 +162,16 @@ def test_a_locale_with_no_mar_still_ships_its_installer():
     ]
 
 
-@pytest.mark.parametrize("kind", sorted(INSTALLERS))
-def test_mar_signing_alone_never_creates_a_variant(kind):
-    """MAR signing is shared by every repack of a platform, so it can only
-    attach to variants a per-repack artifact already created."""
-    deps = [
-        dep for dep in make_deps() if dep.kind not in INSTALLERS or dep.kind == kind
-    ]
-    variants, _ = erd._collect_releases(deps)[REPACK_CONFIG]
+def test_a_platform_without_a_mar_task_has_no_mar():
+    """MAR signing is per repack and per platform, so one platform missing it
+    does not cost the others theirs."""
+    variants, _ = erd._collect_releases(
+        make_deps(skip_mar=("win64-enterprise-shippable",))
+    )[REPACK_CONFIG]
 
-    build_platform, _ = INSTALLERS[kind]
-    target = erd.ENTERPRISE_PLATFORM_MAP[build_platform]
-    assert {t for t, _ in variants} == {target}
+    for locale in LOCALES:
+        assert sorted(variants[("WINNT_x86_64-msvc", locale)]) == ["windows_msi"]
+        assert "complete_mar" in variants[("Linux_x86_64-gcc3", locale)]
 
 
 if __name__ == "__main__":

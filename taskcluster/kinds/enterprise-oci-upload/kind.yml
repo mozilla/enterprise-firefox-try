@@ -14,8 +14,7 @@ transforms:
     - gecko_taskgraph.transforms.task
 
 kind-dependencies:
-    - mar-signing
-    - mar-signing-l10n
+    - enterprise-repack-repackage-signing
     - repackage-signing-msi  # msix not supported by console yet
     - repackage-deb
     - enterprise-repack-mac-notarization
@@ -33,8 +32,7 @@ task-defaults:
         # group. enterprise_release_definition splits it per partner repack and
         # keeps only the dependencies that repack uses.
         kinds:
-            - mar-signing
-            - mar-signing-l10n
+            - enterprise-repack-repackage-signing
             - repackage-signing-msi
             - repackage-deb
             - enterprise-repack-mac-notarization
