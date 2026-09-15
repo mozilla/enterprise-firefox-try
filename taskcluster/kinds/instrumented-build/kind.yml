@@ -13,6 +13,7 @@ transforms:
     - gecko_taskgraph.transforms.build_attrs:transforms
     - gecko_taskgraph.transforms.build_schedules:transforms
     - gecko_taskgraph.transforms.build_lints:transforms
+    - gecko_taskgraph.transforms.mozconfig:transforms
     - gecko_taskgraph.transforms.job:transforms
     - gecko_taskgraph.transforms.artifact:transforms
     - gecko_taskgraph.transforms.task:transforms
@@ -54,11 +55,12 @@ tasks:
         treeherder:
             platform: linux64-shippable/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate
         run:
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            mozconfig-variant: profile-generate
             tooltool-downloads: public
         fetches:
             toolchain:
@@ -82,11 +84,12 @@ tasks:
         treeherder:
             platform: linux64-nightlyasrelease/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate-as-release
         run:
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            mozconfig-variant: profile-generate-as-release
             tooltool-downloads: public
         fetches:
             toolchain:
@@ -110,13 +113,13 @@ tasks:
         treeherder:
             platform: linux64-aarch64-shippable/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate
+            platform: linux64-aarch64
         run:
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            mozconfig-variant: profile-generate
-            extra-config:
-                mozconfig_platform: linux64-aarch64
             tooltool-downloads: public
         fetches:
             toolchain:
@@ -156,6 +159,8 @@ tasks:
                 - name: public/build/security/security-module-helper.xml
                   path: checkouts/gecko/security/mac/hardenedruntime/{entitlement_directory}/security-module-helper.xml
                   type: file
+        mozconfig:
+            variant: profile-generate
         run:
             using: mozharness
             actions: [get-secrets, build]
@@ -164,7 +169,6 @@ tasks:
                 - builds/releng_base_mac_64_cross_builds.py
             script: "mozharness/scripts/fx_desktop_build.py"
             secrets: true
-            mozconfig-variant: profile-generate
         fetches:
             toolchain:
                 - linux64-clang
@@ -204,6 +208,9 @@ tasks:
                 - name: public/build/security/security-module-helper.xml
                   path: checkouts/gecko/security/mac/hardenedruntime/{entitlement_directory}/security-module-helper.xml
                   type: file
+        mozconfig:
+            variant: profile-generate
+            platform: macosx64-aarch64
         run:
             using: mozharness
             actions: [get-secrets, build]
@@ -212,9 +219,6 @@ tasks:
                 - builds/releng_base_mac_64_cross_builds.py
             script: "mozharness/scripts/fx_desktop_build.py"
             secrets: true
-            mozconfig-variant: profile-generate
-            extra-config:
-                mozconfig_platform: macosx64-aarch64
         fetches:
             toolchain:
                 - linux64-clang
@@ -254,6 +258,9 @@ tasks:
                 - name: public/build/security/security-module-helper.xml
                   path: checkouts/gecko/security/mac/hardenedruntime/{entitlement_directory}/security-module-helper.xml
                   type: file
+        mozconfig:
+            variant: profile-generate-as-release
+            platform: macosx64-aarch64
         run:
             using: mozharness
             actions: [get-secrets, build]
@@ -262,9 +269,6 @@ tasks:
                 - builds/releng_base_mac_64_cross_builds.py
             script: "mozharness/scripts/fx_desktop_build.py"
             secrets: true
-            mozconfig-variant: profile-generate-as-release
-            extra-config:
-                mozconfig_platform: macosx64-aarch64
         fetches:
             toolchain:
                 - linux64-clang
@@ -313,6 +317,8 @@ tasks:
                 - name: public/build/geckoview_example.aab
                   path: /builds/worker/workspace/obj-build/gradle/build/mobile/android/geckoview_example/outputs/bundle/debug/geckoview_example-debug.aab
                   type: file
+        mozconfig:
+            variant: profile-generate
         run:
             config:
                 - builds/releng_base_android_64_builds.py
@@ -369,6 +375,8 @@ tasks:
                 - name: public/build/geckoview_example.aab
                   path: /builds/worker/workspace/obj-build/gradle/build/mobile/android/geckoview_example/outputs/bundle/debug/geckoview_example-debug.aab
                   type: file
+        mozconfig:
+            variant: profile-generate
         run:
             config:
                 - builds/releng_base_android_64_builds.py
@@ -425,6 +433,8 @@ tasks:
                 - name: public/build/geckoview_example.aab
                   path: /builds/worker/workspace/obj-build/gradle/build/mobile/android/geckoview_example/outputs/bundle/debug/geckoview_example-debug.aab
                   type: file
+        mozconfig:
+            variant: profile-generate
         run:
             config:
                 - builds/releng_base_android_64_builds.py
@@ -457,14 +467,14 @@ tasks:
         treeherder:
             platform: windows2012-32-shippable/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate
+            platform: win32
         run:
             options: [append-env-variables-from-configs]
-            mozconfig-variant: profile-generate
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            extra-config:
-                mozconfig_platform: win32
         fetches:
             toolchain:
                 - linux64-7zz
@@ -495,14 +505,14 @@ tasks:
         treeherder:
             platform: win64-nightlyasrelease/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate-as-release
+            platform: win64
         run:
             options: [append-env-variables-from-configs]
-            mozconfig-variant: profile-generate-as-release
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            extra-config:
-                mozconfig_platform: win64
         fetches:
             toolchain:
                 - linux64-7zz
@@ -534,14 +544,14 @@ tasks:
         treeherder:
             platform: windows2012-64-shippable/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate
+            platform: win64
         run:
             options: [append-env-variables-from-configs]
-            mozconfig-variant: profile-generate
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            extra-config:
-                mozconfig_platform: win64
         fetches:
             toolchain:
                 - linux64-7zz
@@ -573,14 +583,14 @@ tasks:
         treeherder:
             platform: windows2012-aarch64-shippable/opt
         worker-type: b-linux-docker-amd
+        mozconfig:
+            variant: profile-generate
+            platform: win64-aarch64
         run:
             options: [append-env-variables-from-configs]
-            mozconfig-variant: profile-generate
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            extra-config:
-                mozconfig_platform: win64-aarch64
         fetches:
             toolchain:
                 - linux64-7zz

@@ -13,6 +13,7 @@ transforms:
     - gecko_taskgraph.transforms.build_attrs:transforms
     - gecko_taskgraph.transforms.build_schedules:transforms
     - gecko_taskgraph.transforms.build_lints:transforms
+    - gecko_taskgraph.transforms.mozconfig:transforms
     - gecko_taskgraph.transforms.job:transforms
     - gecko_taskgraph.transforms.artifact:transforms
     - gecko_taskgraph.transforms.task:transforms
@@ -68,17 +69,19 @@ task-defaults:
             - name: public/reports
               path: /builds/worker/workspace/obj-build/gradle/build/reports
               type: directory
-    run:
-        clone-with: hg
-        using: mozharness
-        script: "mozharness/scripts/fx_desktop_build.py"
-        secrets: true
-        mozconfig-variant:
+    mozconfig:
+        variant:
             by-release-type:
                 beta: beta-fat-aar
                 release: release-fat-aar
                 esr.*: release-fat-aar
                 default: nightly-fat-aar
+        platform: android-arm
+    run:
+        clone-with: hg
+        using: mozharness
+        script: "mozharness/scripts/fx_desktop_build.py"
+        secrets: true
         tooltool-downloads: internal
         # Note: These settings are only honored by nightly (i.e. shipping) builds
         update-channel:
@@ -191,6 +194,8 @@ tasks:
             env:
                 PERFHERDER_EXTRA_OPTIONS: android-geckoview-fat-aar-nightly-lite
                 MOZ_ARTIFACT_TASK: {task-reference: '<armeabi-v7a>'}
+        mozconfig:
+            platform: android-arm-lite
         run:
             actions: [get-secrets, build, multi-l10n]
             config:

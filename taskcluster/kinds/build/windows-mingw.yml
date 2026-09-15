@@ -29,12 +29,13 @@ win32-mingwclang/opt:
         env:
             PERFHERDER_EXTRA_OPTIONS: "opt 32 clang"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    mozconfig:
+        variant: mingwclang
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_windows_32_mingw_builds.py
             - builds/releng_sub_windows_configs/32_mingwclang.py
-        mozconfig-variant: mingwclang
     run-on-projects:
         - 'mozilla-central'
         - 'mozilla-esr153'
@@ -70,12 +71,13 @@ win32-mingwclang/debug:
         env:
             PERFHERDER_EXTRA_OPTIONS: "debug 32 clang"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    mozconfig:
+        variant: mingwclang-debug
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_windows_32_mingw_builds.py
             - builds/releng_sub_windows_configs/32_mingwclang.py
-        mozconfig-variant: mingwclang-debug
     run-on-projects:
         - 'mozilla-central'
         - 'mozilla-esr153'
@@ -111,12 +113,13 @@ win64-mingwclang/opt:
         env:
             PERFHERDER_EXTRA_OPTIONS: "opt 64 clang"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    mozconfig:
+        variant: mingwclang
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_windows_64_mingw_builds.py
             - builds/releng_sub_windows_configs/64_mingwclang.py
-        mozconfig-variant: mingwclang
     run-on-projects:
         - 'mozilla-central'
         - 'mozilla-esr153'
@@ -152,12 +155,13 @@ win64-mingwclang/debug:
         env:
             PERFHERDER_EXTRA_OPTIONS: "debug 64 clang"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    mozconfig:
+        variant: mingwclang-debug
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_windows_64_mingw_builds.py
             - builds/releng_sub_windows_configs/64_mingwclang.py
-        mozconfig-variant: mingwclang-debug
     run-on-projects:
         - 'mozilla-central'
         - 'mozilla-esr153'

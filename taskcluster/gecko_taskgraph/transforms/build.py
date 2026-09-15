@@ -117,25 +117,6 @@ def update_channel(config, jobs):
         yield job
 
 
-@transforms.add
-def mozconfig(config, jobs):
-    for job in jobs:
-        resolve_keyed_by(
-            job,
-            "run.mozconfig-variant",
-            item_name=job["name"],
-            **{
-                "release-type": config.params["release_type"],
-            },
-        )
-        mozconfig_variant = job["run"].pop("mozconfig-variant", None)
-        if mozconfig_variant:
-            job["run"].setdefault("extra-config", {})["mozconfig_variant"] = (
-                mozconfig_variant
-            )
-        yield job
-
-
 UNIFY_JOB_SCRIPT = "taskcluster/scripts/misc/unify.sh"
 
 

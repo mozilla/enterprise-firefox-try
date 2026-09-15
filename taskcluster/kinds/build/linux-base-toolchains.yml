@@ -25,6 +25,8 @@ linux64-base-toolchains/opt:
         env:
             PERFHERDER_EXTRA_OPTIONS: base-toolchains
             FORCE_GCC: '1'
+    mozconfig:
+        variant: nightly-base-toolchains
     run:
         using: mozharness
         actions: [get-secrets, build]
@@ -33,7 +35,6 @@ linux64-base-toolchains/opt:
             - builds/releng_base_linux_64_builds.py
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
-        mozconfig-variant: nightly-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
@@ -66,6 +67,8 @@ linux64-base-toolchains/debug:
         env:
             PERFHERDER_EXTRA_OPTIONS: base-toolchains
             FORCE_GCC: '1'
+    mozconfig:
+        variant: debug-base-toolchains
     run:
         using: mozharness
         actions: [get-secrets, build]
@@ -75,7 +78,6 @@ linux64-base-toolchains/debug:
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         custom-build-variant-cfg: debug
-        mozconfig-variant: debug-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
@@ -107,6 +109,8 @@ linux64-base-toolchains-clang/opt:
         env:
             PERFHERDER_EXTRA_OPTIONS: base-toolchains-clang
             DISABLE_CLANG_PLUGIN: '1'
+    mozconfig:
+        variant: nightly-base-toolchains
     run:
         using: mozharness
         actions: [get-secrets, build]
@@ -115,7 +119,6 @@ linux64-base-toolchains-clang/opt:
             - builds/releng_base_linux_64_builds.py
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
-        mozconfig-variant: nightly-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
@@ -147,6 +150,8 @@ linux64-base-toolchains-clang/debug:
         env:
             PERFHERDER_EXTRA_OPTIONS: base-toolchains-clang
             DISABLE_CLANG_PLUGIN: '1'
+    mozconfig:
+        variant: debug-base-toolchains
     run:
         using: mozharness
         actions: [get-secrets, build]
@@ -156,7 +161,6 @@ linux64-base-toolchains-clang/debug:
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         custom-build-variant-cfg: debug
-        mozconfig-variant: debug-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:

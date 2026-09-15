@@ -53,12 +53,13 @@ macosx64/debug:
         max-run-time: 5400
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    mozconfig:
+        variant: debug
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-debug
-        mozconfig-variant: debug
     run-on-projects: ["enterprise-firefox"]
     run-on-repo-type: ["git"]
     use-sccache: true
@@ -126,14 +127,14 @@ macosx64-aarch64/debug:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: aarch64
+    mozconfig:
+        variant: debug
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-debug
-        mozconfig-variant: debug
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     run-on-projects: ['integration', "enterprise-firefox"]
     run-on-repo-type: ["git"]
     use-sccache: true
@@ -161,13 +162,13 @@ macosx64-aarch64/opt:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: aarch64
+    mozconfig:
+        variant: opt
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
-        mozconfig-variant: opt
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     run-on-projects: ['integration']
     use-sccache: true
     fetches:
@@ -192,11 +193,12 @@ macosx64-non-unified/plain:
         env:
             MOZ_AUTOMATION_BUILD_SYMBOLS: '0'
             PERFHERDER_EXTRA_OPTIONS: non-unified
+    mozconfig:
+        variant: non-unified
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
-        mozconfig-variant: non-unified
         extra-config:
             disable_package_metrics: true
     use-sccache: true
@@ -525,12 +527,13 @@ macosx64-asan-fuzzing/opt:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: asan-fuzzing
+    mozconfig:
+        variant: nightly-fuzzing-asan
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-fuzzing-asan
-        mozconfig-variant: nightly-fuzzing-asan
     use-sccache: true
     fetches:
         toolchain:
@@ -559,12 +562,13 @@ macosx64-fuzzing/debug:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: fuzzing
+    mozconfig:
+        variant: debug-fuzzing
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-fuzzing-debug
-        mozconfig-variant: debug-fuzzing
     use-sccache: true
     fetches:
         toolchain:
@@ -592,14 +596,14 @@ macosx64-aarch64-asan-fuzzing/opt:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: aarch64-asan-fuzzing
+    mozconfig:
+        variant: nightly-fuzzing-asan
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-fuzzing-asan
-        mozconfig-variant: nightly-fuzzing-asan
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     use-sccache: true
     fetches:
         toolchain:
@@ -628,14 +632,14 @@ macosx64-aarch64-fuzzing/debug:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: aarch64-fuzzing
+    mozconfig:
+        variant: debug-fuzzing
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-fuzzing-debug
-        mozconfig-variant: debug-fuzzing
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     use-sccache: true
     fetches:
         toolchain:
@@ -670,12 +674,13 @@ macosx64-x64-devedition/opt:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             MOZ_GENERATE_SBOM: "1"
+    mozconfig:
+        variant: devedition
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
             - taskcluster_nightly.py
-        mozconfig-variant: devedition
     run-on-projects: ['mozilla-beta']
     fetches:
         toolchain:
@@ -708,14 +713,14 @@ macosx64-aarch64-devedition/opt:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             MOZ_GENERATE_SBOM: "1"
             PERFHERDER_EXTRA_OPTIONS: aarch64
+    mozconfig:
+        variant: devedition
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
             - taskcluster_nightly.py
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
-        mozconfig-variant: devedition
     run-on-projects: ['mozilla-beta']
     fetches:
         toolchain:
@@ -745,6 +750,7 @@ macosx64-devedition/opt:
     run-on-projects: ['mozilla-beta']
     worker:
         max-run-time: 1800
+    mozconfig: null
     run:
         job-script: taskcluster/scripts/misc/unify.sh
         config:
@@ -885,12 +891,13 @@ macosx64-noopt/debug:
         tier: 2
     worker:
         max-run-time: 3600
+    mozconfig:
+        variant: cross-noopt-debug
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-noopt-debug
-        mozconfig-variant: cross-noopt-debug
         keep-artifacts: false
     run-on-projects: ['mozilla-central']
     use-sccache: true
@@ -914,15 +921,15 @@ macosx64-aarch64-noopt/debug:
         max-run-time: 3600
         env:
             PERFHERDER_EXTRA_OPTIONS: aarch64
+    mozconfig:
+        variant: cross-noopt-debug
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-noopt-debug
-        mozconfig-variant: cross-noopt-debug
         keep-artifacts: false
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     run-on-projects: ['mozilla-central']
     use-sccache: true
     fetches:
@@ -945,12 +952,13 @@ macosx64-x64-add-on-devel/opt:
         max-run-time: 3600
         env:
             PERFHERDER_EXTRA_OPTIONS: x64
+    mozconfig:
+        variant: add-on-devel
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: add-on-devel
-        mozconfig-variant: add-on-devel
     run-on-projects: ['mozilla-beta', 'mozilla-release']
     use-sccache: true
     fetches:
@@ -973,14 +981,14 @@ macosx64-aarch64-add-on-devel/opt:
         max-run-time: 3600
         env:
             PERFHERDER_EXTRA_OPTIONS: aarch64
+    mozconfig:
+        variant: add-on-devel
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: add-on-devel
-        mozconfig-variant: add-on-devel
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     run-on-projects: ['mozilla-beta', 'mozilla-release']
     use-sccache: true
     fetches:
@@ -1001,6 +1009,7 @@ macosx64-add-on-devel/opt:
         tier: 2
     worker:
         max-run-time: 1800
+    mozconfig: null
     run:
         job-script: taskcluster/scripts/misc/unify.sh
         config:
@@ -1079,12 +1088,13 @@ macosx64-nightlyasrelease/opt:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: nightly-as-release
+    mozconfig:
+        variant: nightly-as-release
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
             - taskcluster_nightly.py
-        mozconfig-variant: nightly-as-release
     fetches:
         toolchain:
             - linux64-cctools-port
@@ -1112,14 +1122,14 @@ macosx64-aarch64-nightlyasrelease/opt:
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: nightly-as-release
+    mozconfig:
+        variant: nightly-as-release
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
             - taskcluster_nightly.py
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
-        mozconfig-variant: nightly-as-release
     fetches:
         toolchain:
             - linux64-cctools-port
@@ -1187,13 +1197,13 @@ macosx64-aarch64-shippable/opt:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             MOZ_GENERATE_SBOM: "1"
             PERFHERDER_EXTRA_OPTIONS: aarch64
+    mozconfig:
+        platform: macosx64-aarch64
     run:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_mac_64_cross_builds.py
             - taskcluster_nightly.py
-        extra-config:
-            mozconfig_platform: macosx64-aarch64
     fetches:
         toolchain:
             - linux64-cctools-port
@@ -1224,6 +1234,7 @@ macosx64-shippable/opt:
         # No MOZ_GENERATE_SBOM here: this task only recombines the
         # per-architecture builds, which each upload their own SBOM.
         max-run-time: 1800
+    mozconfig: null
     run:
         job-script: taskcluster/scripts/misc/unify.sh
         config:
