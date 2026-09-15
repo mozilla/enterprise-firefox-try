@@ -16,7 +16,6 @@ const { TestUtils } = ChromeUtils.importESModule(
 
 function mockUpdater() {
   const sandbox = sinon.createSandbox();
-  sandbox.stub(Updates, "_nextRestartUpdateCheck").value(0);
   Updates._suspended = false;
   sandbox.stub(Updates, "updateCheckingAllowed").callsFake(async () => {
     Updates._canDoUpdateChecking = true;
@@ -296,29 +295,18 @@ add_task(async function test_portal_stops_restart_preparation() {
   }
 });
 
-add_task(async function test_no_updates_uses_the_normal_check_interval() {
+add_task(async function test_no_updates_allows_the_next_console_check() {
   const mock = mockUpdater();
   try {
     mock.check.callsFake(async () => {
       mock.addListener.lastCall.args[0](AppUpdater.STATUS.NO_UPDATES_FOUND);
     });
     await Updates.prepareForRestart();
-    Updates._nextRestartUpdateCheck -= 5 * 60 * 1000;
-    await Updates.prepareForRestart();
-    Assert.ok(
-      mock.check.calledOnce,
-      "A successful empty check is not repeated after five minutes"
-    );
-    Assert.ok(
-      Updates.updateCheckingAllowed.calledOnce,
-      "The cooldown also skips update history"
-    );
-    Updates._nextRestartUpdateCheck = Date.now() - 1;
     await Updates.prepareForRestart();
     Assert.equal(
       mock.check.callCount,
       2,
-      "Checking resumes at the normal update interval"
+      "An empty result does not block the next request from RelaunchEnforcer"
     );
   } finally {
     mock.sandbox.restore();

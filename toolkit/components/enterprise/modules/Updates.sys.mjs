@@ -26,7 +26,6 @@ const FELT_UPDATE_APPLY_PERCENT_STAGING_END = 100;
 export const Updates = {
   _restartUpdateCheck: null,
   _restartUpdater: null,
-  _nextRestartUpdateCheck: 0,
   _updateTask: Promise.resolve(),
 
   _queueUpdateTask(task) {
@@ -48,7 +47,7 @@ export const Updates = {
   },
 
   async _prepareForRestart() {
-    if (this._suspended || Date.now() < this._nextRestartUpdateCheck) {
+    if (this._suspended) {
       return;
     }
     await this.updateCheckingAllowed();
@@ -64,11 +63,6 @@ export const Updates = {
     this._restartUpdater = updater;
     const onStatus = status => {
       lazy.log.debug(`Preparing an update before restart: ${status}`);
-      if (status === lazy.AppUpdater.STATUS.NO_UPDATES_FOUND) {
-        this._nextRestartUpdateCheck =
-          Date.now() +
-          Services.prefs.getIntPref("app.update.interval", 21600) * 1000;
-      }
       if (status === lazy.AppUpdater.STATUS.DOWNLOAD_AND_INSTALL) {
         updater.allowUpdateDownload();
       }
