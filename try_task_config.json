@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "repackage-macosx64-enterprise/debug",
+                "repackage-macosx64-enterprise/opt",
+                "repackage-win64-enterprise/opt"
+            ]
+        }
+    },
+    "version": 2
+}
