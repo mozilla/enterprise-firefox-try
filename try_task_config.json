@@ -1,0 +1,45 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "source-test-python-condprof-linux2404-64/opt",
+                "source-test-python-condprof-macosx1470-64/opt",
+                "source-test-python-condprof-windows11-64/opt",
+                "source-test-python-coverage",
+                "source-test-python-fog-linux2404-64/opt",
+                "source-test-python-fog-macosx1470-64/opt",
+                "source-test-python-fog-windows11-64/opt",
+                "source-test-python-fxms-schemas-linux2404-64/opt",
+                "source-test-python-manifest",
+                "source-test-python-marionette-harness-linux2404-64/opt",
+                "source-test-python-marionette-harness-windows11-64/opt",
+                "source-test-python-mozharness",
+                "source-test-python-mozlint-linux2404-64/opt",
+                "source-test-python-mozlint-macosx1470-64/opt",
+                "source-test-python-mozlint-windows11-64/opt",
+                "source-test-python-mozrelease",
+                "source-test-python-mozterm-linux2404-64/opt",
+                "source-test-python-mozterm-windows11-64/opt",
+                "source-test-python-mozversioncontrol-linux2404-64/opt",
+                "source-test-python-mozversioncontrol-macosx1470-64/opt",
+                "source-test-python-mozversioncontrol-windows11-64/opt",
+                "source-test-python-nimbus-linux2404-64/opt",
+                "source-test-python-raptor-linux2404-64/opt",
+                "source-test-python-raptor-macosx1470-64/opt",
+                "source-test-python-raptor-windows11-64/opt",
+                "source-test-python-talos",
+                "source-test-python-telemetry-python-linux2404-64/opt",
+                "source-test-python-telemetry-python-macosx1470-64/opt",
+                "source-test-python-telemetry-python-windows11-64/opt",
+                "source-test-python-update-packaging-linux2404-64/opt",
+                "source-test-python-webext-linux2404-64/opt",
+                "source-test-python-xpcom-linux2404-64/opt"
+            ]
+        }
+    },
+    "version": 2
+}
