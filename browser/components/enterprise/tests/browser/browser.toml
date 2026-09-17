@@ -5,10 +5,4 @@ prefs = [
   "enterprise.log_level=Debug",
 ]
 
-["browser_console_setup_dialog.js"]
-
-["browser_enterprise_endpoints.js"]
-
-["browser_help_menu.js"]
-
-["browser_lockdown_mode_page_action.js"]
+["browser_relaunch_ui.js"]

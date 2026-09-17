@@ -8,8 +8,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   ConsoleClient: "resource://gre/modules/enterprise/ConsoleClient.sys.mjs",
   createEnterpriseLogger:
     "resource://gre/modules/enterprise/EnterpriseCommon.sys.mjs",
-  // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
-  InfoBar: "resource:///modules/asrouter/InfoBar.sys.mjs",
   ScheduledTask: "resource://gre/modules/ScheduledTask.sys.mjs",
 });
 
@@ -32,29 +30,18 @@ const IMMINENT_THRESHOLD_MS = 5 * MS_PER_MINUTE;
 // delay, so a wait past 2^32 - 1 ms, about 49.7 days, wraps and fires early.
 const MAX_BUDGET_MINUTES = 30 * 24 * 60;
 
-const WARNING_ID = "ENTERPRISE_RELAUNCH_WARNING";
-const IMMINENT_ID = "ENTERPRISE_RELAUNCH_IMMINENT";
-
-// InfoBar serves one message at a time, and yields the slot only to a message
-// naming the incumbent. These are the in-tree infobar messages; a message from
-// Nimbus or Remote Settings holds the slot until the next poll retries. Keep it
-// in step with the ids the in-tree message providers author.
-const REPLACEABLE_IDS = [
-  WARNING_ID,
-  IMMINENT_ID,
-  "COMPULSORY_RESTART_SCHEDULED",
-  "INFOBAR_ACTION_86",
-  "INFOBAR_DEFAULT_AND_PIN_87",
-  "INFOBAR_LAUNCH_ON_LOGIN",
-  "INFOBAR_LAUNCH_ON_LOGIN_FINAL",
-  "MULTIPROFILE_DATA_COLLECTION_CHANGED_INFOBAR",
-  "PREF_OBSERVER_MESSAGE_94",
-  "updated-privacy-notice-notification-infobar",
-];
+/**
+ * The phases a warning UI delegate's showOrUpdate() can be asked to present.
+ */
+export const RelaunchPhase = Object.freeze({
+  WARNING: "warning",
+  IMMINENT: "imminent",
+});
 
 /**
  * Enforces the restart deadline the enterprise console reports on each policy
- * poll: warns the user, and force-restarts when the deadline arrives.
+ * poll: warns the user through the application's warning UI delegate, and
+ * force-restarts when the deadline arrives.
  */
 export const RelaunchEnforcer = {
   _schedule: null,
@@ -63,7 +50,6 @@ export const RelaunchEnforcer = {
   _restartTask: null,
   _escalationTask: null,
   _countdownTask: null,
-  _notification: null,
   _shownPhase: null,
   _shownMinutes: null,
   _shownDeadlineMinute: null,
@@ -80,7 +66,8 @@ export const RelaunchEnforcer = {
   /**
    * Registers application-specific relaunch warning UI before console polling
    * starts. Only one delegate can be registered for the lifetime of the
-   * application.
+   * application. Without a delegate the restart still lands on schedule; only
+   * the warning is missing.
    *
    * `showOrUpdate` receives the warning phase, deadline, remaining minutes, and
    * a callback for the warning's restart action. It returns whether the warning
@@ -380,7 +367,7 @@ export const RelaunchEnforcer = {
   },
 
   /**
-   * Brings the warning bar in line with the armed deadline, touching the UI only
+   * Brings the warning in line with the armed deadline, touching the UI only
    * when the text the user reads changes.
    *
    * @returns {Promise<void>} Resolves once this update has been applied.
@@ -388,134 +375,28 @@ export const RelaunchEnforcer = {
   _refreshNotification() {
     // Failures stay out of the chain.
     this._refreshChain = this._refreshChain
-      .then(() => this._updateBar())
+      .then(() => this._updateDelegatedWarning())
       .catch(e => lazy.log.error("Failed to update the relaunch warning:", e));
     return this._refreshChain;
   },
 
-  async _updateBar() {
-    if (!this._schedule || this._restarting) {
-      return;
-    }
-    if (this._warningUIDelegate) {
-      await this._updateDelegatedWarning();
-      return;
-    }
-    const win = this._barWindow();
-    if (!win) {
-      // The first poll precedes session restore; the next poll retries.
-      return;
-    }
-
-    const { restartAt } = this._schedule;
-    const remaining = restartAt - Date.now();
-    const isImminent = remaining <= IMMINENT_THRESHOLD_MS;
-    const phase = isImminent ? IMMINENT_ID : WARNING_ID;
-    const minutes = Math.max(1, Math.ceil(remaining / MS_PER_MINUTE));
-    const deadlineMinute = Math.floor(restartAt / MS_PER_MINUTE);
-
-    if (this._isBarShown() && phase === this._shownPhase) {
-      const sameText = isImminent
-        ? minutes === this._shownMinutes
-        : deadlineMinute === this._shownDeadlineMinute;
-      // Updating the bar already up keeps focus on its button. It also keeps a
-      // re-show under an id InfoBar is still tracking off the table, which
-      // would leave the new bar out of its bookkeeping and unremovable.
-      if (
-        sameText ||
-        this._setBarVariable(
-          phase,
-          isImminent ? "minutes" : "datetime",
-          isImminent ? minutes : restartAt
-        )
-      ) {
-        this._shownMinutes = minutes;
-        this._shownDeadlineMinute = deadlineMinute;
-        if (isImminent) {
-          this._armCountdown(minutes);
-        }
-        return;
-      }
-    }
-
-    const message = {
-      id: phase,
-      content: {
-        priority: isImminent
-          ? win.gNotificationBox.PRIORITY_CRITICAL_HIGH
-          : win.gNotificationBox.PRIORITY_INFO_HIGH,
-        type: "universal",
-        dismissable: false,
-        text: {
-          string_id: isImminent
-            ? "enterprise-relaunch-imminent-message"
-            : "enterprise-relaunch-warning-message",
-        },
-        buttons: [
-          {
-            label: { string_id: "enterprise-relaunch-restart-now" },
-            action: { type: "RESTART_APP", dismiss: false },
-          },
-        ],
-        attributes: isImminent ? { minutes } : { datetime: restartAt },
-        canReplace: REPLACEABLE_IDS,
-      },
-      template: "infobar",
-      targeting: "true",
-      groups: [],
-    };
-
-    const notification = await lazy.InfoBar.showInfoBarMessage(
-      win.gBrowser.selectedBrowser,
-      message,
-      action => {
-        if (
-          action?.type === "USER_ACTION" &&
-          action.data?.type === "RESTART_APP"
-        ) {
-          this._restart();
-        }
-      }
-    );
-
-    if (!notification) {
-      // The restart still lands on schedule, so say who kept the warning off.
-      lazy.log.warn(
-        `The infobar slot is held by ${lazy.InfoBar._activeInfobar?.message?.id}; the relaunch warning is not shown.`
-      );
-      return;
-    }
-
-    if (!this._schedule) {
-      // The console withdrew the deadline while the bar was going up. A later
-      // poll queues behind this one on _refreshChain, so it reconciles the text.
-      if (lazy.InfoBar._activeInfobar?.notification === notification) {
-        notification.removeUniversalInfobars();
-      }
-      return;
-    }
-
-    this._notification = notification;
-    this._shownPhase = phase;
-    this._shownMinutes = minutes;
-    this._shownDeadlineMinute = deadlineMinute;
-
-    if (isImminent) {
-      this._armCountdown(minutes);
-    }
-  },
-
   /**
-   * Brings an application-provided warning in line with the armed deadline.
+   * Brings the application-provided warning in line with the armed deadline.
    *
    * @returns {Promise<void>} Resolves once the delegate has applied the update.
    */
   async _updateDelegatedWarning() {
+    if (!this._schedule || this._restarting) {
+      return;
+    }
     const delegate = this._warningUIDelegate;
+    if (!delegate) {
+      return;
+    }
     const { restartAt } = this._schedule;
     const remaining = restartAt - Date.now();
     const isImminent = remaining <= IMMINENT_THRESHOLD_MS;
-    const phase = isImminent ? "imminent" : "warning";
+    const phase = isImminent ? RelaunchPhase.IMMINENT : RelaunchPhase.WARNING;
     const minutes = Math.max(1, Math.ceil(remaining / MS_PER_MINUTE));
     const deadlineMinute = Math.floor(restartAt / MS_PER_MINUTE);
     const sameText = isImminent
@@ -571,97 +452,9 @@ export const RelaunchEnforcer = {
     }
   },
 
-  /**
-   * The window to show the warning from. The most recent window can be a
-   * private window, a popup or a taskbar tab, and InfoBar refuses all of those.
-   *
-   * InfoBar is only reached once a window exists, so the first poll does not
-   * drag its module graph into "policies-startup".
-   *
-   * @returns {Window|null} null when no open window can take a bar.
-   */
-  _barWindow() {
-    for (const win of Services.wm.getEnumerator("navigator:browser")) {
-      if (
-        win.gBrowser &&
-        // TODO(Bug 2066128): Remove once InfoBar handles loading windows.
-        win.document.readyState === "complete" &&
-        lazy.InfoBar.isValidInfobarWindow(win)
-      ) {
-        return win;
-      }
-    }
-    return null;
-  },
-
-  /**
-   * Puts a new value in one Fluent variable of the bars that are up, in every
-   * window.
-   *
-   * @param {string} barId - The id of the bar to update.
-   * @param {string} name - The Fluent variable name.
-   * @param {string|number} value - The value to substitute.
-   * @returns {boolean} Whether a bar took the new value.
-   */
-  _setBarVariable(barId, name, value) {
-    let updated = false;
-    for (const win of Services.wm.getEnumerator("navigator:browser")) {
-      const bar = win.gNotificationBox?.getNotificationWithValue(barId);
-      const remote = bar?.querySelector("remote-text");
-      if (remote) {
-        remote.setVariable(name, value);
-        updated = true;
-      }
-    }
-    if (updated) {
-      // A window opened from here on is served the stored message, not the DOM.
-      const { attributes } =
-        lazy.InfoBar._activeInfobar?.message?.content ?? {};
-      if (attributes) {
-        attributes[name] = value;
-      }
-    }
-    return updated;
-  },
-
-  // InfoBar hands the slot to another message, and closing the last window on
-  // macOS takes the bar with it.
-  _isBarShown() {
-    if (this._warningUIDelegate) {
-      return this._warningUIDelegate.isVisible();
-    }
-
-    return (
-      !!this._notification &&
-      lazy.InfoBar._activeInfobar?.notification === this._notification
-    );
-  },
-
   _hideNotification() {
     ++this._warningUIGeneration;
-    if (this._warningUIDelegate) {
-      this._warningUIDelegate.hide();
-    } else {
-      // A bar InfoBar lost track of is not in the list
-      // removeUniversalInfobars() walks, so take ours out of each window by
-      // hand. Skipping the animation removes the element, and runs InfoBar's
-      // own teardown, before returning.
-      let removed = false;
-      for (const win of Services.wm.getEnumerator("navigator:browser")) {
-        for (const id of [WARNING_ID, IMMINENT_ID]) {
-          const bar = win.gNotificationBox?.getNotificationWithValue(id);
-          if (bar) {
-            win.gNotificationBox.removeNotification(bar, true);
-            removed = true;
-          }
-        }
-      }
-      // Releases the slot, and the new-window observer, InfoBar may still hold.
-      if (removed || this._isBarShown()) {
-        this._notification?.removeUniversalInfobars();
-      }
-    }
-    this._notification = null;
+    this._warningUIDelegate?.hide();
     this._shownPhase = null;
     this._shownMinutes = null;
     this._shownDeadlineMinute = null;
@@ -681,7 +474,7 @@ export const RelaunchEnforcer = {
       restartArmed: !!this._restartTask?.isArmed,
       escalationArmed: !!this._escalationTask?.isArmed,
       countdownArmed: !!this._countdownTask?.isArmed,
-      barShown: this._isBarShown(),
+      barShown: !!this._warningUIDelegate?.isVisible(),
       restarting: this._restarting,
       awaitingSessionRestore: this._awaitingSessionRestore,
     };

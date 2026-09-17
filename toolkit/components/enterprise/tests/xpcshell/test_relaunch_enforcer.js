@@ -3,7 +3,7 @@
 
 "use strict";
 
-const { RelaunchEnforcer } = ChromeUtils.importESModule(
+const { RelaunchEnforcer, RelaunchPhase } = ChromeUtils.importESModule(
   "resource://gre/modules/enterprise/RelaunchEnforcer.sys.mjs"
 );
 
@@ -358,7 +358,11 @@ add_task(async function test_application_warning_ui_delegate() {
   await RelaunchEnforcer._refreshNotification();
 
   Assert.equal(updates.length, 1, "The delegate shows the warning");
-  Assert.equal(updates[0].phase, "warning", "The warning phase is provided");
+  Assert.equal(
+    updates[0].phase,
+    RelaunchPhase.WARNING,
+    "The warning phase is provided"
+  );
   Assert.equal(
     updates[0].restartAt,
     warningRestartAt,
@@ -392,7 +396,11 @@ add_task(async function test_application_warning_ui_delegate() {
   await RelaunchEnforcer._refreshNotification();
 
   Assert.equal(updates.length, 2, "The delegate updates the warning phase");
-  Assert.equal(updates[1].phase, "imminent", "The imminent phase is provided");
+  Assert.equal(
+    updates[1].phase,
+    RelaunchPhase.IMMINENT,
+    "The imminent phase is provided"
+  );
   Assert.equal(updates[1].minutes, 4, "The imminent countdown is provided");
 
   RelaunchEnforcer.cancel();

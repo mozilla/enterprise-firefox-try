@@ -696,7 +696,9 @@ export const ConsoleClient = {
   },
 
   /**
-   * Registers application-specific pre-shutdown logic to run before a forced quit.
+   * Registers application-specific pre-shutdown logic to run before a forced
+   * quit, such as flushing state or suppressing close vetoes. Registration is
+   * last-write-wins: a later hook replaces the current one.
    *
    * @param {function(number): (void|Promise<void>)} aHook - Receives
    *   nsIAppStartup quit flags.
@@ -715,8 +717,9 @@ export const ConsoleClient = {
   },
 
   /**
-   * Quits the application, ignoring callbacks that could prevent it from
-   * closing.
+   * Quits the application. The registered before-forced-quit hook, if any,
+   * runs first; applications use it to keep close callbacks from preventing
+   * the quit.
    *
    * @param {number} [aFlags] - nsIAppStartup quit flags, to which eRestart can
    *   be added to come back up. eForceQuit on its own by default.
@@ -733,10 +736,6 @@ export const ConsoleClient = {
         await this._beforeForcedQuitHook(aFlags);
       } catch (error) {
         lazy.log.error("Pre-forced-quit hook failed; quitting anyway.", error);
-      }
-    } else {
-      for (const win of Services.wm.getEnumerator("navigator:browser")) {
-        win.skipNextCanClose = true;
       }
     }
     Services.startup.quit(aFlags);
