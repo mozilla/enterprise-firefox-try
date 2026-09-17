@@ -26,7 +26,7 @@ from taskgraph.util.taskcluster import get_artifact
 from taskgraph.util.vcs import get_repository
 from taskgraph.util.yaml import load_yaml
 
-from . import GECKO
+from . import GECKO, run_task_git
 from .actions import render_actions_json
 from .files_changed import get_changed_files
 from .parameters import (
@@ -299,9 +299,10 @@ def taskgraph_decision(options, parameters):
     taskgraph_dir = Path(taskgraph.__file__).parent
     to_copy = {
         scripts_dir / "run-task": f"{ARTIFACTS_DIR}/run-task-hg",
+        scripts_dir / "run_task_python.py": ARTIFACTS_DIR,
         scripts_dir / "tester" / "test-linux.sh": ARTIFACTS_DIR,
         taskgraph_dir / "run-task" / "fetch-content": ARTIFACTS_DIR,
-        taskgraph_dir / "run-task" / "run-task": f"{ARTIFACTS_DIR}/run-task-git",
+        Path(run_task_git.patched_run_task()): f"{ARTIFACTS_DIR}/run-task-git",
         mozharness_dir / "external_tools" / "robustcheckout.py": ARTIFACTS_DIR,
     }
     for target, dest in to_copy.items():

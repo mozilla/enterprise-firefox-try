@@ -1,0 +1,22 @@
+--- a/run-task
++++ b/run-task
+@@ -34,6 +34,8 @@
+ from pathlib import Path
+ from typing import Dict, Optional
+ 
++import run_task_python
++
+ SECRET_BASEURL_TPL = "{}/secrets/v1/secret/{{}}".format(
+     os.environ.get("TASKCLUSTER_PROXY_URL", "http://taskcluster").rstrip("/")
+ )
+@@ -1410,6 +1412,10 @@
+     if "MOZ_FETCHES" in os.environ:
+         fetch_artifacts()
+ 
++        # Gecko's `run-task` (shipped as run-task-hg) puts the `python` and `uv`
++        # fetches on PATH here; keep both flavours in sync.
++        run_task_python.setup(print_line)
++
+     # Install Python requirements after fetches in case tasks want to use
+     # fetches to grab dependencies.
+     install_pip_requirements(repositories)

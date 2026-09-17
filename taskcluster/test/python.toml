@@ -18,4 +18,6 @@ subsuite = "decision"
 
 ["test_new_config.py"]
 
+["test_run_task_git.py"]
+
 ["test_verify_dependencies.py"]

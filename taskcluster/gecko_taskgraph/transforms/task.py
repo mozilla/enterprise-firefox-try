@@ -39,7 +39,7 @@ from taskgraph.util.schema import (
 )
 from taskgraph.util.treeherder import split_symbol
 
-from gecko_taskgraph import GECKO
+from gecko_taskgraph import GECKO, run_task_git
 from gecko_taskgraph.optimize.schema import (
     OptimizationSchema,
 )
@@ -53,7 +53,7 @@ from gecko_taskgraph.util.scriptworker import BALROG_ACTIONS
 from gecko_taskgraph.util.workertypes import get_worker_type, worker_type_implementation
 
 RUN_TASK_HG = Path(GECKO, "taskcluster", "scripts", "run-task")
-RUN_TASK_GIT = Path(taskgraph.__file__).parent / "run-task" / "run-task"
+RUN_TASK_GIT = Path(run_task_git.patched_run_task())
 
 SCCACHE_GCS_PROJECT = "sccache-3"
 

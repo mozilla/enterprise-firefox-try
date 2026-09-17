@@ -206,6 +206,13 @@ def generic_worker_run_task(config, job, taskdesc):
         },
         "file": "./run-task",
     })
+    # Both `run-task` flavours import this from their own directory.
+    worker["mounts"].append({
+        "content": {
+            "url": script_url(config, "run_task_python.py"),
+        },
+        "file": "./run_task_python.py",
+    })
 
     if (
         job.get("fetches")

@@ -37,6 +37,8 @@ import threading
 import urllib.error
 import urllib.request
 
+import run_task_python
+
 FINGERPRINT_URL = (
     "http://taskcluster/secrets/v1/secret/project/taskcluster/gecko/hgfingerprint"
 )
@@ -1112,59 +1114,8 @@ def main(args):
     if "MOZ_FETCHES" in os.environ:
         fetch_artifacts()
 
-        # If Python is a fetch dependency, add it to the PATH and setting
-        # the mozilla-specific MOZ_PYTHON_HOME to relocate binaries.
-        if "MOZ_PYTHON_HOME" in os.environ:
-
-            print_line(b"setup", b"Setting up local python environment\n")
-            prev = [os.environ["PATH"]] if "PATH" in os.environ else []
-
-            moz_python_home = os.environ["MOZ_PYTHON_HOME"]
-            if IS_WINDOWS:
-                ext = ".exe"
-                moz_python_bindir = moz_python_home
-            else:
-                ext = ""
-                moz_python_bindir = moz_python_home + "/bin"
-
-            new = os.environ["PATH"] = os.pathsep.join([moz_python_bindir] + prev)
-
-            # Relocate the python binary. Standard way uses PYTHONHOME, but
-            # this conflicts with system python (e.g. used by hg) so we
-            # maintain a small patch to use MOZPYTHONHOME instead.
-            os.environ["MOZPYTHONHOME"] = moz_python_home
-
-            pyinterp = os.path.join(moz_python_bindir, f"python3{ext}")
-            # just a sanity check
-            if not os.path.exists(pyinterp):
-                raise RuntimeError(
-                    "Inconsistent Python installation: "
-                    "archive found, but no python3 binary "
-                    "detected"
-                )
-
-            if IS_MACOSX:
-                # On OSX, we may not have access to the system certificate,
-                # so use the certifi ones.
-                certifi_cert_file = subprocess.check_output(
-                    [pyinterp, "-c", "import certifi; print(certifi.where())"],
-                    text=True,
-                )
-                os.environ["SSL_CERT_FILE"] = certifi_cert_file.strip()
-                print_line(b"setup", b"patching ssl certificate\n")
-
-            print_line(
-                b"setup", b"updated PATH with python artifact: " + new.encode() + b"\n"
-            )
-
-        if 'MOZ_UV_HOME' in os.environ:
-            print_line(b'setup', b'Adding uv to PATH\n')
-            current_env = [os.environ['PATH']] if 'PATH' in os.environ else []
-            moz_python_bindir = os.environ['MOZ_UV_HOME']
-            new = os.environ['PATH'] = os.pathsep.join([moz_python_bindir] + current_env)
-            print_line(
-                b"setup", b"updated PATH with uv artifact: " + new.encode() + b"\n"
-            )
+        # Also used by run-task-git, see taskcluster/scripts/run-task-git.patch.
+        run_task_python.setup(print_line)
 
     return run_and_prefix_output(b"task", task_args, cwd=args.task_cwd)
 

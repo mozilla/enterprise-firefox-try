@@ -15,6 +15,7 @@ from taskgraph.util import docker, schema
 from taskgraph.util import taskcluster as tc_util
 from taskgraph.util.readonlydict import ReadOnlyDict
 
+from gecko_taskgraph import run_task_git
 from gecko_taskgraph.config import GraphConfigSchema
 
 GECKO = os.path.normpath(os.path.realpath(os.path.join(__file__, "..", "..", "..")))
@@ -36,17 +37,17 @@ def _represent_ro_dict(dumper, data):
 yaml.SafeDumper.add_representer(ReadOnlyDict, _represent_ro_dict)
 
 # Overwrite Taskgraph's RUN_TASK_SNIPPET to place the binaries in Gecko
-# specific locations.
+# specific locations, and to ship `run-task` patched with the Gecko python
+# setup, along with the module implementing it.
 docker.RUN_TASK_FILES = {
-    f"run-task/{path}": os.path.join(docker.RUN_TASK_ROOT, path)
-    for path in [
-        "run-task",
-        "fetch-content",
-    ]
+    "run-task/run-task": run_task_git.patched_run_task(),
+    "run-task/fetch-content": os.path.join(docker.RUN_TASK_ROOT, "fetch-content"),
+    "run-task/run_task_python.py": run_task_git.PYTHON_SETUP_MODULE,
 }
 docker.RUN_TASK_SNIPPET = [
     "COPY run-task/run-task /builds/worker/bin/run-task-git\n",
     "COPY run-task/fetch-content /builds/worker/bin/fetch-content\n",
+    "COPY run-task/run_task_python.py /builds/worker/bin/run_task_python.py\n",
 ]
 
 # Don't use any of the upstream morphs.
