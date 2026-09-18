@@ -723,7 +723,7 @@ void InitEncryptionKeystore() {
         // own Drop still has two phases of headroom before LateWriteChecks
         // activates at XPCOMShutdownThreads (default
         // toolkit.shutdown.lateWriteChecksStage = 2).
-        ShutdownEncryptionKeystore();
+        /// ShutdownEncryptionKeystore();
       },
       ShutdownPhase::XPCOMShutdownFinal);
 }
