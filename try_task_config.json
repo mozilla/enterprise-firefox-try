@@ -1,0 +1,43 @@
+{
+    "parameters": {
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-enterprise-rusttests/opt",
+                "build-linux64-enterprise/debug",
+                "build-linux64-enterprise/opt",
+                "build-linux64-plain/debug",
+                "build-linux64-plain/opt",
+                "build-mac-signing-macosx64-aarch64/debug",
+                "build-mac-signing-macosx64-enterprise/debug",
+                "build-mac-signing-macosx64-enterprise/opt",
+                "build-mac-signing-macosx64/debug",
+                "build-macosx64-aarch64/debug",
+                "build-macosx64-enterprise/debug",
+                "build-macosx64-enterprise/opt",
+                "build-macosx64/debug",
+                "build-signing-win32/debug",
+                "build-signing-win64-enterprise/debug",
+                "build-signing-win64-enterprise/opt",
+                "build-signing-win64/debug",
+                "build-win64-aarch64-enterprise/debug",
+                "build-win64-aarch64-enterprise/opt",
+                "build-win64-enterprise/debug",
+                "build-win64-enterprise/opt",
+                "build-win64-plain/debug",
+                "build-win64-plain/opt",
+                "source-test-buildconfig-buildconfig-android-components",
+                "source-test-buildconfig-buildconfig-fenix",
+                "source-test-buildconfig-buildconfig-focus",
+                "test-android-em-14-x86_64/debug-isolated-process-geckoview-cppunittest-1proc",
+                "test-android-em-14-x86_64/debug-isolated-process-geckoview-gtest-1proc",
+                "test-android-em-14-x86_64/debug-isolated-process-geckoview-junit-nofis",
+                "test-android-em-14-x86_64/debug-isolated-process-geckoview-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
