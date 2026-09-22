@@ -1,0 +1,46 @@
+{
+    "parameters": {
+        "base_rev": "045672a70a75afc15dd5585295ffb40be8cbc5dd",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "enterprise-repack-repackage-hosted_pilotProd_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotProd_fr-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-hosted_pilotStage_fr-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_prodGCP_fr-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-moz_stageGCP_fr-win64-enterprise-shippable/opt"
+            ]
+        }
+    },
+    "version": 2
+}
