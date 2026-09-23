@@ -2352,6 +2352,10 @@ def add_android_shippable_multi_index_routes(config, task):
 
 @transforms.add
 def add_index_routes(config, tasks):
+    # Try pushes have nothing to publish to the index, and their branch names
+    # can make the routes exceed the 249 character limit createTask enforces.
+    skip_index = bool(config.params.get("try_mode"))
+
     for task in tasks:
         index = task.get("index", {})
 
@@ -2370,7 +2374,8 @@ def add_index_routes(config, tasks):
         else:
             extra_index["rank"] = rank
 
-        if not index:
+        if not index or skip_index:
+            task.pop("index", None)
             yield task
             continue
 
