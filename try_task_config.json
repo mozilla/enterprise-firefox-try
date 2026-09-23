@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "base_rev": "805adc300b07270745c2cb799d192eb9a61cc6d7",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
