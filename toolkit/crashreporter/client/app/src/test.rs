@@ -256,6 +256,10 @@ impl GuiTest {
         .set(crate::std::time::MockCurrentTime, current_system_time())
         .set(mock::MockHook::new("enable_glean_pings"), false);
 
+        // Mock the storage for the token, which `try_run` initializes below.
+        #[cfg(feature = "enterprise")]
+        mock.set(crate::net::auth::ACCESS_TOKEN, Default::default());
+
         GuiTest {
             config: test_config(),
             mock,
@@ -295,6 +299,10 @@ impl GuiTest {
 
         // Run the mock environment.
         let result = mock.run(|| {
+            // `report_main` records the token before calling `try_run`, mimic that here
+            #[cfg(feature = "enterprise")]
+            crate::net::auth::init_access_token(crate::net::auth::TokenSource::CrashingProcess);
+
             let _glean = if *enable_glean {
                 Some(glean::test_init(&test_config))
             } else {

@@ -7,6 +7,20 @@
 use crate::std::{env, io::stdin, path::PathBuf};
 use crate::{glean, logging, net::ping};
 
+/// What `CrashManager` writes to our stdin.
+///
+/// The console bearer token travels this way rather than in our environment,
+/// which another process of the same user can read.
+#[derive(Default, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PingInput {
+    #[serde(default)]
+    annotations: serde_json::Value,
+    #[serde(default)]
+    #[cfg_attr(not(feature = "enterprise"), allow(dead_code))]
+    auth_token: Option<String>,
+}
+
 /// Resolve the enterprise console address for this run from the crash data
 /// path.
 ///
@@ -27,8 +41,11 @@ pub fn main() {
     let data_path = args.next().expect("no data path provided");
     let reason = args.next().expect("no crash reason provided");
 
-    let extra: serde_json::Value =
-        serde_json::from_reader(stdin()).expect("failed to read extra data from stdin");
+    let input: PingInput =
+        serde_json::from_reader(stdin()).expect("failed to read input from stdin");
+    #[cfg(all(not(mock), feature = "enterprise"))]
+    crate::net::auth::init_access_token(crate::net::auth::TokenSource::Stdin(input.auth_token));
+    let extra = input.annotations;
 
     let profile_dir = extra
         .get("ProfileDirectory")
@@ -67,6 +84,14 @@ pub fn cleanup_main() {
     let data_path = args.next().expect("no data path provided");
     let profile_dir = args.next();
 
+    // Unlike `main`, there is nothing on stdin but the token, so a client run
+    // by hand without any input is still able to flush the pending pings.
+    #[cfg(all(not(mock), feature = "enterprise"))]
+    {
+        let input: PingInput = serde_json::from_reader(stdin()).unwrap_or_default();
+        crate::net::auth::init_access_token(crate::net::auth::TokenSource::Stdin(input.auth_token));
+    }
+
     #[cfg(all(not(mock), feature = "enterprise"))]
     init_console_address(&data_path);
 
@@ -85,4 +110,32 @@ pub fn cleanup_main() {
 
     // Glean shutdown will block (for a period) on at least one ping to be sent.
     ::glean::shutdown();
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    /// The document `CrashManager` writes for `--send-ping`.
+    #[test]
+    fn ping_input_carries_annotations_and_token() {
+        let input: PingInput =
+            serde_json::from_str(r#"{"annotations":{"ProcessType":"content"},"authToken":"abc"}"#)
+                .expect("failed to parse");
+        assert_eq!(input.auth_token.as_deref(), Some("abc"));
+        assert_eq!(input.annotations["ProcessType"], "content");
+    }
+
+    /// The document `CrashManager` writes for `--ping-cleanup`, which has no
+    /// annotations, and what any build without a token to send writes.
+    #[test]
+    fn ping_input_without_a_token() {
+        let input: PingInput =
+            serde_json::from_str(r#"{"authToken":null}"#).expect("failed to parse");
+        assert!(input.auth_token.is_none());
+
+        let input: PingInput = serde_json::from_str("{}").expect("failed to parse");
+        assert!(input.auth_token.is_none());
+        assert!(input.annotations.is_null());
+    }
 }
