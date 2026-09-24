@@ -412,15 +412,12 @@ impl FeltXPCOM {
         };
 
         trace!("FeltXPCOM:IpcChannel() waiting on accept()");
-        let (pending_authentication_rx, tx): (_, ipc_channel::ipc::IpcSender<FeltMessage>) =
-            felt_server.accept().unwrap();
-
-        // Identify the connecting peer by the OS process id of the just accepted
-        // connection, so the peer can be matched against the browser child the
-        // launcher spawned before any managed secret is sent. The accept
-        // receiver is not used past this point, so drop it once queried.
-        let peer_pid = pending_authentication_rx.peer_pid();
-        drop(pending_authentication_rx);
+        // Identify the connecting peer by its OS process id, so the peer can be
+        // matched against the browser child the launcher spawned before any
+        // managed secret is sent. The accept receiver is not used past this
+        // point.
+        let (_, tx, peer_pid): (_, ipc_channel::ipc::IpcSender<FeltMessage>, _) =
+            felt_server.accept_with_peer_pid().unwrap();
 
         // AUTHORIZATION: decided from the peer's pid alone, before the version
         // handshake below, and kept separate from it. Any other same-user
