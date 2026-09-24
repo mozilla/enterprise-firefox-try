@@ -759,6 +759,16 @@ impl OsIpcOneShotServer {
             Ok((receiver, ipc_message))
         }
     }
+
+    /// Like `accept`, and also returns the connected peer's pid, as reported
+    /// by the accepted receiver's `peer_pid()`.
+    pub fn accept_with_peer_pid(
+        self,
+    ) -> Result<(OsIpcReceiver, IpcMessage, Option<u32>), UnixError> {
+        let (receiver, ipc_message) = self.accept()?;
+        let peer_pid = receiver.peer_pid();
+        Ok((receiver, ipc_message, peer_pid))
+    }
 }
 
 // Make sure that the kernel doesn't return errors to readers if there's still data left after we

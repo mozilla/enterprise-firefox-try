@@ -35,6 +35,39 @@ mod mach_sys;
 /// this, we retry and spill to the heap.
 const SMALL_MESSAGE_SIZE: usize = 4096;
 
+// Receive-trailer options from <mach/message.h>; see
+// https://github.com/apple-oss-distributions/xnu/blob/xnu-12377.121.6/osfmk/mach/message.h
+// `MACH_RCV_TRAILER_TYPE` and `MACH_RCV_TRAILER_ELEMENTS` are function-like
+// macros there, so they are mirrored as `const fn`s.
+const MACH_MSG_TRAILER_FORMAT_0: i32 = 0;
+const MACH_RCV_TRAILER_AUDIT: i32 = 3;
+
+const fn mach_rcv_trailer_type(trailer_type: i32) -> i32 {
+    (trailer_type & 0xf) << 28
+}
+
+const fn mach_rcv_trailer_elements(elements: i32) -> i32 {
+    (elements & 0xf) << 24
+}
+
+/// Receive option asking the kernel to append a `mach_msg_audit_trailer_t`,
+/// which identifies the sending task, to a received message.
+const AUDIT_TRAILER_RCV_OPTION: i32 = mach_rcv_trailer_type(MACH_MSG_TRAILER_FORMAT_0)
+    | mach_rcv_trailer_elements(MACH_RCV_TRAILER_AUDIT);
+
+/// `round_msg()` from <mach/message.h>: the kernel places the receive trailer
+/// at the message size rounded up to a multiple of `sizeof(natural_t)` (4
+/// bytes).
+fn round_msg(size: usize) -> usize {
+    (size + 3) & !3
+}
+
+#[link(name = "bsm")]
+extern "C" {
+    /// From <bsm/libbsm.h>: the process id recorded in an audit token.
+    fn audit_token_to_pid(token: mach_sys::audit_token_t) -> libc::pid_t;
+}
+
 pub fn set_bootstrap_prefix(prefix: impl Into<String>) {
     BOOTSTRAP_PREFIX
         .set(prefix.into())
@@ -207,10 +240,11 @@ fn mach_port_extract_right(
 impl OsIpcReceiver {
     /// OS process id of the peer on the other end of this receiver's channel.
     ///
-    /// Not resolved on the Mach-port back-end: a Mach message does not carry the
-    /// sender's pid unless a receive-time audit trailer is requested, which this
-    /// transport does not do. Always returns `None`; a caller that needs peer
-    /// authentication on macOS must establish it by other means.
+    /// Always `None` on the Mach-port back-end. A receiver is a Mach receive
+    /// right, and any number of processes may hold send rights to it and send
+    /// messages on it, so a receiver has no single peer. The sender of one
+    /// specific message can be identified instead: see
+    /// `OsIpcOneShotServer::accept_with_peer_pid`.
     pub fn peer_pid(&self) -> Option<u32> {
         None
     }
@@ -718,6 +752,17 @@ fn select(
     port: mach_port_t,
     blocking_mode: BlockingMode,
 ) -> Result<OsIpcSelectionResult, MachError> {
+    select_with_sender(port, blocking_mode, false).map(|(result, _)| result)
+}
+
+/// Like `select`, and when `audit_sender` is set also returns the pid of the
+/// process that sent the message, taken from the kernel's audit trailer. The
+/// pid is `None` for a no-senders notification, which comes from the kernel.
+fn select_with_sender(
+    port: mach_port_t,
+    blocking_mode: BlockingMode,
+    audit_sender: bool,
+) -> Result<(OsIpcSelectionResult, Option<u32>), MachError> {
     debug_assert!(port != MACH_PORT_NULL);
     unsafe {
         let mut buffer = [0; SMALL_MESSAGE_SIZE];
@@ -732,6 +777,11 @@ fn select(
                 .try_into()
                 .map(|ms| (MACH_RCV_MSG | MACH_RCV_LARGE | MACH_RCV_TIMEOUT, ms))
                 .unwrap_or((MACH_RCV_MSG | MACH_RCV_LARGE, MACH_MSG_TIMEOUT_NONE)),
+        };
+        let flags = if audit_sender {
+            flags | AUDIT_TRAILER_RCV_OPTION
+        } else {
+            flags
         };
         match mach_sys::mach_msg(
             message as *mut _,
@@ -785,8 +835,15 @@ fn select(
 
         let local_port = (*message).header.msgh_local_port;
         if (*message).header.msgh_id == MACH_NOTIFY_NO_SENDERS {
-            return Ok(OsIpcSelectionResult::ChannelClosed(local_port as u64));
+            // A kernel notification, not a message from a peer.
+            return Ok((OsIpcSelectionResult::ChannelClosed(local_port as u64), None));
         }
+
+        let sender_pid = if audit_sender {
+            audit_trailer_pid(message)
+        } else {
+            None
+        };
 
         let (mut ports, mut shared_memory_regions) = (Vec::new(), Vec::new());
         let mut port_descriptor = message.offset(1) as *mut mach_msg_port_descriptor_t;
@@ -834,11 +891,33 @@ fn select(
             libc::free(allocated_buffer)
         }
 
-        Ok(OsIpcSelectionResult::DataReceived(
-            local_port as u64,
-            IpcMessage::new(payload, ports, shared_memory_regions),
+        Ok((
+            OsIpcSelectionResult::DataReceived(
+                local_port as u64,
+                IpcMessage::new(payload, ports, shared_memory_regions),
+            ),
+            sender_pid,
         ))
     }
+}
+
+/// Reads the sender's pid from the audit trailer the kernel appended to a
+/// message received with `AUDIT_TRAILER_RCV_OPTION`. Returns `None` if the
+/// kernel supplied a shorter trailer or the pid does not fit a `u32`.
+///
+/// # Safety
+///
+/// `message` must point to a message just received that way, in a buffer
+/// that still holds the trailer.
+unsafe fn audit_trailer_pid(message: *const Message) -> Option<u32> {
+    let trailer_offset = round_msg((*message).header.msgh_size as usize);
+    let trailer =
+        (message as *const u8).add(trailer_offset) as *const mach_sys::mach_msg_audit_trailer_t;
+    let trailer = ptr::read_unaligned(trailer);
+    if (trailer.msgh_trailer_size as usize) < mem::size_of::<mach_sys::mach_msg_audit_trailer_t>() {
+        return None;
+    }
+    u32::try_from(audit_token_to_pid(trailer.msgh_audit)).ok()
 }
 
 pub struct OsIpcOneShotServer {
@@ -871,6 +950,25 @@ impl OsIpcOneShotServer {
     pub fn accept(self) -> Result<(OsIpcReceiver, IpcMessage), MachError> {
         let ipc_message = self.receiver.recv()?;
         Ok((self.receiver.consume(), ipc_message))
+    }
+
+    /// Like `accept`, and also returns the pid of the process that sent the
+    /// accepted message, from the audit trailer the kernel appends to it. The
+    /// kernel fills that in from the sending task, so the sender cannot forge
+    /// it. It identifies the sender of that message only; later messages on the
+    /// receiver may come from any holder of a send right.
+    pub fn accept_with_peer_pid(
+        self,
+    ) -> Result<(OsIpcReceiver, IpcMessage, Option<u32>), MachError> {
+        let (result, sender_pid) =
+            select_with_sender(self.receiver.port.get(), BlockingMode::Blocking, true)?;
+        let ipc_message = match result {
+            OsIpcSelectionResult::DataReceived(_, ipc_message) => ipc_message,
+            OsIpcSelectionResult::ChannelClosed(_) => {
+                return Err(MachError::from(MACH_NOTIFY_NO_SENDERS))
+            },
+        };
+        Ok((self.receiver.consume(), ipc_message, sender_pid))
     }
 }
 

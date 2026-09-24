@@ -60,6 +60,11 @@ git = "https://github.com/jfkthame/mapped_hyph.git"
 rev = "eff105f6ad7ec9b79816cfc1985a28e5340ad14b"
 replace-with = "vendored-sources"
 
+[source."git+https://github.com/johnreitano/ipc-channel?rev=fec28269875bde5cf9d3b654906c2504b1c62c19"]
+git = "https://github.com/johnreitano/ipc-channel"
+rev = "fec28269875bde5cf9d3b654906c2504b1c62c19"
+replace-with = "vendored-sources"
+
 [source."git+https://github.com/martinthomson/ohttp?rev=600931b5a1e947776cbaad931ed78f1e89005352"]
 git = "https://github.com/martinthomson/ohttp"
 rev = "600931b5a1e947776cbaad931ed78f1e89005352"
@@ -93,11 +98,6 @@ replace-with = "vendored-sources"
 [source."git+https://github.com/mozilla/happy-eyeballs?tag=v1.0.0"]
 git = "https://github.com/mozilla/happy-eyeballs"
 tag = "v1.0.0"
-replace-with = "vendored-sources"
-
-[source."git+https://github.com/mozilla/ipc-channel?rev=4fe32fd10d10b597889d1df254a6334654dda78b"]
-git = "https://github.com/mozilla/ipc-channel"
-rev = "4fe32fd10d10b597889d1df254a6334654dda78b"
 replace-with = "vendored-sources"
 
 [source."git+https://github.com/mozilla/memtest?rev=ad681ba425beb0aeba95f03e671432b4be932174"]

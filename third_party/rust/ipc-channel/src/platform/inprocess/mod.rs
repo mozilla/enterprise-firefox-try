@@ -357,6 +357,16 @@ impl OsIpcOneShotServer {
         let ipc_message = self.receiver.recv()?;
         Ok((self.receiver, ipc_message))
     }
+
+    /// Like `accept`, and also returns the connected peer's pid, as reported
+    /// by the accepted receiver's `peer_pid()` (always `None` here).
+    pub fn accept_with_peer_pid(
+        self,
+    ) -> Result<(OsIpcReceiver, IpcMessage, Option<u32>), ChannelError> {
+        let (receiver, ipc_message) = self.accept()?;
+        let peer_pid = receiver.peer_pid();
+        Ok((receiver, ipc_message, peer_pid))
+    }
 }
 
 #[derive(Debug)]

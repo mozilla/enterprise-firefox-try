@@ -4179,6 +4179,17 @@ SO_PEERCRED via nix getsockopt, Windows GetNamedPipeClientProcessId; None on mac
 backends), for FELT peer authentication (Bug 2072053).
 """
 
+[[audits.ipc-channel]]
+who = "John Reitano <jreitano@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "0.21.0@git:4fe32fd10d10b597889d1df254a6334654dda78b -> 0.21.0@git:fec28269875bde5cf9d3b654906c2504b1c62c19"
+importable = false
+notes = """
+Adds IpcOneShotServer::accept_with_peer_pid(); on macOS it requests the Mach
+audit trailer and reads the sender's pid with audit_token_to_pid, for FELT peer
+authentication (Bug 2072053).
+"""
+
 [[audits.itertools]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
