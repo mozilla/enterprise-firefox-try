@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { getSitePrincipal } from "chrome://browser/content/ipprotection/ipprotection-utils.mjs";
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -124,18 +126,25 @@ export class AccessConnectorButton {
    * @returns {{ isProtected: boolean, isError: boolean }}
    */
   #getStatus() {
-    const principal = this.gBrowser?.selectedBrowser?.contentPrincipal;
-
     if (!lazy.IPPProxyManager.active) {
       return { isProtected: false, isError: false };
     }
 
-    const rule = lazy.IPPSiteRuleManager.getRule(principal);
+    const errorStatus = this.#checkForProxyError(
+      this.gBrowser?.selectedBrowser?.contentPrincipal
+    );
+    if (errorStatus.isError) {
+      return errorStatus;
+    }
+
+    const rule = lazy.IPPSiteRuleManager.getRule(
+      getSitePrincipal(this.gBrowser)
+    );
     if (rule === lazy.IPPPrincipalRules.INCLUDED) {
       return { isProtected: true, isError: false };
     }
 
-    return this.#checkForProxyError(principal);
+    return errorStatus;
   }
 
   /**
