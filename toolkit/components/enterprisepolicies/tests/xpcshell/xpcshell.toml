@@ -9,4 +9,8 @@ run-if = [
 
 ["test_empty.js"]
 
+["test_local_policies_console_opt_in.js"]
+# Only run in MOZ_ENTERPRISE builds
+run-if = ["enterprise"]
+
 ["test_null_local_policy_ignored.js"]

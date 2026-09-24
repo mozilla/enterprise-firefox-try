@@ -284,7 +284,9 @@ EnterprisePoliciesManager.prototype = {
   /**
    * Build the policies provider. Every available source (JSON, platform, and
    * the remote source in enterprise builds) is added to a single
-   * CombinedProvider, in increasing order of precedence.
+   * CombinedProvider, in increasing order of precedence. The local sources are
+   * only added when there is no remote source, or when the remote policies
+   * explicitly allow them (see RemotePoliciesProvider.allowsLocalPolicies).
    *
    * @returns {Promise<CombinedProvider>} the combined policies provider
    * @throws {RemotePolicyProviderInitError} when the startup policies couldn't
@@ -294,7 +296,7 @@ EnterprisePoliciesManager.prototype = {
     const provider = new CombinedProvider();
 
     // The remote provider is built first so we can perform an early lookup
-    // whether the DisableLocalPolicies policy is present.
+    // whether the local policy sources may be used.
     let remoteProvider = null;
     if (this._isRemotePoliciesSupported()) {
       lazy.log.debug("Remote policies supported, fetching startup policies.");
@@ -316,7 +318,7 @@ EnterprisePoliciesManager.prototype = {
       );
     }
 
-    if (!remoteProvider?.disablesLocalPolicies) {
+    if (!remoteProvider || remoteProvider.allowsLocalPolicies) {
       lazy.log.debug("Adding JSON provider.");
       provider.push(new JSONPoliciesProvider());
 
@@ -330,7 +332,9 @@ EnterprisePoliciesManager.prototype = {
         }
       }
     } else {
-      lazy.log.debug("Local policies disabled; skipping local providers.");
+      lazy.log.debug(
+        "The remote policies do not allow local policies; skipping local providers."
+      );
     }
 
     if (remoteProvider) {
@@ -1576,13 +1580,18 @@ class RemotePoliciesProvider extends PoliciesProvider {
   }
 
   /**
-   * Whether the remote policies request that all local policy providers be
-   * disabled.
+   * Whether the remote policies explicitly allow the local policy sources
+   * (policies.json, Windows GPO and macOS plist) by setting the
+   * DisableLocalPolicies policy to false. A console-managed browser ignores
+   * the local sources otherwise: some of them can be written without
+   * administrator rights (e.g. the macOS user preference domain), which would
+   * let a user merge policies the console does not set into the
+   * console-managed policy set.
    *
    * @returns {boolean}
    */
-  get disablesLocalPolicies() {
-    return this._policies?.[POLICY_DISABLE_LOCAL_POLICIES] === true;
+  get allowsLocalPolicies() {
+    return this._policies?.[POLICY_DISABLE_LOCAL_POLICIES] === false;
   }
 
   observe(aSubject, aTopic, aData) {

@@ -1701,7 +1701,7 @@
         "firefox_enterprise": { "version_added": "155" }
       },
       "x-restart-required": true,
-      "description": "Disable all local policy sources (policies.json, Windows GPO and macOS plist).",
+      "description": "Disable all local policy sources (policies.json, Windows GPO and macOS plist). A browser managed by the console ignores the local policy sources unless this policy is explicitly set to false.",
       "examples": [true, false]
     },
     "DisableMasterPasswordCreation": {

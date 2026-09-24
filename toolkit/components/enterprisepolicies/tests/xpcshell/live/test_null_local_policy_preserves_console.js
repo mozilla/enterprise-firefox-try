@@ -21,6 +21,10 @@ const { FileTestUtils } = ChromeUtils.importESModule(
 const NULL_LOCAL_POLICIES = { policies: { x: null } };
 const REMOTE_CONSOLE_POLICIES = {
   policies: {
+    // The console has to opt in to local policies for the local file to be
+    // read at all (Bug 2073015), which is what lets the null value reach the
+    // merge this test is about.
+    DisableLocalPolicies: false,
     SecurityLogging: { Download: { Enabled: true } },
   },
 };

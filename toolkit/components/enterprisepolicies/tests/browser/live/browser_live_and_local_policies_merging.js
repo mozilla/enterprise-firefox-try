@@ -3,8 +3,17 @@
 
 "use strict";
 
+// A console-managed browser only reads local policies when the console opts in
+// with DisableLocalPolicies: false (see browser_live_disable_local_policies.js),
+// so every remote policy set below carries that opt-in.
+
 const customSchema = {
   properties: {
+    DisableLocalPolicies: {
+      type: "boolean",
+      "x-restart-required": true,
+    },
+
     simple_policy0: {
       type: "string",
       "x-restart-required": false,
@@ -57,7 +66,7 @@ add_task(async function test_remote_policy_overrides_local_policy() {
     },
   };
   let remotePolicies = {
-    policies: {},
+    policies: { DisableLocalPolicies: false },
   };
 
   await EnterprisePolicyTesting.setupPolicyEngineWithCombinedPolicyProvider(
@@ -68,7 +77,10 @@ add_task(async function test_remote_policy_overrides_local_policy() {
 
   Assert.deepEqual(
     Services.policies.getActivePolicies(),
-    { simple_policy0: POLICY_PARAM_STATE.APPLIED_LOCAL_POLICY },
+    {
+      DisableLocalPolicies: false,
+      simple_policy0: POLICY_PARAM_STATE.APPLIED_LOCAL_POLICY,
+    },
     "Expected local policy simple_policy0 to be set."
   );
   Assert.equal(
@@ -79,6 +91,7 @@ add_task(async function test_remote_policy_overrides_local_policy() {
 
   remotePolicies = {
     policies: {
+      DisableLocalPolicies: false,
       simple_policy0: POLICY_PARAM_STATE.UPDATED_BY_REMOTE_POLICY,
     },
   };
@@ -87,7 +100,10 @@ add_task(async function test_remote_policy_overrides_local_policy() {
 
   Assert.deepEqual(
     Services.policies.getActivePolicies(),
-    { simple_policy0: POLICY_PARAM_STATE.UPDATED_BY_REMOTE_POLICY },
+    {
+      DisableLocalPolicies: false,
+      simple_policy0: POLICY_PARAM_STATE.UPDATED_BY_REMOTE_POLICY,
+    },
     "Expected remote policy update to override local policies."
   );
   Assert.equal(
@@ -97,11 +113,14 @@ add_task(async function test_remote_policy_overrides_local_policy() {
   );
 
   // Remove remote policies, re-apply local policy
-  await waitForLivePolicyUpdate({});
+  await waitForLivePolicyUpdate({ DisableLocalPolicies: false });
 
   Assert.deepEqual(
     Services.policies.getActivePolicies(),
-    { simple_policy0: POLICY_PARAM_STATE.APPLIED_LOCAL_POLICY },
+    {
+      DisableLocalPolicies: false,
+      simple_policy0: POLICY_PARAM_STATE.APPLIED_LOCAL_POLICY,
+    },
     "Expected local policy to be re-applied if the remote policy is removed."
   );
   Assert.equal(
@@ -121,6 +140,7 @@ add_task(async function test_remote_and_local_policy_merged() {
   };
   let remotePolicies = {
     policies: {
+      DisableLocalPolicies: false,
       simple_policy1: POLICY_PARAM_STATE.APPLIED_REMOTE_POLICY,
     },
   };
@@ -134,6 +154,7 @@ add_task(async function test_remote_and_local_policy_merged() {
   Assert.deepEqual(
     Services.policies.getActivePolicies(),
     {
+      DisableLocalPolicies: false,
       simple_policy0: POLICY_PARAM_STATE.APPLIED_LOCAL_POLICY,
       simple_policy1: POLICY_PARAM_STATE.APPLIED_REMOTE_POLICY,
     },
