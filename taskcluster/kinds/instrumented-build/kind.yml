@@ -86,11 +86,8 @@ tasks:
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
-            mozconfig-variant: profile-generate
+            mozconfig-variant: profile-generate-as-release
             tooltool-downloads: public
-            extra-config:
-                extra_mozconfig_content:
-                    - ac_add_options --as-milestone=release
         fetches:
             toolchain:
                 - linux64-clang
@@ -119,8 +116,7 @@ tasks:
                 - builds/releng_base_linux_64_builds.py
             mozconfig-variant: profile-generate
             extra-config:
-                extra_mozconfig_content:
-                    - ac_add_options --target=aarch64
+                mozconfig_platform: linux64-aarch64
             tooltool-downloads: public
         fetches:
             toolchain:
@@ -266,11 +262,9 @@ tasks:
                 - builds/releng_base_mac_64_cross_builds.py
             script: "mozharness/scripts/fx_desktop_build.py"
             secrets: true
-            mozconfig-variant: profile-generate
+            mozconfig-variant: profile-generate-as-release
             extra-config:
                 mozconfig_platform: macosx64-aarch64
-                extra_mozconfig_content:
-                    - ac_add_options --as-milestone=release
         fetches:
             toolchain:
                 - linux64-clang
@@ -503,14 +497,12 @@ tasks:
         worker-type: b-linux-docker-amd
         run:
             options: [append-env-variables-from-configs]
-            mozconfig-variant: profile-generate
+            mozconfig-variant: profile-generate-as-release
             config:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_linux_64_builds.py
             extra-config:
                 mozconfig_platform: win64
-                extra_mozconfig_content:
-                    - ac_add_options --as-milestone=release
         fetches:
             toolchain:
                 - linux64-7zz

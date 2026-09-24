@@ -295,11 +295,9 @@ win64-non-unified/plain:
         config:
             - builds/releng_base_firefox.py
             - builds/releng_base_linux_64_builds.py
-        mozconfig-variant: nightly
+        mozconfig-variant: non-unified
         extra-config:
             mozconfig_platform: win64
-            extra_mozconfig_content:
-                - ac_add_options --disable-unified-build
     use-sccache: true
     run-on-projects: ['integration']
     fetches:

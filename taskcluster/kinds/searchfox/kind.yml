@@ -148,8 +148,7 @@ tasks:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_mac_64_cross_builds.py
             extra-config:
-                extra_mozconfig_content:
-                    - ac_add_options --target=aarch64-apple-darwin
+                mozconfig_platform: macosx64-aarch64
             script: "mozharness/scripts/fx_desktop_build.py"
             custom-build-variant-cfg: cross-opt-searchfox
             keep-artifacts: false
@@ -184,8 +183,7 @@ tasks:
                 - builds/releng_base_firefox.py
                 - builds/releng_base_mac_64_cross_builds.py
             extra-config:
-                extra_mozconfig_content:
-                    - ac_add_options --target=aarch64-apple-darwin
+                mozconfig_platform: macosx64-aarch64
             script: "mozharness/scripts/fx_desktop_build.py"
             custom-build-variant-cfg: cross-debug-searchfox
             keep-artifacts: false

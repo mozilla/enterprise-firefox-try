@@ -263,9 +263,7 @@ linux64-non-unified/plain:
         tooltool-downloads: public
         extra-config:
             disable_package_metrics: true
-            extra_mozconfig_content:
-                - ac_add_options --disable-unified-build
-        mozconfig-variant: nightly
+        mozconfig-variant: non-unified
     run-on-projects: ['integration']
     use-sccache: true
     fetches:
@@ -581,10 +579,7 @@ linux64-non-unified/debug:
         tooltool-downloads: public
         extra-config:
             disable_package_metrics: true
-            extra_mozconfig_content:
-                - ac_add_options --disable-unified-build
-                - ac_add_options --enable-debug
-        mozconfig-variant: nightly
+        mozconfig-variant: non-unified-debug
     run-on-projects: ['integration']
     use-sccache: true
     fetches:
@@ -1750,8 +1745,7 @@ linux64-aarch64/opt:
             - builds/releng_base_firefox.py
             - builds/releng_base_linux_64_builds.py
         extra-config:
-            extra_mozconfig_content:
-                - ac_add_options --target=aarch64
+            mozconfig_platform: linux64-aarch64
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         tooltool-downloads: public
@@ -1794,8 +1788,7 @@ linux64-aarch64/debug:
             - builds/releng_base_firefox.py
             - builds/releng_base_linux_64_builds.py
         extra-config:
-            extra_mozconfig_content:
-                - ac_add_options --target=aarch64
+            mozconfig_platform: linux64-aarch64
         script: "mozharness/scripts/fx_desktop_build.py"
         custom-build-variant-cfg: debug
         mozconfig-variant: debug
@@ -1852,8 +1845,7 @@ linux64-aarch64-shippable/opt:
             - builds/releng_base_linux_64_builds.py
             - taskcluster_nightly.py
         extra-config:
-            extra_mozconfig_content:
-                - ac_add_options --target=aarch64
+            mozconfig_platform: linux64-aarch64
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         tooltool-downloads: public
@@ -1963,8 +1955,7 @@ linux64-aarch64-devedition/opt:
             - taskcluster_nightly.py
         extra-config:
             max_build_output_timeout: 3600
-            extra_mozconfig_content:
-                - ac_add_options --target=aarch64
+            mozconfig_platform: linux64-aarch64
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         tooltool-downloads: public

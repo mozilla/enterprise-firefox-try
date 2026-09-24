@@ -274,9 +274,7 @@ android-aarch64-non-unified/opt:
     run:
         actions: [get-secrets, build]
         custom-build-variant-cfg: aarch64
-        extra-config:
-            extra_mozconfig_content:
-                - ac_add_options --disable-unified-build
+        mozconfig-variant: non-unified
     use-sccache: true
     use-python: "3.11"
     fetches:
@@ -498,9 +496,7 @@ android-x86_64-non-unified/opt:
     run:
         actions: [get-secrets, build]
         custom-build-variant-cfg: x86_64
-        extra-config:
-            extra_mozconfig_content:
-                - ac_add_options --disable-unified-build
+        mozconfig-variant: non-unified
     use-sccache: true
     use-python: "3.11"
     fetches:

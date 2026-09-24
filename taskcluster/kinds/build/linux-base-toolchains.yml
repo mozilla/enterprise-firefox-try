@@ -10,12 +10,6 @@ task-defaults:
     worker-type: b-linux-docker-amd
     run:
         clone-with: hg
-        extra-config:
-            extra_mozconfig_content:
-                # Builds on automation don't normally build geckodriver,
-                # but to ensure we also successfully build geckodriver with
-                # the MSRV, force it to be built.
-                - ac_add_options --enable-geckodriver
 
 linux64-base-toolchains/opt:
     description: "Linux64 base toolchains Opt"
@@ -39,6 +33,7 @@ linux64-base-toolchains/opt:
             - builds/releng_base_linux_64_builds.py
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
+        mozconfig-variant: nightly-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
@@ -80,7 +75,7 @@ linux64-base-toolchains/debug:
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         custom-build-variant-cfg: debug
-        mozconfig-variant: debug
+        mozconfig-variant: debug-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
@@ -120,6 +115,7 @@ linux64-base-toolchains-clang/opt:
             - builds/releng_base_linux_64_builds.py
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
+        mozconfig-variant: nightly-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
@@ -160,7 +156,7 @@ linux64-base-toolchains-clang/debug:
         script: "mozharness/scripts/fx_desktop_build.py"
         secrets: true
         custom-build-variant-cfg: debug
-        mozconfig-variant: debug
+        mozconfig-variant: debug-base-toolchains
         tooltool-downloads: public
     use-sccache: true
     fetches:
