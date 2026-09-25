@@ -1,0 +1,32 @@
+{
+    "parameters": {
+        "base_rev": "0bfd50936879258759a68d0f98635c0384165adc",
+        "optimize_target_tasks": false,
+        "project": "enterprise-thunderbird",
+        "release_product": "thunderbird-enterprise",
+        "release_type": "nightly-enterprise",
+        "try_task_config": {
+            "tasks": [
+                "enterprise-repack-smp_sbxTb_en-US-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-smp_sbxTb_fr-mac-signing-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_en-US-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_en-US-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_en-US-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_en-US-win64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_fr-linux64-aarch64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_fr-linux64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_fr-macosx64-enterprise-shippable/opt",
+                "enterprise-repack-repackage-smp_sbxTb_fr-win64-enterprise-shippable/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-smp_sbxTb_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-aarch64-enterprise-shippable-smp_sbxTb_fr/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-smp_sbxTb_en-US/opt",
+                "repackage-enterprise-repack-deb-linux64-enterprise-shippable-smp_sbxTb_fr/opt",
+                "repackage-enterprise-repack-msi-win64-enterprise-shippable-smp_sbxTb_en-US/opt",
+                "repackage-enterprise-repack-msi-win64-enterprise-shippable-smp_sbxTb_fr/opt",
+                "repackage-signing-enterprise-repack-smp_sbxTb_en-US-msi-win64-enterprise-shippable/opt",
+                "repackage-signing-enterprise-repack-smp_sbxTb_fr-msi-win64-enterprise-shippable/opt"
+            ]
+        }
+    },
+    "version": 2
+}
