@@ -413,5 +413,7 @@ def add_enterprise_to_searchfox(config, jobs):
             config.params["project"] == "enterprise-firefox"
             and config.kind == "searchfox"
         ):
-            job["mozconfig"]["variant"] += "-enterprise"
+            job["run"].setdefault("extra-config", {}).setdefault(
+                "extra_mozconfig_content", []
+            ).extend(["ac_add_options --enable-enterprise"])
         yield job
