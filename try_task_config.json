@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "2abc754a4a98b5e8c0dbea19541b38c7ae8089b8",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"xpcshell\": [\"services/settings/test/unit\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
