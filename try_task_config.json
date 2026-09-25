@@ -1,0 +1,27 @@
+{
+    "parameters": {
+        "base_rev": "b36798667ae404fd3ea8bfd4cb9c0c2be62c531f",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-enterprise-rusttests/opt",
+                "build-linux64-enterprise/debug",
+                "build-linux64-enterprise/opt",
+                "build-linux64-plain/debug",
+                "build-linux64-plain/opt",
+                "build-mac-signing-macosx64-aarch64/debug",
+                "build-mac-signing-macosx64-enterprise/debug",
+                "build-mac-signing-macosx64-enterprise/opt",
+                "build-mac-signing-macosx64/debug",
+                "build-macosx64-aarch64/debug",
+                "build-macosx64-enterprise/debug",
+                "build-macosx64-enterprise/opt",
+                "build-macosx64/debug"
+            ]
+        }
+    },
+    "version": 2
+}
