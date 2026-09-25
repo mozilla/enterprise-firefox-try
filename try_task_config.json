@@ -1,0 +1,28 @@
+{
+    "parameters": {
+        "base_rev": "b36798667ae404fd3ea8bfd4cb9c0c2be62c531f",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
