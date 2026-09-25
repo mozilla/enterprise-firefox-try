@@ -1,0 +1,18 @@
+{
+    "parameters": {
+        "base_rev": "b36798667ae404fd3ea8bfd4cb9c0c2be62c531f",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-aarch64-enterprise-shippable/opt",
+                "build-linux64-enterprise-rusttests/opt",
+                "build-macosx64-enterprise/debug",
+                "build-win64-enterprise/opt"
+            ]
+        }
+    },
+    "version": 2
+}
