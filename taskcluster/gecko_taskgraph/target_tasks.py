@@ -1244,6 +1244,18 @@ def target_tasks_daily_releases(full_task_graph, parameters, graph_config):
     return [l for l, t in full_task_graph.tasks.items() if filter(t)]
 
 
+@register_target_task("daily_releases_enterprise")
+def target_tasks_daily_releases_enterprise(full_task_graph, parameters, graph_config):
+    """Select the set of tasks required to identify if we should release.
+    If we determine that we should the task will communicate to ship-it to
+    schedule the release itself."""
+
+    def filter(task):
+        return task.kind in ["maybe-release"]
+
+    return [l for l, t in full_task_graph.tasks.items() if filter(t)]
+
+
 @register_target_task("nightly_desktop")
 def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     """Select the set of tasks required for a nightly build of linux, mac,
@@ -1281,6 +1293,92 @@ def target_tasks_nightly_all(full_task_graph, parameters, graph_config):
     return list(
         set(target_tasks_nightly_desktop(full_task_graph, parameters, graph_config))
         | set(target_tasks_nightly_android(full_task_graph, parameters, graph_config))
+    )
+
+
+def target_tasks_enterprise_any(
+    full_task_graph, parameters, graph_config, partner_subconfig
+):
+    """
+    Select the set of tasks required for a nightly build of firefox enterprise
+    Will apply partner/sub_config on required tasks.
+    """
+    if cron_index_exists(graph_config, parameters, "nightly-enterprise"):
+        return []
+
+    def filter(task):
+        partner = task.attributes.get("partner", None)
+        sub_config = task.attributes.get("sub_config", None)
+        if partner and sub_config:
+            """
+            For tasks that defines partner/sub_config, apply filtering. Those that
+            do not defines it are not directly related to repackage
+            """
+            if partner in partner_subconfig.keys():
+                if sub_config in partner_subconfig[partner]:
+                    return True
+            return False
+        return True
+
+    return filter_out_enterprise_oci_tag(
+        full_task_graph,
+        [l for l, t in full_task_graph.tasks.items() if filter(t)]
+    )
+
+
+def filter_out_enterprise_oci_tag(full_task_graph, selected_tasks_labels):
+    """
+    Apply filtering to selected_tasks_labels to ensure no enterprise-oci-tag tasks
+    gets scheduled.
+    """
+    return [
+        label
+        for label, task in full_task_graph.tasks.items()
+        if label in selected_tasks_labels and not task.kind == "enterprise-oci-tag"
+    ]
+
+
+def target_tasks_nightly_enterprise_stage(full_task_graph, parameters, graph_config):
+    """
+    Select the set of tasks required for a nightly build of firefox enterprise
+    Tailored for nightly stage builds to be validated by QA
+    """
+    return target_tasks_enterprise_any(
+        full_task_graph, parameters, graph_config, {"moz": ["stageGCP"]}
+    )
+
+
+def target_tasks_nightly_enterprise_prod(full_task_graph, parameters, graph_config):
+    """
+    Select the set of tasks required for a nightly build of firefox enterprise
+    Tailored for nightly prod builds: build will be uploaded to console but
+    make sure it is not tagged
+    """
+    return filter_out_enterprise_oci_tag(
+        full_task_graph,
+        target_tasks_enterprise_any(
+            full_task_graph, parameters, graph_config, {"moz": ["prodGCP"]}
+        ),
+    )
+
+
+@register_target_task("nightly_enterprise")
+def target_tasks_nightly_enterprise(full_task_graph, parameters, graph_config):
+    """
+    Select the set of tasks required for a nightly build of firefox enterprise
+    Tailored for nightly stage builds to be validated by QA
+    """
+    return list(
+        set(
+            target_tasks_nightly_enterprise_stage(
+                full_task_graph, parameters, graph_config
+            )
+        )
+        | set(
+            target_tasks_nightly_enterprise_prod(
+                full_task_graph, parameters, graph_config
+            )
+        )
     )
 
 
