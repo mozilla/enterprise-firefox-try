@@ -52,10 +52,25 @@ fn normalize_arg(arg: String) -> String {
     normalized.to_lowercase()
 }
 
+// The flag name of a command line argument. Like nsCommandLine, this drops the
+// value of "--flag=value" and, on Windows, of "/flag:value".
+fn arg_name(arg: &str) -> String {
+    let name = if arg.starts_with('-') {
+        arg.split('=').next().unwrap_or(arg)
+    } else if cfg!(windows) && arg.starts_with('/') {
+        arg.split(':').next().unwrap_or(arg)
+    } else {
+        arg
+    };
+    normalize_arg(name.to_string())
+}
+
+fn args_match(args: impl IntoIterator<Item = String>, target: &str) -> bool {
+    args.into_iter().any(|arg| arg_name(&arg) == target)
+}
+
 fn arg_matches(target: &str) -> bool {
-    env::args()
-        .into_iter()
-        .any(|arg| normalize_arg(arg) == target)
+    args_match(env::args(), target)
 }
 
 fn has_env(target: &str) -> bool {
@@ -295,4 +310,49 @@ pub extern "C" fn felt_restartforced_constructor(
 ) -> nserror::nsresult {
     let felt_restartforced = components::FeltRestartForced::new();
     unsafe { felt_restartforced.QueryInterface(iid, result) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn matches(args: &[&str], target: &str) -> bool {
+        args_match(args.iter().map(|a| a.to_string()), target)
+    }
+
+    #[test]
+    fn flag_forms_match() {
+        for arg in [
+            "-chrome",
+            "--chrome",
+            "-CHROME",
+            "--chrome=chrome://browser/content/browser.xhtml",
+            "-chrome=",
+        ] {
+            assert!(matches(&[arg], "chrome"), "{arg} should match chrome");
+        }
+        assert!(matches(&["-feltUI"], "feltui"));
+        assert!(matches(&["--felt=1"], "felt"));
+    }
+
+    #[test]
+    fn values_do_not_match() {
+        assert!(!matches(
+            &["chrome://browser/content/browser.xhtml"],
+            "chrome"
+        ));
+        assert!(!matches(&["--chromium"], "chrome"));
+        assert!(!matches(&["-feltUI"], "felt"));
+        assert!(!matches(&["-url", "chrome"], "felt"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_slash_forms_match() {
+        assert!(matches(&["/chrome"], "chrome"));
+        assert!(matches(
+            &["/chrome:chrome://browser/content/browser.xhtml"],
+            "chrome"
+        ));
+    }
 }
