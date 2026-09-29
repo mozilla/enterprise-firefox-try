@@ -32,11 +32,11 @@ class FeltStartsBrowser(FeltTests):
                     x["name"] == self.cookie_name.value
                     and x["value"] == self.cookie_value.value
                 ),
-                self._child_driver.get_cookies(),
+                self.get_cookies_child("localhost"),
             )
         )
         assert len(expected_cookie) == 1, (
-            f"Cookie {self.cookie_name} was properly set on Firefox started by FELT"
+            f"Cookie {self.cookie_name} was properly set on the app started by FELT"
         )
 
     def run_ensure_firefox_config_set_in_browser(self):

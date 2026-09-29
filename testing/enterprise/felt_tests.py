@@ -1106,12 +1106,58 @@ class FeltTestsBase(ConsoleSSOPortMixin, EnterpriseTestsBase):
         return self._get_elem(e, self._driver, self._wait, self._longwait)
 
     def get_elem_child(self, e):
+        if self.is_thunderbird:
+            with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
+                tab = self.get_current_tab_child()
+                return self._child_driver.execute_script(
+                    """
+                    return arguments[0].docShell.document.querySelector(arguments[1]);
+                    """,
+                    [tab, e],
+                )
+
         return self._get_elem(
             e,
             self._child_driver,
             self._child_wait,
             self._child_longwait,
         )
+
+    def get_elem_child_text(self, e):
+        # Elements returned by get_elem_child() on Thunderbird come from a
+        # chrome context script, so they cannot be handed to content context
+        # commands such as WebDriver:GetElementText.
+        if self.is_thunderbird:
+            with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
+                tab = self.get_current_tab_child()
+                return self._child_wait.until(
+                    lambda d: d.execute_script(
+                        """
+                        return arguments[0].docShell?.document?.querySelector(arguments[1])?.textContent || null;
+                        """,
+                        [tab, e],
+                    )
+                )
+
+        elem = self.get_elem_child(e)
+        self._child_wait.until(lambda d: len(elem.text) > 0)
+        return elem.text
+
+    def get_cookies_child(self, host):
+        # Cookies of the document loaded in the child, which content context
+        # commands cannot reach on Thunderbird.
+        if self.is_thunderbird:
+            with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
+                return self._child_driver.execute_script(
+                    """
+                    return [...Services.cookies.getCookiesFromHost(arguments[0], {})].map(
+                        cookie => ({ name: cookie.name, value: cookie.value })
+                    );
+                    """,
+                    [host],
+                )
+
+        return self._child_driver.get_cookies()
 
     def find_elem(self, e):
         return self._driver.find_element(By.CSS_SELECTOR, e)
@@ -1166,9 +1212,9 @@ class FeltTestsBase(ConsoleSSOPortMixin, EnterpriseTestsBase):
                 self._logger.info(
                     f"Found PID {pid_to_check}: STATUS:{process_status} :: EXE:{process_exe} :: NAME:{process_name} :: CMDLINE:{process_cmdline} :: BASENAME:'{process_basename}'"
                 )
-                # If process basename is not Firefox, then it is just PID re-use
-                assert not process_basename.startswith("firefox"), (
-                    f"Process PID {pid_to_check} should not be Firefox"
+                # If process basename is not the app, then it is just PID re-use
+                assert not process_basename.startswith(self.app_name), (
+                    f"Process PID {pid_to_check} should not be {self.app_name}"
                 )
             except psutil.NoSuchProcess:
                 self._logger.info(f"PID disappeared {pid_to_check}")

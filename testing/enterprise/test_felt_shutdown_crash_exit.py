@@ -11,8 +11,8 @@ sys.path.append(os.path.dirname(__file__))
 from felt_browser_starts import FeltStartsBrowser
 
 
-class BrowserShutdownCrash(FeltStartsBrowser):
-    def test_browser_shutdown_crash(self):
+class AppShutdownCrash(FeltStartsBrowser):
+    def test_app_shutdown_crash(self):
         super().run_felt_base()
         self.run_felt_browser_started()
         self.run_force_shutdown_timeout()

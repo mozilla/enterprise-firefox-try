@@ -10,6 +10,10 @@ subsuite = "enterprise"
 
 ["test_felt_context_menu.py"]
 
+["test_felt_crash_abort_restart.py"]
+
+["test_felt_crash_restart.py"]
+
 ["test_felt_device_posture.py"]
 
 ["test_felt_device_posture_elements.py"]
@@ -31,6 +35,8 @@ subsuite = "enterprise"
 ["test_felt_restart_is_quit.py"]
 
 ["test_felt_restart_works.py"]
+
+["test_felt_shutdown_crash_exit.py"]
 
 ["test_felt_starts_missing_bin.py"]
 

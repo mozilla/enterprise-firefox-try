@@ -9,11 +9,11 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 
 from base_test import Environment
-from felt_browser_crashes import BrowserCrashes
 from felt_consts import WHOAMI_EMAIL
+from felt_crashes import AppCrashes
 
 
-class BrowserCrashAbortRestart(BrowserCrashes):
+class AppCrashAbortRestart(AppCrashes):
     EXTRA_PREFS = {
         "enterprise.browser.abnormal_exit_limit": 2,
         "enterprise.browser.abnormal_exit_period": 120,
@@ -44,7 +44,7 @@ class BrowserCrashAbortRestart(BrowserCrashes):
         self.run_felt_crash_parent_twice()
         self.run_felt_check_error_message()
 
-    def test_browser_crash_abort_restart(self):
+    def test_app_crash_abort_restart(self):
         self.policy_signout_crash_action.value = "signout"
         self._prepare_felt_keystore()
         self._seed_stale_locking_token()
@@ -59,7 +59,13 @@ class BrowserCrashAbortRestart(BrowserCrashes):
         self.assert_user_signed_out(env=Environment.FELT)
         assert self.signout_count.value == 1
 
-    def test_browser_crash_abort_restart_with_lock(self):
+    def test_app_crash_abort_restart_with_lock(self):
+        if self.is_thunderbird:
+            # nsIFelt.setCrashLockIntent() is only called by
+            # EnterpriseHandler, so the SignOut.Crash.Action policy never
+            # reaches FELT and the session is signed out instead of locked.
+            self.skipTest("Thunderbird does not relay the crash lock intent")
+
         self.policy_signout_crash_action.value = "lock"
 
         self._prepare_felt_keystore()

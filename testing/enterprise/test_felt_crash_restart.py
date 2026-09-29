@@ -8,16 +8,16 @@ import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-from felt_browser_crashes import BrowserCrashes
+from felt_crashes import AppCrashes
 
 
-class BrowserCrashRestart(BrowserCrashes):
+class AppCrashRestart(AppCrashes):
     EXTRA_PREFS = {
         "enterprise.browser.abnormal_exit_limit": 2,
         "enterprise.browser.abnormal_exit_period": 1,
     }
 
-    def test_browser_crash_abort_restart(self):
+    def test_app_crash_restart(self):
         super().run_felt_base()
         self.run_felt_crash_parent_once()
         self.run_felt_proper_restart()

@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(__file__))
 from felt_tests import FeltTests
 
 
-class BrowserCrashes(FeltTests):
+class AppCrashes(FeltTests):
     EXTRA_ENV = {"MOZ_GDB_SLEEP": "1"}
     # Reduce the timeout for faster processing of the tests
     socket_timeout = 10
@@ -25,7 +25,7 @@ class BrowserCrashes(FeltTests):
             # This is going to trigger exception for sure
             self._logger.info("Crashing main process")
             self._child_driver.set_context("content")
-            self._child_driver.navigate("about:crashparent")
+            self.open_tab_child("about:crashparent")
         except Exception as ex:
             self._logger.info(f"Caught exception {ex}")
         finally:
@@ -46,11 +46,13 @@ class BrowserCrashes(FeltTests):
         self.connect_child_browser()
         self._browser_pid = self._child_driver.session_capabilities["moz:processID"]
         self._logger.info(f"Connected to {self._browser_pid}")
-        with self._child_driver.using_context("content"):
-            self._child_driver.navigate("about:buildconfig")
+        self.open_tab_child("about:buildconfig")
 
-        build_flags_box = self.get_elem_child("p:last-child")
-        self._child_wait.until(lambda d: len(build_flags_box.text) > 0)
+        # Firefox and Thunderbird ship their own about:buildconfig, only the
+        # heading is common to both.
+        build_config_title = self.get_elem_child_text("h1")
+        self._logger.info(f"about:buildconfig heading: {build_config_title}")
+        assert len(build_config_title) > 0, "Restarted app renders about:buildconfig"
 
     def run_felt_crash_parent_twice(self):
         self._manually_closed_child = True

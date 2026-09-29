@@ -231,7 +231,50 @@ class EnterpriseTestsBase(MarionetteTestCase):
         return self._open_tab(url, self._driver)
 
     def open_tab_child(self, url):
+        # Marionette has no tabbrowser to drive on Thunderbird
+        # (TabManager.getTabBrowser() only knows about Firefox, Felt UI and
+        # Android), so content tabs have to be opened through tabmail from the
+        # chrome context.
+        if self.is_thunderbird:
+            return self._open_tab_child_tabmail(url)
+
         return self._open_tab(url, self._child_driver)
+
+    def _open_tab_child_tabmail(self, url):
+        with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
+            return self._child_driver.execute_script(
+                """
+                const url = arguments[0];
+                const mainWin = Services.wm.getMostRecentWindow("mail:3pane");
+                const tabmail = mainWin.document.getElementById("tabmail");
+                const oldShouldSwitchTo = tabmail.tabModes["contentTab"].shouldSwitchTo;
+                tabmail.tabModes["contentTab"].shouldSwitchTo = () => {
+                    return -1;
+                };
+                tabmail.openTab("contentTab", { url });
+                tabmail.tabModes["contentTab"].shouldSwitchTo = oldShouldSwitchTo;
+                """,
+                [url],
+            )
+
+    def get_current_tab_child(self):
+        """Thunderbird only: <browser> of the currently selected tabmail tab."""
+        with self._child_driver.using_context(self._child_driver.CONTEXT_CHROME):
+            return self._child_driver.execute_script(
+                """
+                const mainWin = Services.wm.getMostRecentWindow("mail:3pane");
+                const tabmail = mainWin.document.getElementById("tabmail");
+                return tabmail._getTabContextForTabbyThing(null, true)[1].browser;
+                """
+            )
+
+    @property
+    def app_name(self):
+        return self._driver.session_capabilities.get("browserName")
+
+    @property
+    def is_thunderbird(self):
+        return self.app_name == "thunderbird"
 
     def get_marionette_port(self, max_try):
         marionette_port_file = os.path.join(
