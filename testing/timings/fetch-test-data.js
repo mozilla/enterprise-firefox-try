@@ -27,7 +27,7 @@ const HARNESS = (() => {
 
 // Firefox-CI ETL Query for test job data (contains xpcshell, mochitest, reftest)
 const FIREFOX_CI_ETL_URL =
-  "https://sql.telemetry.mozilla.org/api/queries/114029/results.json?api_key=6LTIeXwlJ5YTlmtbRXmlr5vfSEKVmzsNEyhr4VxO";
+  "https://sql.telemetry.mozilla.org/api/queries/120119/results.json?api_key=f4ylmrolVTmPIedFpXodxwQS6WvYucHdyfOY9Vrr";
 
 // Treeherder query for list of tasks to ignore (broken patches that were reverted)
 const IGNORE_LIST_URL =
