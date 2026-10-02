@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "base_rev": "5e982c106dd946445239f609cc7ff08380d6ce81",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/opt-enterprise-end2end-current",
+                "test-linux2404-64-enterprise/opt-enterprise-end2end-main"
+            ]
+        }
+    },
+    "version": 2
+}
