@@ -13,4 +13,8 @@ run-if = [
 # Only run in MOZ_ENTERPRISE builds
 run-if = ["enterprise"]
 
+["test_macos_user_domain_console_managed.js"]
+# Console-managed browsers exist in MOZ_ENTERPRISE builds only
+run-if = ["enterprise && os == 'mac'"]
+
 ["test_null_local_policy_ignored.js"]

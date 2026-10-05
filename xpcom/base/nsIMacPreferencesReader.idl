@@ -20,15 +20,22 @@ interface nsIMacPreferencesReader : nsISupports
   /**
    * This method checks whether macOS policies are enabled.
    *
+   * @param aAdminOnly only honor the EnterprisePoliciesEnabled preference when
+   *        an administrator set it, see readPreferences.
    * @return true if macOS policies are enabled, false otherwise.
    */
-  boolean policiesEnabled();
+  boolean policiesEnabled([optional] in boolean aAdminOnly);
 
   /**
    * This method reads and returns the macOS preferences.
    *
+   * @param aAdminOnly only return the preferences an administrator set: the
+   *        managed preferences (installed with a configuration profile or MCX)
+   *        and those of the system-wide domain under /Library/Preferences.
+   *        The preferences the user can write themselves, in their own
+   *        ~/Library/Preferences domains or on the command line, are left out.
    * @return A JSON object containing all macOS preferences.
    */
   [implicit_jscontext]
-  jsval readPreferences();
+  jsval readPreferences([optional] in boolean aAdminOnly);
 };

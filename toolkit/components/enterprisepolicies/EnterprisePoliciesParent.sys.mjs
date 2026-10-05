@@ -286,7 +286,8 @@ EnterprisePoliciesManager.prototype = {
    * the remote source in enterprise builds) is added to a single
    * CombinedProvider, in increasing order of precedence. The local sources are
    * only added when there is no remote source, or when the remote policies
-   * explicitly allow them (see RemotePoliciesProvider.allowsLocalPolicies).
+   * explicitly allow them (see RemotePoliciesProvider.allowsLocalPolicies),
+   * and a remote source limits them to what an administrator controls.
    *
    * @returns {Promise<CombinedProvider>} the combined policies provider
    * @throws {RemotePolicyProviderInitError} when the startup policies couldn't
@@ -319,8 +320,15 @@ EnterprisePoliciesManager.prototype = {
     }
 
     if (!remoteProvider || remoteProvider.allowsLocalPolicies) {
+      // Even then, a console-managed browser honors only the local policy
+      // sources an administrator controls. Local policies merge with the
+      // console's per top-level policy, so a source the user can write (their
+      // own macOS preferences domain, a policy file selected with a
+      // preference) would let the user set every policy the console leaves
+      // unset.
+      const adminOnly = !!remoteProvider;
       lazy.log.debug("Adding JSON provider.");
-      provider.push(new JSONPoliciesProvider());
+      provider.push(new JSONPoliciesProvider({ adminOnly }));
 
       if (AppConstants.MOZ_SYSTEM_POLICIES) {
         if (AppConstants.platform == "win") {
@@ -328,7 +336,7 @@ EnterprisePoliciesManager.prototype = {
           provider.push(new WindowsGPOPoliciesProvider());
         } else if (AppConstants.platform == "macosx") {
           lazy.log.debug("Adding macOS platform provider.");
-          provider.push(new macOSPoliciesProvider());
+          provider.push(new macOSPoliciesProvider({ adminOnly }));
         }
       }
     } else {
@@ -1416,8 +1424,15 @@ class PoliciesProvider {
  */
 
 class JSONPoliciesProvider extends PoliciesProvider {
-  constructor() {
+  /**
+   * @param {object} [options]
+   * @param {boolean} [options.adminOnly] read only the policy files an
+   *   administrator controls: the file a preference selects is then honored
+   *   in automation only
+   */
+  constructor({ adminOnly = false } = {}) {
     super();
+    this._adminOnly = adminOnly;
     this._readData();
   }
 
@@ -1464,10 +1479,11 @@ class JSONPoliciesProvider extends PoliciesProvider {
     // An alternate policy path can also be used in Nightly builds (for
     // testing purposes), but the Background Update Agent will be unable to
     // detect the alternate policy file so the DisableAppUpdate policy may not
-    // work as expected.
+    // work as expected. The preference is writable by the user, so a provider
+    // limited to what an administrator controls honors it in automation only.
     if (
       alternatePath &&
-      (Cu.isInAutomation || AppConstants.NIGHTLY_BUILD) &&
+      (Cu.isInAutomation || (AppConstants.NIGHTLY_BUILD && !this._adminOnly)) &&
       (!configFile || !configFile.exists())
     ) {
       if (alternatePath.startsWith(MAGIC_TEST_ROOT_PREFIX)) {
@@ -1583,10 +1599,9 @@ class RemotePoliciesProvider extends PoliciesProvider {
    * Whether the remote policies explicitly allow the local policy sources
    * (policies.json, Windows GPO and macOS plist) by setting the
    * DisableLocalPolicies policy to false. A console-managed browser ignores
-   * the local sources otherwise: some of them can be written without
-   * administrator rights (e.g. the macOS user preference domain), which would
-   * let a user merge policies the console does not set into the
-   * console-managed policy set.
+   * the local sources otherwise, since some of them can be written without
+   * administrator rights (e.g. the macOS user preference domain); see
+   * _buildProvider for what it reads once they are allowed.
    *
    * @returns {boolean}
    */
@@ -1772,16 +1787,23 @@ class WindowsGPOPoliciesProvider extends PoliciesProvider {
   }
 }
 
-class macOSPoliciesProvider extends PoliciesProvider {
-  constructor() {
+export class macOSPoliciesProvider extends PoliciesProvider {
+  /**
+   * @param {object} [options]
+   * @param {boolean} [options.adminOnly] read only the preferences an
+   *   administrator set (managed preferences and the system-wide domain),
+   *   leaving out the user's own preferences domain
+   */
+  constructor({ adminOnly = false } = {}) {
     super();
     let prefReader = Cc["@mozilla.org/mac-preferences-reader;1"].createInstance(
       Ci.nsIMacPreferencesReader
     );
-    if (!prefReader.policiesEnabled()) {
+    if (!prefReader.policiesEnabled(adminOnly)) {
       return;
     }
-    this._policies = lazy.macOSPoliciesParser.readPolicies(prefReader) || {};
+    this._policies =
+      lazy.macOSPoliciesParser.readPolicies(prefReader, adminOnly) || {};
   }
 }
 

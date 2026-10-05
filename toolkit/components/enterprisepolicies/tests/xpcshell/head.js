@@ -25,3 +25,31 @@ let policies = Cc["@mozilla.org/enterprisepolicies;1"].getService(
   Ci.nsIObserver
 );
 policies.observe(null, "policies-startup", null);
+
+/**
+ * Restart the policy engine synchronously through its policies-startup
+ * observer: as a console-managed browser when a console policy set is given,
+ * served by a stubbed console client (this takes an enterprise build), and as
+ * a browser without a console otherwise.
+ *
+ * @param {object} [consolePolicies] the policy set the console serves
+ */
+function restartPolicyEngine(consolePolicies = null) {
+  Services.obs.notifyObservers(null, "EnterprisePolicies:Reset");
+  if (consolePolicies) {
+    EnterprisePolicyTesting.stubRemotePolicies({ policies: consolePolicies });
+    Services.prefs.setBoolPref("enterprise.policies.live.enabled", true);
+  } else {
+    Services.prefs.clearUserPref("enterprise.policies.live.enabled");
+  }
+  policies.observe(null, "policies-startup", null);
+}
+
+registerCleanupFunction(() => {
+  Services.obs.notifyObservers(null, "EnterprisePolicies:Reset");
+  Services.prefs.clearUserPref("enterprise.policies.live.enabled");
+  if (EnterprisePolicyTesting.remotePoliciesStub) {
+    EnterprisePolicyTesting.remotePoliciesStub.restore();
+    EnterprisePolicyTesting.remotePoliciesStub = null;
+  }
+});

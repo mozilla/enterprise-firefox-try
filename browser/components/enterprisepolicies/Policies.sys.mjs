@@ -1483,7 +1483,8 @@ export var Policies = {
 
   // The policy engine applies this policy when building the CombinedProvider:
   // a console-managed browser skips the local policy providers (policies.json,
-  // Windows GPO and macOS plist) unless the console sets it to false.
+  // Windows GPO and macOS plist) unless the console sets it to false, and even
+  // then reads only the sources an administrator controls.
   DisableLocalPolicies: {},
 
   DisableMasterPasswordCreation: {

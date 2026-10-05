@@ -20,8 +20,14 @@ ChromeUtils.defineLazyGetter(lazy, "log", () => {
 });
 
 export var macOSPoliciesParser = {
-  readPolicies(reader) {
-    let nativePolicies = reader.readPreferences();
+  /**
+   * @param {nsIMacPreferencesReader} reader
+   * @param {boolean} [adminOnly] read only the preferences an administrator
+   *   set, leaving out the user's own preferences domain
+   * @returns {object|null} the policies found, unflattened
+   */
+  readPolicies(reader, adminOnly = false) {
+    let nativePolicies = reader.readPreferences(adminOnly);
     if (!nativePolicies) {
       return null;
     }
