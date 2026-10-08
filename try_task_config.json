@@ -1,0 +1,35 @@
+{
+    "parameters": {
+        "base_rev": "ee79a39c2afefb7b06cf39b507fad2a3fc245c4c",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"toolkit/components/enterprisepolicies/tests\"], \"xpcshell\": [\"toolkit/components/enterprisepolicies/tests\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-*",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-nofis-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64/debug-mochitest-browser-chrome-swr-*",
+                "test-linux2404-64/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows10-64-2009-qr/debug-xpcshell-*",
+                "test-windows11-32-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-32-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-msix-*",
+                "test-windows11-64-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2/debug-xpcshell-msix-*"
+            ]
+        }
+    },
+    "version": 2
+}
