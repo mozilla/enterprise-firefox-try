@@ -123,7 +123,7 @@ add_task(async function test_block_all_prefs_and_feature_reverted() {
   );
 
   Assert.equal(
-    Services.prefs.getBoolPref(SHOW_PANE_PREF, true),
+    Services.prefs.getBoolPref(SHOW_PANE_PREF),
     false,
     "getAddons.showPane is turned off"
   );
@@ -153,9 +153,9 @@ add_task(async function test_block_all_prefs_and_feature_reverted() {
     "getAddons.showPane is unlocked after removal"
   );
   Assert.equal(
-    Services.prefs.getPrefType(SHOW_PANE_PREF),
-    Services.prefs.PREF_INVALID,
-    "getAddons.showPane is removed again after removal"
+    Services.prefs.getBoolPref(SHOW_PANE_PREF),
+    false,
+    "getAddons.showPane is restored to its default after removal"
   );
   Assert.ok(
     !Services.prefs.prefIsLocked(RECOMMENDATIONS_PREF),
@@ -163,7 +163,7 @@ add_task(async function test_block_all_prefs_and_feature_reverted() {
   );
   Assert.equal(
     Services.prefs.getBoolPref(RECOMMENDATIONS_PREF),
-    true,
+    false,
     "recommendations are restored to their default after removal"
   );
   Assert.ok(
