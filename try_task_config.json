@@ -1,0 +1,36 @@
+{
+    "parameters": {
+        "base_rev": "ee79a39c2afefb7b06cf39b507fad2a3fc245c4c",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "rebuild": 2,
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/opt-marionette-integration",
+                "test-linux2404-64/debug-marionette-integration",
+                "test-linux2404-64/debug-marionette-integration-swr",
+                "test-linux2404-64/debug-marionette-unittest",
+                "test-linux2404-64/debug-marionette-unittest-swr",
+                "test-macosx1500-64-enterprise/debug-marionette-integration",
+                "test-macosx1500-64-enterprise/debug-marionette-integration-swr",
+                "test-macosx1500-64-enterprise/opt-marionette-integration",
+                "test-windows11-32-25h2/debug-marionette-integration",
+                "test-windows11-32-25h2/debug-marionette-integration-swr",
+                "test-windows11-32-25h2/debug-marionette-unittest",
+                "test-windows11-32-25h2/debug-marionette-unittest-swr",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration-swr",
+                "test-windows11-64-25h2-enterprise/opt-marionette-integration",
+                "test-windows11-64-25h2/debug-marionette-integration",
+                "test-windows11-64-25h2/debug-marionette-integration-swr",
+                "test-windows11-64-25h2/debug-marionette-unittest",
+                "test-windows11-64-25h2/debug-marionette-unittest-swr"
+            ]
+        }
+    },
+    "version": 2
+}
