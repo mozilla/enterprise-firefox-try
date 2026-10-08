@@ -1,0 +1,31 @@
+{
+    "parameters": {
+        "base_rev": "ca3e31ff767800cd1e856268689748e01e55f42c",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"xpcshell\": [\"toolkit/components/enterprise/tests/xpcshell/test_relaunch_enforcer.js\", \"toolkit/components/enterprise/tests/xpcshell/test_restart_update_check.js\"], \"mochitest-browser-chrome\": [\"browser/components/enterprise/tests/browser/browser_relaunch_ui.js\"], \"marionette-enterprise\": [\"testing/enterprise/test_felt_browser_relaunch_deadline_countdown_focus.py\", \"testing/enterprise/test_felt_browser_relaunch_deadline_first_poll.py\", \"testing/enterprise/test_felt_browser_relaunch_deadline_infobar_slot.py\", \"testing/enterprise/test_felt_browser_relaunch_deadline_missing_policies.py\", \"testing/enterprise/test_felt_browser_relaunch_deadline_removed_bar.py\", \"testing/enterprise/test_felt_browser_relaunch_deadline_restart.py\", \"testing/enterprise/test_felt_browser_relaunch_deadline_withdrawn.py\", \"testing/enterprise/test_felt_browser_relaunch_update_check.py\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-mochitest-browser-chrome-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-mochitest-browser-chrome-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
