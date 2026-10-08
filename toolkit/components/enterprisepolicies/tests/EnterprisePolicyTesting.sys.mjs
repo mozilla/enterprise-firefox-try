@@ -220,41 +220,51 @@ export var EnterprisePolicyTesting = {
    *
    * @param {string} url page to load
    * @param {boolean} expectedBlocked whether the load is expected to be blocked
+   * @param {Function} [onLoaded] awaited with the browser after an unblocked
+   *                              load, before the tab is closed. Use it for
+   *                              pages that keep initializing past the load
+   *                              event and misbehave when torn down mid-init.
    * @returns {Promise<void>} resolves once the assertion has been made
    */
-  async checkBlockedPage(url, expectedBlocked) {
+  async checkBlockedPage(url, expectedBlocked, onLoaded) {
     let gBrowser =
       Services.wm.getMostRecentWindow("navigator:browser").gBrowser;
     let newTab = lazy.BrowserTestUtils.addTab(gBrowser);
     gBrowser.selectedTab = newTab;
 
-    if (expectedBlocked) {
-      let promise = lazy.BrowserTestUtils.waitForErrorPage(
-        gBrowser.selectedBrowser
-      );
-      lazy.BrowserTestUtils.startLoadingURIString(gBrowser, url);
-      await promise;
+    try {
+      if (expectedBlocked) {
+        let promise = lazy.BrowserTestUtils.waitForErrorPage(
+          gBrowser.selectedBrowser
+        );
+        lazy.BrowserTestUtils.startLoadingURIString(gBrowser, url);
+        await promise;
 
-      const errorPage = AppConstants.MOZ_ENTERPRISE
-        ? "blockedByPolicyEnterprise"
-        : "blockedByPolicy";
-      Assert.ok(
-        newTab.linkedBrowser.documentURI.spec.startsWith(
-          `about:neterror?e=${errorPage}`
-        ),
-        "Should be blocked by policy"
-      );
-    } else {
-      let promise = lazy.BrowserTestUtils.browserStopped(gBrowser, url);
-      lazy.BrowserTestUtils.startLoadingURIString(gBrowser, url);
-      await promise;
-      Assert.equal(
-        newTab.linkedBrowser.documentURI.spec,
-        url,
-        "Should not be blocked by policy"
-      );
+        const errorPage = AppConstants.MOZ_ENTERPRISE
+          ? "blockedByPolicyEnterprise"
+          : "blockedByPolicy";
+        Assert.ok(
+          newTab.linkedBrowser.documentURI.spec.startsWith(
+            `about:neterror?e=${errorPage}`
+          ),
+          "Should be blocked by policy"
+        );
+      } else {
+        let promise = lazy.BrowserTestUtils.browserStopped(gBrowser, url);
+        lazy.BrowserTestUtils.startLoadingURIString(gBrowser, url);
+        await promise;
+        Assert.equal(
+          newTab.linkedBrowser.documentURI.spec,
+          url,
+          "Should not be blocked by policy"
+        );
+        if (onLoaded) {
+          await onLoaded(newTab.linkedBrowser);
+        }
+      }
+    } finally {
+      lazy.BrowserTestUtils.removeTab(newTab);
     }
-    lazy.BrowserTestUtils.removeTab(newTab);
   },
 
   resetRunOnceState: function resetRunOnceState() {

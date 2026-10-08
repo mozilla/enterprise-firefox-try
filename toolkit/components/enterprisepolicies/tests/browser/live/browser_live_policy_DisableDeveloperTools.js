@@ -21,9 +21,23 @@ const DEVTOOLS_ABOUT_PAGES = [
   "about:profiling",
 ];
 
+// about:debugging keeps initializing after its load event. Closing the tab
+// while AboutDebugging.init() causes to leak the window.
+const SETTLE_SELECTORS = new Map([["about:debugging", ".qa-connect-page"]]);
+
 async function checkDevToolsAboutPages(blocked) {
   for (const page of DEVTOOLS_ABOUT_PAGES) {
-    await EnterprisePolicyTesting.checkBlockedPage(page, blocked);
+    const selector = SETTLE_SELECTORS.get(page);
+    await EnterprisePolicyTesting.checkBlockedPage(
+      page,
+      blocked,
+      selector &&
+        (browser =>
+          TestUtils.waitForCondition(
+            () => browser.contentDocument.querySelector(selector),
+            `${page} finished initializing`
+          ))
+    );
   }
 }
 
