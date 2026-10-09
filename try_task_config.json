@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "base_rev": "035072878f080371d6b79bd740dd26dc44ac86d4",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
