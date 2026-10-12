@@ -18,15 +18,16 @@ IPDL_SOURCES += [
 LOCAL_INCLUDES += [
     "/dom/system/windows/location",
 ]
-if CONFIG["MOZ_ENTERPRISE"]:
-    UNIFIED_SOURCES += ["MobileBroadbandImeiProvider.cpp"]
-    SOURCE_HEADERS += ["MobileBroadbandImeiProvider.h"]
+UNIFIED_SOURCES += ["MobileBroadbandImeiProvider.cpp"]
+SOURCE_HEADERS += ["MobileBroadbandImeiProvider.h"]
 
-    XPCOM_MANIFESTS += [
-        "components.conf",
-    ]
+XPCOM_MANIFESTS += [
+    "components.conf",
+]
 
 DIRS += ["location"]
+
+TEST_DIRS += ["gtest"]
 
 include("/ipc/chromium/chromium-config.mozbuild")
 

@@ -126,7 +126,8 @@ void ModemManagerImeiProvider::OnIntrospectFinish(RefPtr<Promise> aPromise,
   }
 
   if (!nodeInfos->nodes) {
-    MMI_LOG(Error, "nodeInfos->nodes failed! %s", error ? error->message : "(noerror)");
+    MMI_LOG(Error, "nodeInfos->nodes failed! %s",
+            error ? error->message : "(noerror)");
     aPromise->MaybeReject(NS_ERROR_FAILURE);
     return;
   }
@@ -170,7 +171,7 @@ void ModemManagerImeiProvider::CollectImei(RefPtr<Promise> aPromise) {
           },
           [aPromise](GUniquePtr<GError>&& aError) {
             MMI_LOG(Error, "Failed to get modems: %s\n", aError->message);
-            aPromise->MaybeReject(NS_ERROR_PROXY_NOT_FOUND);
+            aPromise->MaybeReject(NS_ERROR_NOT_AVAILABLE);
           });
 }
 
