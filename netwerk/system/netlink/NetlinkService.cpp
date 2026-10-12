@@ -263,9 +263,7 @@ class NetlinkLink {
   uint32_t GetIndex() const { return mIface.ifi_index; }
   uint32_t GetFlags() const { return mIface.ifi_flags; }
   uint16_t GetType() const { return mIface.ifi_type; }
-#if defined(MOZ_ENTERPRISE)
   uint8_t* GetMac() { return mMAC; }
-#endif
 
   bool Init(struct nlmsghdr* aNlh) {
     struct ifinfomsg* iface;
@@ -276,36 +274,24 @@ class NetlinkLink {
     len = aNlh->nlmsg_len - NLMSG_LENGTH(sizeof(*iface));
 
     bool hasName = false;
-#if defined(MOZ_ENTERPRISE)
     bool hasMAC = false;
-#endif
     for (attr = IFLA_RTA(iface); RTA_OK(attr, len);
          attr = RTA_NEXT(attr, len)) {
       if (attr->rta_type == IFLA_IFNAME) {
         mName.Assign((char*)RTA_DATA(attr));
         hasName = true;
-      }
-#if defined(MOZ_ENTERPRISE)
-      if (attr->rta_type == IFLA_ADDRESS) {
-        memcpy(mMAC, RTA_DATA(attr), ETH_ALEN);
+      } else if (attr->rta_type == IFLA_ADDRESS) {
+        memcpy(mMAC, RTA_DATA(attr),
+               std::min<size_t>(RTA_PAYLOAD(attr), ETH_ALEN));
         hasMAC = true;
       }
-#endif
 
-      if (hasName
-#if defined(MOZ_ENTERPRISE)
-          && (IsTypeEther() && hasMAC)
-#endif
-      ) {
+      if (hasName && hasMAC) {
         break;
       }
     }
 
-    if (!hasName
-#if defined(MOZ_ENTERPRISE)
-        || (IsTypeEther() && !hasMAC)
-#endif
-    ) {
+    if (!hasName) {
       return false;
     }
 
@@ -315,9 +301,7 @@ class NetlinkLink {
 
  private:
   nsCString mName;
-#if defined(MOZ_ENTERPRISE)
   uint8_t mMAC[ETH_ALEN]{};
-#endif
   struct ifinfomsg mIface{};
 };
 
@@ -1935,52 +1919,47 @@ nsresult NetlinkService::GetResolvers(nsTArray<NetAddr>& aResolvers) {
 #endif
 }
 
-#if defined(MOZ_ENTERPRISE)
 nsresult NetlinkService::GetNetworkInterfaces(
-    nsTArray<NetworkInterface>& aNetworkInterfaces) {
-  MutexAutoLock lock(mMutex);
-
+    nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
   nsTArray<NetworkInterface> networkInterfaces;
-  for (const auto& linkInfo : mLinks.Values()) {
-    if (linkInfo->mIsUp) {
-      nsAutoCString linkName;
-      linkInfo->mLink->GetName(linkName);
+  {
+    MutexAutoLock lock(mMutex);
 
-      NetworkInterface intf(linkName, linkInfo->mLink->GetMac());
+    for (const auto& linkInfo : mLinks.Values()) {
+      if (linkInfo->mIsUp) {
+        nsAutoCString linkName;
+        linkInfo->mLink->GetName(linkName);
 
-      for (uint32_t i = 0; i < linkInfo->mAddresses.Length(); ++i) {
-        if (linkInfo->mAddresses[i]->Family() == AF_INET) {
-          intf.AddIP(reinterpret_cast<const in_addr*>(
-              linkInfo->mAddresses[i]->GetAddrPtr()));
-        } else if (linkInfo->mAddresses[i]->Family() == AF_INET6) {
-          intf.AddIP(reinterpret_cast<const in6_addr*>(
-              linkInfo->mAddresses[i]->GetAddrPtr()));
+        NetworkInterface intf(linkName, linkInfo->mLink->GetMac());
+
+        for (uint32_t i = 0; i < linkInfo->mAddresses.Length(); ++i) {
+          if (linkInfo->mAddresses[i]->Family() == AF_INET) {
+            intf.AddIP(reinterpret_cast<const in_addr*>(
+                linkInfo->mAddresses[i]->GetAddrPtr()));
+          } else if (linkInfo->mAddresses[i]->Family() == AF_INET6) {
+            intf.AddIP(reinterpret_cast<const in6_addr*>(
+                linkInfo->mAddresses[i]->GetAddrPtr()));
+          }
         }
-      }
 
-      for (uint32_t i = 0; i < linkInfo->mDefaultRoutes.Length(); ++i) {
-        if (linkInfo->mDefaultRoutes[i]->Family() == AF_INET) {
-          intf.AddGW(reinterpret_cast<const in_addr*>(
-              linkInfo->mDefaultRoutes[i]->GetGWAddrPtr()));
-        } else if (linkInfo->mDefaultRoutes[i]->Family() == AF_INET6) {
-          intf.AddGW(reinterpret_cast<const in6_addr*>(
-              linkInfo->mDefaultRoutes[i]->GetGWAddrPtr()));
+        for (uint32_t i = 0; i < linkInfo->mDefaultRoutes.Length(); ++i) {
+          if (linkInfo->mDefaultRoutes[i]->Family() == AF_INET) {
+            intf.AddGW(reinterpret_cast<const in_addr*>(
+                linkInfo->mDefaultRoutes[i]->GetGWAddrPtr()));
+          } else if (linkInfo->mDefaultRoutes[i]->Family() == AF_INET6) {
+            intf.AddGW(reinterpret_cast<const in6_addr*>(
+                linkInfo->mDefaultRoutes[i]->GetGWAddrPtr()));
+          }
         }
-      }
 
-      networkInterfaces.AppendElement(intf);
+        networkInterfaces.AppendElement(intf);
+      }
     }
   }
 
-  aNetworkInterfaces = std::move(networkInterfaces);
+  nsNetworkInterface::AppendInterfaces(networkInterfaces, aNetworkInterfaces);
   return NS_OK;
 }
-#else
-nsresult NetlinkService::GetNetworkInterfaces(
-    nsTArray<NetworkInterface>& aNetworkInterfaces) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-#endif
 
 void NetlinkService::GetIsLinkUp(bool* aIsUp) {
   MutexAutoLock lock(mMutex);

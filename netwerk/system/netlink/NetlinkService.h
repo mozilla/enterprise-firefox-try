@@ -55,7 +55,8 @@ class NetlinkService : public nsIRunnable {
   void GetIsLinkUp(bool* aIsUp);
   nsresult GetDnsSuffixList(nsTArray<nsCString>& aDnsSuffixList);
   nsresult GetResolvers(nsTArray<NetAddr>& aResolvers);
-  nsresult GetNetworkInterfaces(nsTArray<NetworkInterface>& aNetworkInterfaces);
+  nsresult GetNetworkInterfaces(
+      nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces);
 
   static bool HasNonLocalIPv6Address();
 

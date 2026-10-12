@@ -5,8 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsNetworkInterface.h"
-#include "nsString.h"
+
 #include "mozilla/net/DNS.h"
+#include "nsString.h"
 
 NetworkInterface::NetworkInterface(const NetworkInterface& aIntf)
     : mName(aIntf.mName), mMAC(aIntf.mMAC) {
@@ -254,6 +255,16 @@ bool getRoutesForNetworkInterfaces(
 #endif  // defined(XP_MACOSX)
 
 NS_IMPL_ISUPPORTS(nsNetworkInterface, nsINetworkInterface)
+
+// static
+void nsNetworkInterface::AppendInterfaces(
+    const nsTArray<NetworkInterface>& aInterfaces,
+    nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
+  for (const auto& intf : aInterfaces) {
+    aNetworkInterfaces.AppendElement(
+        mozilla::MakeRefPtr<nsNetworkInterface>(&intf));
+  }
+}
 
 NS_IMETHODIMP nsNetworkInterface::GetName(nsACString& aName) {
   aName = mIntf.Name();

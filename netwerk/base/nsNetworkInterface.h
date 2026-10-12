@@ -7,16 +7,24 @@
 #ifndef nsNetworkInterface_h
 #define nsNetworkInterface_h
 
+#include "mozilla/RefPtr.h"
 #include "nsINetworkInterface.h"
 #include "nsPrintfCString.h"
+#include "nsTArray.h"
+
+#if defined(XP_UNIX)
+#  include <netinet/in.h>
+#endif
 
 #if defined(XP_WIN)
+// clang-format off
 #  include <windows.h>
 #  include <winsock2.h>
 #  include <iptypes.h>
 #  include <iphlpapi.h>
 #  include <ws2ipdef.h>
 #  include <ws2tcpip.h>
+// clang-format on
 #endif
 
 #if defined(XP_MACOSX)
@@ -108,6 +116,10 @@ class nsNetworkInterface final : public nsINetworkInterface {
   NS_DECL_NSINETWORKINTERFACE
 
   explicit nsNetworkInterface(const NetworkInterface* aIntf) : mIntf(*aIntf) {}
+
+  static void AppendInterfaces(
+      const nsTArray<NetworkInterface>& aInterfaces,
+      nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces);
 
  private:
   NetworkInterface mIntf;

@@ -17,11 +17,9 @@
 #include <netinet/in.h>
 #include <resolv.h>
 
-#if defined(MOZ_ENTERPRISE)
-#  include <sys/sockio.h>
-#  include <sys/ioctl.h>
-#  include <net/if_media.h>
-#endif
+#include <net/if_media.h>
+#include <sys/ioctl.h>
+#include <sys/sockio.h>
 
 #include "../../base/IPv6Utils.h"
 #include "../LinkServiceCommon.h"
@@ -1034,7 +1032,6 @@ void nsNetworkLinkService::NotifyObservers(const char* aTopic,
   }
 }
 
-#if defined(MOZ_ENTERPRISE)
 NS_IMETHODIMP
 nsNetworkLinkService::GetNetworkInterfaces(
     nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
@@ -1108,13 +1105,6 @@ nsNetworkLinkService::GetNetworkInterfaces(
   freeifaddrs(ifap);
   return NS_OK;
 }
-#else
-NS_IMETHODIMP
-nsNetworkLinkService::GetNetworkInterfaces(
-    nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-#endif
 
 /* static */
 void nsNetworkLinkService::ReachabilityChanged(SCNetworkReachabilityRef target,

@@ -502,10 +502,8 @@ nsNotifyAddrListener::CheckAdaptersAddresses(void) {
         continue;
       }
 
-#if defined(MOZ_ENTERPRISE)
       // Skip non up interfaces as well as loopback
       networkInterfaces.AppendElement(NetworkInterface(adapter));
-#endif
 
       LOG(("Adapter %s type: %lu",
            NS_ConvertUTF16toUTF8(adapter->FriendlyName).get(),
@@ -740,25 +738,13 @@ void nsNotifyAddrListener::CheckLinkStatus(void) {
   }
 }
 
-#if defined(MOZ_ENTERPRISE)
 NS_IMETHODIMP
 nsNotifyAddrListener::GetNetworkInterfaces(
     nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
   MutexAutoLock lock(mMutex);
-
-  for (const auto& intf : mNetworkInterfaces) {
-    aNetworkInterfaces.AppendElement(MakeRefPtr<nsNetworkInterface>(&intf));
-  }
-
+  nsNetworkInterface::AppendInterfaces(mNetworkInterfaces, aNetworkInterfaces);
   return NS_OK;
 }
-#else
-NS_IMETHODIMP
-nsNotifyAddrListener::GetNetworkInterfaces(
-    nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-#endif
 
 // static
 bool nsINetworkLinkService::HasNonLocalIPv6Address() {

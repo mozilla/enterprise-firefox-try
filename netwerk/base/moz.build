@@ -260,16 +260,15 @@ UNIFIED_SOURCES += [
     "TRRLoadInfo.cpp",
 ]
 
-if CONFIG["MOZ_ENTERPRISE"]:
-    if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
-        # netwerk/base/nsProtocolProxyService.cpp(736,10): error: no member named 'u' in 'PRIPv6Addr'
-        SOURCES += [
-            "nsNetworkInterface.cpp",
-        ]
-    else:
-        UNIFIED_SOURCES += [
-            "nsNetworkInterface.cpp",
-        ]
+if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
+    # netwerk/base/nsProtocolProxyService.cpp(736,10): error: no member named 'u' in 'PRIPv6Addr'
+    SOURCES += [
+        "nsNetworkInterface.cpp",
+    ]
+else:
+    UNIFIED_SOURCES += [
+        "nsNetworkInterface.cpp",
+    ]
 
 if CONFIG["FUZZING"]:
     SOURCES += [
