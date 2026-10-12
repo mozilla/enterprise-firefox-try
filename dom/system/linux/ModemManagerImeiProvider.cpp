@@ -72,13 +72,14 @@ ModemManagerImeiProvider::GetImei(JSContext* aCx, Promise** aResult) {
   return NS_OK;
 }
 
-void ModemManagerImeiProvider::QueryModemImei(RefPtr<Promise> aPromise) {
+void ModemManagerImeiProvider::QueryModemImei(RefPtr<Promise> aPromise,
+                                              const nsCString& aRealModemPath) {
   MMI_LOG(Debug, "%s query modem %s", __PRETTY_FUNCTION__,
-          mRealModemPath.get());
+          aRealModemPath.get());
 
   widget::CreateDBusProxyForBus(
       G_BUS_TYPE_SYSTEM, GDBusProxyFlags(G_DBUS_PROXY_FLAGS_NONE), nullptr,
-      kModemManagerBusName, mRealModemPath.get(), kModemInterface, mCancellable)
+      kModemManagerBusName, aRealModemPath.get(), kModemInterface, mCancellable)
       ->Then(
           GetCurrentSerialEventTarget(), __func__,
           [aPromise](RefPtr<GDBusProxy>&& aProxy) {
@@ -126,18 +127,19 @@ void ModemManagerImeiProvider::OnIntrospectFinish(RefPtr<Promise> aPromise,
   }
 
   if (!nodeInfos->nodes) {
-    MMI_LOG(Error, "nodeInfos->nodes failed! %s", error ? error->message : "(noerror)");
+    MMI_LOG(Error, "nodeInfos->nodes failed! %s",
+            error ? error->message : "(noerror)");
     aPromise->MaybeReject(NS_ERROR_FAILURE);
     return;
   }
 
-  for (int n = 0; nodeInfos->nodes != NULL && nodeInfos->nodes[n] != NULL;
+  for (int n = 0; nodeInfos->nodes != nullptr && nodeInfos->nodes[n] != nullptr;
        n++) {
     if (nodeInfos->nodes[n]) {
       MMI_LOG(Error, "Query IMEI@%d: %s", n, nodeInfos->nodes[n]->path);
-      mRealModemPath =
+      nsCString realModemPath =
           nsPrintfCString("%s/%s", kModemRootPath, nodeInfos->nodes[n]->path);
-      QueryModemImei(aPromise);
+      QueryModemImei(aPromise, realModemPath);
       return;
     }
   }
@@ -170,7 +172,7 @@ void ModemManagerImeiProvider::CollectImei(RefPtr<Promise> aPromise) {
           },
           [aPromise](GUniquePtr<GError>&& aError) {
             MMI_LOG(Error, "Failed to get modems: %s\n", aError->message);
-            aPromise->MaybeReject(NS_ERROR_PROXY_NOT_FOUND);
+            aPromise->MaybeReject(NS_ERROR_NOT_AVAILABLE);
           });
 }
 

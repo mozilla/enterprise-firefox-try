@@ -138,14 +138,22 @@ async function readLine(aPipe) {
 
 export const DBusMockTestUtils = {
   /**
-   * Starts a private bus and points DBUS_SESSION_BUS_ADDRESS at it, before
-   * anything connects to the session bus. The daemon is stopped once xpcshell
+   * Starts a private bus and points the session or system bus variable at it,
+   * before anything connects to that bus. The daemon is stopped once xpcshell
    * has exited, since GLib exits when its bus goes away.
    *
+   * GTK connects to the system bus at startup, so mocking it requires the
+   * manifest to set DBUS_SYSTEM_BUS_ADDRESS to a fixed aOptions.address.
+   *
+   * @param {object} [aOptions]
+   * @param {boolean} [aOptions.system] Use the bus as the system bus.
+   * @param {string} [aOptions.address] Address for the bus to listen on.
    * @returns {Promise<string>} The address of the bus.
    */
-  async startBus() {
-    const address = `unix:abstract=firefox-xpcshell-dbus-${Services.uuid.generateUUID().toString().slice(1, -1)}`;
+  async startBus({
+    system = false,
+    address = `unix:abstract=firefox-xpcshell-dbus-${Services.uuid.generateUUID().toString().slice(1, -1)}`,
+  } = {}) {
     const daemon = await lazy.Subprocess.call({
       command: await lazy.Subprocess.pathSearch("sh"),
       arguments: [
@@ -159,7 +167,10 @@ export const DBusMockTestUtils = {
     if (!listening) {
       throw new Error(`dbus-daemon failed to listen on ${address}`);
     }
-    Services.env.set("DBUS_SESSION_BUS_ADDRESS", listening);
+    Services.env.set(
+      system ? "DBUS_SYSTEM_BUS_ADDRESS" : "DBUS_SESSION_BUS_ADDRESS",
+      listening
+    );
     return listening;
   },
 
@@ -169,15 +180,29 @@ export const DBusMockTestUtils = {
    *
    * @param {object} aOptions
    * @param {string} aOptions.address Address returned by startBus().
+   * @param {boolean} [aOptions.system] Whether startBus() was called with
+   *   system: true.
    * @param {string} aOptions.busName
    * @param {string} aOptions.objectPath Path of the main mock object.
    * @param {string} aOptions.interfaceName Interface of the main mock object.
    * @returns {Promise<DBusMock>}
    */
-  async startMock({ address, busName, objectPath, interfaceName }) {
+  async startMock({
+    address,
+    system = false,
+    busName,
+    objectPath,
+    interfaceName,
+  }) {
+    const args = ["-m", "dbusmock"];
+    if (system) {
+      args.push("--system");
+    }
+    args.push(busName, objectPath, interfaceName);
+
     const proc = await lazy.Subprocess.call({
       command: await lazy.Subprocess.pathSearch("python3"),
-      arguments: ["-m", "dbusmock", busName, objectPath, interfaceName],
+      arguments: args,
     });
 
     const mock = new DBusMock(address, busName, objectPath, proc);
