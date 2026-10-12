@@ -17,10 +17,10 @@
 #include <netinet/in.h>
 #include <resolv.h>
 
-#if defined(MOZ_ENTERPRISE)
-#  include <sys/sockio.h>
-#  include <sys/ioctl.h>
+#ifdef MOZ_ENTERPRISE
 #  include <net/if_media.h>
+#  include <sys/ioctl.h>
+#  include <sys/sockio.h>
 #endif
 
 #include "../../base/IPv6Utils.h"
@@ -39,11 +39,15 @@
 #include "nsCRT.h"
 #include "nsIObserverService.h"
 #include "nsNetCID.h"
-#include "nsNetworkInterface.h"
 #include "nsNetworkLinkService.h"
 #include "nsServiceManagerUtils.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"
+
+#ifdef MOZ_ENTERPRISE
+#  include "nsNetworkInterface_mac.h"
+#  include "nsXULAppAPI.h"
+#endif
 
 #import <Cocoa/Cocoa.h>
 #import <netinet/in.h>
@@ -653,6 +657,10 @@ nsNetworkLinkService::GetName(nsACString& aName) {
 
 void nsNetworkLinkService::calculateNetworkIdInternal(void) {
   MOZ_ASSERT(!NS_IsMainThread(), "Should not be called on the main thread");
+#ifdef MOZ_ENTERPRISE
+  UpdateNetworkInterfaces();
+#endif
+
   SHA1Sum sha1;
   bool idChanged = false;
   bool found4 = IPv4NetworkId(&sha1);
@@ -1034,16 +1042,15 @@ void nsNetworkLinkService::NotifyObservers(const char* aTopic,
   }
 }
 
-#if defined(MOZ_ENTERPRISE)
-NS_IMETHODIMP
-nsNetworkLinkService::GetNetworkInterfaces(
-    nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
-  MutexAutoLock lock(mMutex);
+#ifdef MOZ_ENTERPRISE
+void nsNetworkLinkService::UpdateNetworkInterfaces() {
+  MOZ_ASSERT(!NS_IsMainThread(), "Should not be called on the main thread");
 
   struct ifaddrs* ifap;
   if (getifaddrs(&ifap) < 0) {
-    return NS_ERROR_FAILURE;
+    return;
   }
+  auto freeIfaddrs = mozilla::MakeScopeExit([&] { freeifaddrs(ifap); });
 
   std::vector<std::string> ifNames;
   struct ifaddrs* ifa;
@@ -1079,8 +1086,8 @@ nsNetworkLinkService::GetNetworkInterfaces(
     int probe = ioctl(s, SIOCGIFXMEDIA, (caddr_t)&ifmr);
     close(s);
     if (probe < 0) {
-      LOG(("nsNetworkLinkService::GetNetworkInterfaces ioctl(SIOCGIFXMEDIA) on "
-           "%s failed with %d\n",
+      LOG(("nsNetworkLinkService::UpdateNetworkInterfaces "
+           "ioctl(SIOCGIFXMEDIA) on %s failed with %d\n",
            ifa->ifa_name, probe));
       continue;
     }
@@ -1100,21 +1107,32 @@ nsNetworkLinkService::GetNetworkInterfaces(
     NS_WARNING("NetworkInterfaces: no routing table");
   }
 
-  for (auto ifName : ifNames) {
-    NetworkInterface intf(ifName.c_str(), routes, ifap);
-    aNetworkInterfaces.AppendElement(MakeRefPtr<nsNetworkInterface>(&intf));
+  nsTArray<NetworkInterface> interfaces;
+  for (const auto& ifName : ifNames) {
+    interfaces.AppendElement(MacNetworkInterface(ifName.c_str(), routes, ifap));
   }
 
-  freeifaddrs(ifap);
-  return NS_OK;
+  MutexAutoLock lock(mMutex);
+  mNetworkInterfaces = std::move(interfaces);
 }
-#else
+#endif
+
 NS_IMETHODIMP
 nsNetworkLinkService::GetNetworkInterfaces(
     nsTArray<RefPtr<nsINetworkInterface>>& aNetworkInterfaces) {
+#ifdef MOZ_ENTERPRISE
+  if (!XRE_IsParentProcess()) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  MutexAutoLock lock(mMutex);
+  nsNetworkInterface::AppendInterfaces(mNetworkInterfaces.Clone(),
+                                       aNetworkInterfaces);
+  return NS_OK;
+#else
   return NS_ERROR_NOT_IMPLEMENTED;
-}
 #endif
+}
 
 /* static */
 void nsNetworkLinkService::ReachabilityChanged(SCNetworkReachabilityRef target,

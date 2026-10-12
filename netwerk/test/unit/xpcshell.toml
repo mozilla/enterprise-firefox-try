@@ -1457,6 +1457,9 @@ run-if = [
 
 ["test_network_connectivity_service_idle_startup.js"]
 
+["test_network_interfaces.js"]
+run-if = ["enterprise"]
+
 ["test_networking_over_socket_process.js"]
 run-sequentially = ["true"] # node server exceptions dont replay well
 run-if = [
