@@ -1624,6 +1624,19 @@ def _filter_by_release_project(parameters, graph_config):
             "esr153": "comm-esr153",
             "esr140": "comm-esr140",
         },
+        # All Enterprise branches build from the same project. The upstream
+        # release types are mapped too for the upstream test parameters.
+        "enterprise": {
+            release_type: "enterprise-firefox"
+            for release_type in (
+                "nightly",
+                "beta",
+                "release",
+                "nightly-enterprise",
+                "beta-enterprise",
+                "release-enterprise",
+            )
+        },
     }
     trust_domain = graph_config["trust-domain"]
     project_by_release = project_by_release_by_trust_domain.get(trust_domain)
