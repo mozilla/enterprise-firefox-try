@@ -77,20 +77,17 @@ def repacks_of(labels, kind):
 
 
 def test_nightly_schedules_upload_and_tag(graph):
-    """What a nightly ends up with, as the union of its three variants."""
+    """What a nightly ends up with, as the union of its stage and prod
+    variants. The try variant only runs on `enterprise-firefox-try`."""
     labels = target_tasks.target_tasks_nightly_enterprise(graph, PARAMETERS, {})
 
     assert repacks_of(labels, "enterprise-oci-upload") == [
         "moz/prodGCP",
         "moz/stageGCP",
-        "smp/prodGCP",
-        "smp/stageGCP",
     ]
     assert repacks_of(labels, "enterprise-oci-tag") == [
         "moz/prodGCP",
         "moz/stageGCP",
-        "smp/prodGCP",
-        "smp/stageGCP",
     ]
 
 
