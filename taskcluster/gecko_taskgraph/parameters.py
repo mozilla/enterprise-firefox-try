@@ -74,7 +74,7 @@ class GeckoParametersSchema(Schema, kw_only=True, rename=None):
     optimize_strategies: Optional[str]
     phabricator_diff: Optional[str]
     release_enable_emefree: bool
-    release_enable_enterprise_repack: bool
+    release_enable_enterprise_repack: bool = False
     release_enable_partner_repack: bool
     release_enable_partner_attribution: bool
     release_eta: Optional[str]

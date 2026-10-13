@@ -117,7 +117,9 @@ def make_release_definitions(config, tasks):
         build_assets = task.pop("build-assets")
         releases = _collect_releases(get_dependencies(config, task))
 
-        if not releases and config.params["release_enable_enterprise_repack"]:
+        if not releases and config.params.get(
+            "release_enable_enterprise_repack", False
+        ):
             raise Exception(
                 "No enterprise release definition could be built: none of the "
                 f"{sorted(BLOB_SPECS)} dependencies yielded a repack config. "

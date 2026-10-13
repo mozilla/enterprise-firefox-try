@@ -396,7 +396,7 @@ def check_if_partners_enabled(config, tasks):
         (
             (
                 # The second test is temporary, see the function.
-                config.params["release_enable_enterprise_repack"]
+                config.params.get("release_enable_enterprise_repack", False)
                 or lacks_release_promotion_support(config.params)
             )
             and config.kind.startswith("enterprise-repack")
