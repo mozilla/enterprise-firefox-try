@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "077c9b7ea318c512d5be3932a4a3f6a5108cbff2",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/opt-enterprise-end2end-main",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
