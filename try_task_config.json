@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "ef934efbe94c3703b374a7eaaa7ded03c9e0bcb7",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"toolkit/modules/tests/browser\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*"
+            ]
+        }
+    },
+    "version": 2
+}
