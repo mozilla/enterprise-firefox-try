@@ -4192,6 +4192,21 @@ which on macOS requests the Mach audit trailer (using mach2's constants and
 types) and reads the sender's pid with libbsm's audit_token_to_pid.
 """
 
+[[audits.ipc-channel]]
+who = "John Reitano <jreitano@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "0.21.0@git:e27888a6cdde52cdcb0937c462294669013a5e6f -> 0.21.0@git:666ceda7c504e328a4e86c8de1d04c72b1818c00"
+importable = false
+notes = """
+Makes the macOS receive path reject messages that do not have the layout
+OsIpcSender::send writes (Bug 2073017): descriptors are read only from complex
+messages, descriptor types are checked in release builds, every read is bounded
+by msgh_size, and a rejected message is destroyed (mach_msg_destroy, after
+marking its out-of-line regions for deallocation) and reported as
+MachError::RcvMalformedMessage. Also returns an empty slice for a null,
+zero-length OsIpcSharedMemory. Adds macOS-only tests.
+"""
+
 [[audits.itertools]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
