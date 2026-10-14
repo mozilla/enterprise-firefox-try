@@ -1,0 +1,40 @@
+{
+    "parameters": {
+        "base_rev": "ef934efbe94c3703b374a7eaaa7ded03c9e0bcb7",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"marionette-enterprise\": [\"testing/enterprise\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "rebuild": 15,
+            "tasks": [
+                "source-test-python-marionette-harness-linux2404-64/opt",
+                "source-test-python-marionette-harness-windows11-64/opt",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-integration",
+                "test-linux2404-64/debug-marionette-integration",
+                "test-linux2404-64/debug-marionette-integration-swr",
+                "test-linux2404-64/debug-marionette-unittest",
+                "test-linux2404-64/debug-marionette-unittest-swr",
+                "test-windows11-32-25h2/debug-marionette-integration",
+                "test-windows11-32-25h2/debug-marionette-integration-swr",
+                "test-windows11-32-25h2/debug-marionette-unittest",
+                "test-windows11-32-25h2/debug-marionette-unittest-swr",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration-swr",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-integration",
+                "test-windows11-64-25h2/debug-marionette-integration",
+                "test-windows11-64-25h2/debug-marionette-integration-swr",
+                "test-windows11-64-25h2/debug-marionette-unittest",
+                "test-windows11-64-25h2/debug-marionette-unittest-swr"
+            ]
+        }
+    },
+    "version": 2
+}
