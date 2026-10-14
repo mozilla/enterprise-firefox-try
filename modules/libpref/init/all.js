@@ -4087,6 +4087,9 @@ pref("dom.postMessage.sharedArrayBuffer.bypassCOOP_COEP.insecure.enabled", false
 // Thunderbird (which can in principle be built with --enable-enterprise too)
 // stays plaintext for now.
 pref("security.storage.encryption.sqlite.enabled", true);
+// Defined in StaticPrefList.yaml but overridden here to lock it: the console
+// provides the primary password, so the user must not be able to turn this off.
+pref("security.storage.encryption.enabled", true, locked);
 #endif
 
 // Preferences for the form autofill toolkit component.

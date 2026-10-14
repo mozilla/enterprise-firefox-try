@@ -11,10 +11,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 export const EnterpriseStorageEncryption = {
   async init() {
     if (
-      Services.prefs.getBoolPref(
-        "security.storage.encryption.enabled",
-        false
-      ) &&
+      Services.prefs.getBoolPref("security.storage.encryption.enabled") &&
       Services.felt?.isFeltBrowser()
     ) {
       await this.load();
