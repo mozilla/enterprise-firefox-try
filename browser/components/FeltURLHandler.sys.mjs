@@ -14,12 +14,9 @@ ChromeUtils.defineLazyGetter(
     )
 );
 
-ChromeUtils.defineLazyGetter(lazy, "pendingURLsPath", () =>
-  PathUtils.join(
-    Services.dirsvc.get("ProfD", Ci.nsIFile).path,
-    "pendingURLs.json"
-  )
-);
+ChromeUtils.defineESModuleGetters(lazy, {
+  FeltStorage: "resource://gre/modules/enterprise/FeltStorage.sys.mjs",
+});
 
 export const FELT_OPEN_WINDOW_DISPOSITION = {
   DEFAULT: 0,
@@ -28,8 +25,11 @@ export const FELT_OPEN_WINDOW_DISPOSITION = {
 };
 
 /**
- * Parses an external URL payload and rejects chrome: URLs, matching Firefox's
- * external-opening policy. Loaders enforce the remaining restrictions.
+ * Parses an external URL payload and rejects chrome: URLs, matching
+ * shouldLoadURI in BrowserContentHandler.sys.mjs, which is Firefox's own policy
+ * for externally supplied URLs. Callers load these with fromExternal: true,
+ * which stops a principal-inheriting URL from picking up the current
+ * document's principal.
  *
  * @param {object} payload
  *   External URL and optional window disposition.
@@ -63,18 +63,16 @@ export function sanitizeFeltURLPayload(payload) {
 // URL requests are stored here when they arrive via command line (before Felt extension loads)
 // FeltProcessParent imports this module and manages forwarding from this queue.
 //
-// Update restarts (bug 2032092) inherit a fresh handoff key through the
-// environment. Only ciphertext is written to the scratch profile; a later,
-// unrelated launch cannot restore it using a persistent OS-account key.
-const RESTART_KEY_ENV = "MOZ_FELT_PENDING_URLS_KEY";
-const MAX_HANDOFF_BYTES = 1024 * 1024;
-const MAX_HANDOFF_AGE_MS = 30 * 60 * 1000;
+// The stored copy mirrors the queue so an app restart can carry it over
+// (bug 2032092). FeltStorage encrypts it, and only a launch that is itself a
+// restart reads it back, so URLs queued by one session are never reopened by an
+// unrelated one.
 
 export const gFeltPendingURLs = {
   _pendingURLs: [],
   _ready: false,
   _initPromise: null,
-  _updateRestart: false,
+  _writes: Promise.resolve(),
 
   async init() {
     if (this._ready) {
@@ -94,106 +92,41 @@ export const gFeltPendingURLs = {
   },
 
   async _restore() {
-    const inheritedKey = Services.env.get(RESTART_KEY_ENV);
-    Services.env.set(RESTART_KEY_ENV, "");
-    if (!inheritedKey) {
-      await IOUtils.remove(lazy.pendingURLsPath, { ignoreAbsent: true });
+    await lazy.FeltStorage.init();
+    if (!Services.startup.wasRestarted) {
+      await lazy.FeltStorage.clearPendingURLs();
       return;
     }
-
-    let bytes;
-    try {
-      bytes = await IOUtils.read(lazy.pendingURLsPath, {
-        maxBytes: MAX_HANDOFF_BYTES + 1,
-      });
-    } finally {
-      await IOUtils.remove(lazy.pendingURLsPath, { ignoreAbsent: true });
+    const restored = await lazy.FeltStorage.takePendingURLs();
+    if (restored.length) {
+      this._pendingURLs.unshift(
+        ...restored.map(sanitizeFeltURLPayload).filter(Boolean)
+      );
+      this._persist();
     }
-    if (bytes.length > MAX_HANDOFF_BYTES || inheritedKey.length > 1024) {
-      return;
-    }
-
-    const key = await crypto.subtle.importKey(
-      "jwk",
-      JSON.parse(inheritedKey),
-      "AES-GCM",
-      false,
-      ["decrypt"]
-    );
-    const plaintext = await crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv: bytes.subarray(0, 12),
-        additionalData: new TextEncoder().encode(lazy.pendingURLsPath),
-      },
-      key,
-      bytes.subarray(12)
-    );
-    const restored = JSON.parse(new TextDecoder().decode(plaintext));
-    const age = Date.now() - restored.createdAt;
-    if (
-      restored.version !== 1 ||
-      !Number.isFinite(restored.createdAt) ||
-      age < 0 ||
-      age > MAX_HANDOFF_AGE_MS ||
-      !Array.isArray(restored.urls)
-    ) {
-      return;
-    }
-    this._pendingURLs.unshift(
-      ...restored.urls.map(sanitizeFeltURLPayload).filter(Boolean)
-    );
   },
 
-  observe() {
-    this._updateRestart = true;
-  },
-
-  async persistForRestart() {
-    await this.init();
-    Services.env.set(RESTART_KEY_ENV, "");
-    if (!this._updateRestart || !this._pendingURLs.length) {
-      return;
+  /**
+   * Brings the stored copy in line with the queue. Writes are chained so a
+   * slower earlier one cannot land after a later one and resurrect URLs that
+   * have since been opened.
+   *
+   * @returns {Promise<void>} Resolves once this update has been written.
+   */
+  _persist() {
+    if (!Services.felt?.isFeltUI()) {
+      return this._writes;
     }
-    try {
-      const plaintext = new TextEncoder().encode(
-        JSON.stringify({
-          version: 1,
-          createdAt: Date.now(),
-          urls: this._pendingURLs,
-        })
-      );
-      if (plaintext.length + 12 + 16 > MAX_HANDOFF_BYTES) {
-        throw new Error("Pending Felt URLs exceed the restart handoff limit");
-      }
-      const key = await crypto.subtle.generateKey(
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt", "decrypt"]
-      );
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const ciphertext = await crypto.subtle.encrypt(
-        {
-          name: "AES-GCM",
-          iv,
-          additionalData: new TextEncoder().encode(lazy.pendingURLsPath),
-        },
-        key,
-        plaintext
-      );
-      const bytes = new Uint8Array(iv.length + ciphertext.byteLength);
-      bytes.set(iv);
-      bytes.set(new Uint8Array(ciphertext), iv.length);
-      await IOUtils.write(lazy.pendingURLsPath, bytes, {
-        tmpPath: `${lazy.pendingURLsPath}.tmp`,
+    this._writes = this._writes
+      .then(() =>
+        this._pendingURLs.length
+          ? lazy.FeltStorage.setPendingURLs(this._pendingURLs)
+          : lazy.FeltStorage.clearPendingURLs()
+      )
+      .catch(error => {
+        console.error("Failed to store pending Felt URLs", error);
       });
-      Services.env.set(
-        RESTART_KEY_ENV,
-        JSON.stringify(await crypto.subtle.exportKey("jwk", key))
-      );
-    } catch (error) {
-      console.error("Failed to persist pending Felt URLs", error);
-    }
+    return this._writes;
   },
 
   [Symbol.iterator]() {
@@ -201,7 +134,9 @@ export const gFeltPendingURLs = {
   },
 
   push(payload) {
-    return this._pendingURLs.push(payload);
+    const rv = this._pendingURLs.push(payload);
+    this._persist();
+    return rv;
   },
 
   get length() {
@@ -210,6 +145,7 @@ export const gFeltPendingURLs = {
 
   clear() {
     this._pendingURLs = [];
+    this._persist();
   },
 };
 
@@ -217,15 +153,6 @@ if (Services.felt?.isFeltUI()) {
   gFeltPendingURLs.init().catch(error => {
     console.error(`Failed to initialize Felt pending URL storage: ${error}`);
   });
-  Services.obs.addObserver(gFeltPendingURLs, "felt-update-restart");
-  IOUtils.profileBeforeChange.addBlocker(
-    "FeltURLHandler: hand off pending URLs for an update restart",
-    async () => {
-      if (Services.startup.restarting) {
-        await gFeltPendingURLs.persistForRestart();
-      }
-    }
-  );
 }
 
 let lastNotificationShown = 0;

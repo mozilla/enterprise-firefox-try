@@ -1275,6 +1275,11 @@ export class FeltProcessParent extends JSProcessActorParent {
       }
     } finally {
       lazy.FeltLocking.clearLockAndTokens();
+      // External URLs queued by the session that is ending must not be waiting
+      // for whoever signs in next.
+      if (lazy.isBuildAppBrowser()) {
+        lazy.gFeltPendingURLs.clear();
+      }
       try {
         if (signedOut) {
           await lazy.FeltStorage.endSession();

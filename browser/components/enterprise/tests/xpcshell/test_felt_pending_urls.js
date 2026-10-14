@@ -3,227 +3,316 @@
 
 "use strict";
 
-do_get_profile();
+// Tests the stored copy of the external URL queue. It mirrors the queue so an
+// app restart can carry it over, and only a launch that is itself a restart
+// reads it back.
 
-const { FELT_OPEN_WINDOW_DISPOSITION, gFeltPendingURLs } =
-  ChromeUtils.importESModule("resource:///modules/FeltURLHandler.sys.mjs");
+// Imported lazily so FeltStorage doesn't resolve its "UAppData"-based path
+// before makeFakeAppDir() runs below.
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  FeltStorage: "resource://gre/modules/enterprise/FeltStorage.sys.mjs",
+  FELT_OPEN_WINDOW_DISPOSITION: "resource:///modules/FeltURLHandler.sys.mjs",
+  gFeltPendingURLs: "resource:///modules/FeltURLHandler.sys.mjs",
+});
 
-const RESTART_KEY_ENV = "MOZ_FELT_PENDING_URLS_KEY";
-const PENDING_PATH = PathUtils.join(
-  Services.dirsvc.get("ProfD", Ci.nsIFile).path,
-  "pendingURLs.json"
+const { makeFakeAppDir } = ChromeUtils.importESModule(
+  "resource://testing-common/AppData.sys.mjs"
 );
-const URL_A = {
-  url: "https://example.com/a",
-  disposition: FELT_OPEN_WINDOW_DISPOSITION.DEFAULT,
-};
-const URL_B = {
-  url: "https://example.com/b",
-  disposition: FELT_OPEN_WINDOW_DISPOSITION.NEW_WINDOW,
-};
+const { OSKeyStore } = ChromeUtils.importESModule(
+  "resource://gre/modules/OSKeyStore.sys.mjs"
+);
+const { sinon } = ChromeUtils.importESModule(
+  "resource://testing-common/Sinon.sys.mjs"
+);
+
+const MAX_AGE_MS = 30 * 60 * 1000;
+
+function url(spec, disposition) {
+  return {
+    url: spec,
+    disposition: disposition ?? lazy.FELT_OPEN_WINDOW_DISPOSITION.DEFAULT,
+  };
+}
+
+/** The raw value FeltStorage holds, bypassing the public accessors. */
+function storedQueue() {
+  return lazy.FeltStorage._feltStorage.data.pendingURLs;
+}
+
+function plantStoredQueue(value) {
+  lazy.FeltStorage._feltStorage.data.pendingURLs = value;
+}
+
+async function queue(...payloads) {
+  for (const payload of payloads) {
+    lazy.gFeltPendingURLs.push(payload);
+  }
+  await lazy.gFeltPendingURLs._writes;
+}
+
+/**
+ * Stands in for the next launch.
+ *
+ * @param {object} options
+ * @param {boolean} options.restarted Whether it follows an in-app restart.
+ * @returns {Promise<Array<object>>} The queue that launch starts with.
+ */
+async function relaunch({ restarted }) {
+  Services.env.set("MOZ_APP_RESTART", restarted ? "1" : "");
+  lazy.gFeltPendingURLs._pendingURLs = [];
+  lazy.gFeltPendingURLs._ready = false;
+  lazy.gFeltPendingURLs._initPromise = null;
+  await lazy.gFeltPendingURLs.init();
+  await lazy.gFeltPendingURLs._writes;
+  return [...lazy.gFeltPendingURLs];
+}
 
 add_setup(async function () {
-  await gFeltPendingURLs.init();
+  do_get_profile();
+  await makeFakeAppDir();
+  await lazy.FeltStorage.init();
+
+  // The queue is only mirrored to disk in the Felt UI process.
+  const felt = Services.felt;
+  Object.defineProperty(Services, "felt", {
+    configurable: true,
+    value: { isFeltUI: () => true },
+  });
+
+  // Reversible stand-ins so the tests can assert both that the queue is
+  // encrypted on the way in and recovered on the way out, without a real
+  // keystore. OSKeyStore.decrypt hands back a binary string, so the fake
+  // mirrors that too.
+  sinon
+    .stub(OSKeyStore, "encrypt")
+    .callsFake(async plaintext => `enc(${plaintext})`);
+  sinon
+    .stub(OSKeyStore, "decrypt")
+    .callsFake(async ciphertext =>
+      unescape(encodeURIComponent(ciphertext.replace(/^enc\((.*)\)$/s, "$1")))
+    );
+
   registerCleanupFunction(() => {
-    Services.env.set(RESTART_KEY_ENV, "");
+    sinon.restore();
+    Object.defineProperty(Services, "felt", {
+      configurable: true,
+      value: felt,
+    });
+    Services.env.set("MOZ_APP_RESTART", "");
   });
 });
 
-async function resetQueue() {
-  gFeltPendingURLs.clear();
-  gFeltPendingURLs._ready = false;
-  gFeltPendingURLs._initPromise = null;
-  gFeltPendingURLs._updateRestart = false;
-  Services.env.set(RESTART_KEY_ENV, "");
-  await IOUtils.remove(PENDING_PATH, { ignoreAbsent: true });
-  await gFeltPendingURLs.init();
-}
-
-async function persistForUpdate() {
-  gFeltPendingURLs.observe(null, "felt-update-restart");
-  await gFeltPendingURLs.persistForRestart();
-}
-
-async function restore() {
-  gFeltPendingURLs.clear();
-  gFeltPendingURLs._ready = false;
-  gFeltPendingURLs._updateRestart = false;
-  await gFeltPendingURLs.init();
-}
-
-async function writeHandoff(urls, overrides = {}, path = PENDING_PATH) {
-  const key = await crypto.subtle.generateKey(
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"]
+add_task(async function test_nothing_stored_restores_nothing() {
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "a restart with nothing stored starts empty"
   );
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    {
-      name: "AES-GCM",
-      iv,
-      additionalData: new TextEncoder().encode(path),
-    },
-    key,
-    new TextEncoder().encode(
-      JSON.stringify({ version: 1, createdAt: Date.now(), urls, ...overrides })
-    )
+});
+
+add_task(async function test_queue_is_stored_encrypted() {
+  await relaunch({ restarted: false });
+  await queue(url("https://example.com/a"));
+
+  Assert.ok(
+    storedQueue().startsWith("enc("),
+    "the queue is stored as the keystore wrote it, not as plain JSON"
   );
-  const bytes = new Uint8Array(12 + ciphertext.byteLength);
-  bytes.set(iv);
-  bytes.set(new Uint8Array(ciphertext), 12);
-  await IOUtils.write(PENDING_PATH, bytes);
-  Services.env.set(
-    RESTART_KEY_ENV,
-    JSON.stringify(await crypto.subtle.exportKey("jwk", key))
+});
+
+add_task(async function test_restart_carries_the_queue_over() {
+  await relaunch({ restarted: false });
+  await queue(
+    url("https://example.com/a"),
+    url("https://example.com/b", lazy.FELT_OPEN_WINDOW_DISPOSITION.NEW_WINDOW)
   );
-}
 
-add_task(async function test_memory_queue_does_not_persist_on_other_restarts() {
-  await resetQueue();
-  gFeltPendingURLs.push(URL_A);
-  await gFeltPendingURLs.persistForRestart();
-  Assert.deepEqual([...gFeltPendingURLs], [URL_A]);
-  Assert.ok(!(await IOUtils.exists(PENDING_PATH)));
-  Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [
+      url("https://example.com/a"),
+      url(
+        "https://example.com/b",
+        lazy.FELT_OPEN_WINDOW_DISPOSITION.NEW_WINDOW
+      ),
+    ],
+    "both URLs come back in the order they were queued"
+  );
+  Assert.notStrictEqual(
+    storedQueue(),
+    undefined,
+    "the restored queue is stored again, so a second restart also carries it"
+  );
+  Assert.equal(
+    (await relaunch({ restarted: true })).length,
+    2,
+    "a second restart carries the queue as well"
+  );
 });
 
-add_task(async function test_empty_queue_writes_no_file_or_key() {
-  await resetQueue();
-  await persistForUpdate();
-  Assert.ok(!(await IOUtils.exists(PENDING_PATH)));
-  Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
+add_task(async function test_cold_start_discards_the_queue() {
+  await relaunch({ restarted: false });
+  await queue(url("https://example.com/cold-start"));
+
+  Assert.deepEqual(
+    await relaunch({ restarted: false }),
+    [],
+    "a launch that is not a restart does not reopen queued URLs"
+  );
+  Assert.equal(
+    storedQueue(),
+    undefined,
+    "and the stored copy is dropped rather than left for a later restart"
+  );
 });
 
-add_task(async function test_update_restart_round_trip_and_consumption() {
-  await resetQueue();
-  gFeltPendingURLs.push(URL_A);
-  gFeltPendingURLs.push(URL_B);
-  await persistForUpdate();
-  const bytes = await IOUtils.read(PENDING_PATH);
-  Assert.ok(!new TextDecoder().decode(bytes).includes(URL_A.url));
-  Assert.notEqual(Services.env.get(RESTART_KEY_ENV), "");
+add_task(async function test_draining_the_queue_clears_the_stored_copy() {
+  await relaunch({ restarted: false });
+  await queue(url("https://example.com/drained"));
 
-  await restore();
-  Assert.deepEqual([...gFeltPendingURLs], [URL_A, URL_B]);
-  Assert.equal(Services.env.get(RESTART_KEY_ENV), "", "key is consumed");
-  Assert.ok(!(await IOUtils.exists(PENDING_PATH)), "file is consumed");
-  await gFeltPendingURLs.init();
-  Assert.equal(gFeltPendingURLs.length, 2, "init does not duplicate entries");
+  lazy.gFeltPendingURLs.clear();
+  await lazy.gFeltPendingURLs._writes;
 
-  await IOUtils.write(PENDING_PATH, bytes);
-  await restore();
-  Assert.equal(gFeltPendingURLs.length, 0, "a copied file cannot replay later");
+  Assert.equal(
+    storedQueue(),
+    undefined,
+    "URLs that have been forwarded are no longer stored"
+  );
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "so a restart has nothing to reopen"
+  );
 });
 
-add_task(async function test_restored_urls_precede_newer_urls() {
-  await resetQueue();
-  gFeltPendingURLs.push(URL_A);
-  await persistForUpdate();
-  gFeltPendingURLs.clear();
-  gFeltPendingURLs._ready = false;
-  gFeltPendingURLs.push(URL_B);
-  await Promise.all([gFeltPendingURLs.init(), gFeltPendingURLs.init()]);
-  Assert.deepEqual([...gFeltPendingURLs], [URL_A, URL_B]);
+add_task(async function test_restored_urls_precede_newly_queued_ones() {
+  await relaunch({ restarted: false });
+  await queue(url("https://example.com/before-restart"));
+
+  Services.env.set("MOZ_APP_RESTART", "1");
+  lazy.gFeltPendingURLs._pendingURLs = [];
+  lazy.gFeltPendingURLs._ready = false;
+  lazy.gFeltPendingURLs._initPromise = null;
+  // Arrives on the command line before init() finishes, as it would on a launch
+  // that is handed a URL straight away.
+  lazy.gFeltPendingURLs.push(url("https://example.com/after-restart"));
+  await lazy.gFeltPendingURLs.init();
+
+  Assert.deepEqual(
+    [...lazy.gFeltPendingURLs].map(entry => entry.url),
+    ["https://example.com/before-restart", "https://example.com/after-restart"],
+    "the restored URL is opened ahead of the one that arrived after it"
+  );
 });
 
-add_task(async function test_plaintext_file_is_discarded() {
-  await resetQueue();
-  await IOUtils.writeJSON(PENDING_PATH, { pendingURLs: [URL_A] });
-  await restore();
-  Assert.equal(gFeltPendingURLs.length, 0);
-  Assert.ok(!(await IOUtils.exists(PENDING_PATH)));
+add_task(async function test_stale_stored_queue_is_discarded() {
+  await relaunch({ restarted: false });
+  plantStoredQueue(
+    `enc(${JSON.stringify({
+      version: 1,
+      createdAt: Date.now() - MAX_AGE_MS - 1000,
+      urls: [url("https://example.com/stale")],
+    })})`
+  );
+
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "a queue past its age cap is dropped"
+  );
+  Assert.equal(storedQueue(), undefined, "and it is still consumed");
 });
 
-add_task(async function test_tampered_ciphertext_is_rejected() {
-  await resetQueue();
-  gFeltPendingURLs.push(URL_A);
-  await persistForUpdate();
-  const bytes = await IOUtils.read(PENDING_PATH);
-  bytes[bytes.length - 1] ^= 1;
-  await IOUtils.write(PENDING_PATH, bytes);
-  await restore();
-  Assert.equal(gFeltPendingURLs.length, 0);
-  Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
-  Assert.ok(!(await IOUtils.exists(PENDING_PATH)));
+add_task(async function test_future_dated_stored_queue_is_discarded() {
+  await relaunch({ restarted: false });
+  plantStoredQueue(
+    `enc(${JSON.stringify({
+      version: 1,
+      createdAt: Date.now() + MAX_AGE_MS,
+      urls: [url("https://example.com/future")],
+    })})`
+  );
+
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "a future-dated queue is dropped"
+  );
 });
 
-add_task(async function test_different_restart_uses_a_different_key() {
-  await resetQueue();
-  gFeltPendingURLs.push(URL_A);
-  await persistForUpdate();
-  const oldBytes = await IOUtils.read(PENDING_PATH);
-  const oldKey = Services.env.get(RESTART_KEY_ENV);
-  await restore();
-  await persistForUpdate();
-  Assert.notEqual(Services.env.get(RESTART_KEY_ENV), oldKey);
-  await IOUtils.write(PENDING_PATH, oldBytes);
-  await restore();
-  Assert.equal(gFeltPendingURLs.length, 0);
+add_task(async function test_unknown_version_is_discarded() {
+  await relaunch({ restarted: false });
+  plantStoredQueue(
+    `enc(${JSON.stringify({
+      version: 2,
+      createdAt: Date.now(),
+      urls: [url("https://example.com/v2")],
+    })})`
+  );
+
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "an unrecognized version is dropped"
+  );
 });
 
-add_task(async function test_restored_chrome_urls_are_rejected() {
-  await resetQueue();
-  await writeHandoff([
-    { url: "chrome://browser/content/browser.xhtml", disposition: 0 },
-    URL_A,
-  ]);
-  await restore();
-  Assert.deepEqual([...gFeltPendingURLs], [URL_A]);
+add_task(async function test_unreadable_stored_queue_is_discarded() {
+  await relaunch({ restarted: false });
+  // What a file-write primitive alone could leave behind: it is not something
+  // the keystore wrote, so it must be dropped rather than opened.
+  plantStoredQueue(
+    JSON.stringify({ urls: [url("https://example.com/planted")] })
+  );
+
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "a value the keystore did not write is dropped"
+  );
+  Assert.equal(
+    storedQueue(),
+    undefined,
+    "and it is consumed rather than retried on every launch"
+  );
 });
 
-add_task(async function test_handoff_is_bound_to_the_profile() {
-  await resetQueue();
-  await writeHandoff([URL_A], {}, `${PENDING_PATH}.another-profile`);
-  await restore();
-  Assert.equal(gFeltPendingURLs.length, 0);
+add_task(async function test_restored_urls_are_sanitized() {
+  await relaunch({ restarted: false });
+  plantStoredQueue(
+    `enc(${JSON.stringify({
+      version: 1,
+      createdAt: Date.now(),
+      urls: [
+        url("chrome://browser/content/browser.xhtml"),
+        url("https://example.com/kept"),
+        url("not a url at all"),
+      ],
+    })})`
+  );
+
+  Assert.deepEqual(
+    (await relaunch({ restarted: true })).map(entry => entry.url),
+    ["https://example.com/kept"],
+    "chrome: and unparseable URLs do not survive being restored"
+  );
 });
 
-add_task(async function test_expired_future_and_invalid_handoffs() {
-  for (const overrides of [
-    { createdAt: Date.now() - 31 * 60 * 1000 },
-    { createdAt: Date.now() + 60 * 1000 },
-    { createdAt: null },
-    { version: 2 },
-    { urls: {} },
-  ]) {
-    await resetQueue();
-    await writeHandoff([URL_A], overrides);
-    await restore();
-    Assert.equal(gFeltPendingURLs.length, 0, JSON.stringify(overrides));
-    Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
-  }
-});
+add_task(async function test_signout_drops_the_stored_queue() {
+  await relaunch({ restarted: false });
+  await queue(url("https://example.com/signed-out"));
 
-add_task(async function test_missing_file_consumes_key_and_accepts_new_urls() {
-  await resetQueue();
-  await writeHandoff([URL_A]);
-  await IOUtils.remove(PENDING_PATH);
-  await restore();
-  gFeltPendingURLs.push(URL_B);
-  Assert.deepEqual([...gFeltPendingURLs], [URL_B]);
-  Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
-});
+  await lazy.FeltStorage.endSession();
 
-add_task(async function test_failed_write_does_not_export_key() {
-  await resetQueue();
-  gFeltPendingURLs.push(URL_A);
-  await IOUtils.makeDirectory(PENDING_PATH);
-  try {
-    await persistForUpdate();
-    Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
-    Assert.equal((await IOUtils.stat(PENDING_PATH)).type, "directory");
-  } finally {
-    await IOUtils.remove(PENDING_PATH);
-  }
-});
-
-add_task(async function test_oversized_handoff_is_rejected() {
-  await resetQueue();
-  gFeltPendingURLs.push({
-    url: `https://example.com/${"a".repeat(1024 * 1024)}`,
-  });
-  await persistForUpdate();
-  Assert.ok(!(await IOUtils.exists(PENDING_PATH)));
-  Assert.equal(Services.env.get(RESTART_KEY_ENV), "");
+  Assert.equal(
+    storedQueue(),
+    undefined,
+    "ending the session removes the stored queue"
+  );
+  Assert.deepEqual(
+    await relaunch({ restarted: true }),
+    [],
+    "URLs queued by the session that ended are not reopened"
+  );
 });

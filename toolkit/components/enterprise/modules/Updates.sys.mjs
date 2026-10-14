@@ -464,7 +464,6 @@ export const Updates = {
       .getService(Ci.nsIUpdateManager)
       .elevationOptedIn()
       .finally(() => {
-        Services.obs.notifyObservers(null, "felt-update-restart");
         Services.startup.quit(
           Ci.nsIAppStartup.eForceQuit | Ci.nsIAppStartup.eRestart
         );
