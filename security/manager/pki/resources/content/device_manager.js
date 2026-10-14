@@ -3,6 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
+const { LoginHelper } = ChromeUtils.importESModule(
+  "resource://gre/modules/LoginHelper.sys.mjs"
+);
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
@@ -218,6 +221,17 @@ function enableButtons() {
         selected_token.isInternalKeyToken &&
         !selected_token.hasPassword
       ) {
+        pw_toggle = true;
+      }
+
+      // The enterprise console provides the primary password, so it is not
+      // user configurable.
+      if (
+        selected_token.isInternalKeyToken &&
+        LoginHelper.isEnterpriseManagedPrimaryPassword()
+      ) {
+        login_toggle = true;
+        logout_toggle = true;
         pw_toggle = true;
       }
     }

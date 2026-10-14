@@ -46,6 +46,9 @@ skip-if = [
 
 ["browser_deleteCert_ui.js"]
 
+["browser_deviceManager_enterprise.js"]
+run-if = ["enterprise"]
+
 ["browser_downloadCert_ui.js"]
 
 ["browser_editCACertTrust.js"]
