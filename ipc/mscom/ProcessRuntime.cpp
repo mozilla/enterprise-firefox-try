@@ -25,6 +25,65 @@
 #  endif  // defined(MOZ_SANDBOX)
 #endif    // defined(MOZILLA_INTERNAL_API)
 
+#if defined(MOZILLA_INTERNAL_API)
+#  include <stdio.h>
+
+#define PR_DEBUG(fmt, ...)                                               \
+  fprintf(stderr, "[MTA-DEBUG pid=%lu tid=%lu t=%llu] " fmt "\n",        \
+          ::GetCurrentProcessId(), ::GetCurrentThreadId(),                \
+          (unsigned long long)::GetTickCount64(), ##__VA_ARGS__);        \
+  fflush(stderr)
+
+static void PrintAddress(DWORD64 aPC, int aFrame) {
+  HMODULE mod = nullptr;
+  char name[MAX_PATH] = "???";
+  if (::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCSTR>(aPC), &mod)) {
+    ::GetModuleFileNameA(mod, name, sizeof(name));
+  }
+  PR_DEBUG("  #%02d: %s +0x%llx (pc=0x%llx)", aFrame, name,
+           (unsigned long long)(aPC - reinterpret_cast<DWORD64>(mod)),
+           (unsigned long long)aPC);
+}
+
+static LONG CALLBACK DebugAVHandler(PEXCEPTION_POINTERS aInfo) {
+  PEXCEPTION_RECORD rec = aInfo->ExceptionRecord;
+  if (rec->ExceptionCode != EXCEPTION_ACCESS_VIOLATION) {
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+  PR_DEBUG("ACCESS VIOLATION at %p, %s address 0x%llx", rec->ExceptionAddress,
+           rec->NumberParameters >= 2
+               ? (rec->ExceptionInformation[0] == 0   ? "reading"
+                  : rec->ExceptionInformation[0] == 1 ? "writing"
+                                                      : "executing")
+               : "?",
+           rec->NumberParameters >= 2
+               ? (unsigned long long)rec->ExceptionInformation[1]
+               : 0ULL);
+#  if defined(_M_X64)
+  CONTEXT ctx = *aInfo->ContextRecord;
+  for (int i = 0; i < 64 && ctx.Rip; ++i) {
+    PrintAddress(ctx.Rip, i);
+    DWORD64 imageBase = 0;
+    PRUNTIME_FUNCTION fn = ::RtlLookupFunctionEntry(ctx.Rip, &imageBase, nullptr);
+    if (!fn) {
+      ctx.Rip = *reinterpret_cast<DWORD64*>(ctx.Rsp);
+      ctx.Rsp += 8;
+      continue;
+    }
+    PVOID handlerData;
+    DWORD64 establisher;
+    ::RtlVirtualUnwind(UNW_FLAG_NHANDLER, imageBase, ctx.Rip, fn, &ctx,
+                       &handlerData, &establisher, nullptr);
+  }
+#  else
+  PrintAddress(reinterpret_cast<DWORD64>(rec->ExceptionAddress), 0);
+#  endif
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif  // defined(MOZILLA_INTERNAL_API)
+
 // This API from oleaut32.dll is not declared in Windows SDK headers
 extern "C" void __cdecl SetOaNoCache(void);
 
@@ -52,7 +111,11 @@ ProcessRuntime::ProcessRuntime(const ProcessCategory aProcessCategory)
   MOZ_DIAGNOSTIC_ASSERT(!sInstance);
   sInstance = this;
 
+  ::AddVectoredExceptionHandler(1, DebugAVHandler);
+  PR_DEBUG("ProcessRuntime ctor this=%p category=%d", this,
+           (int)aProcessCategory);
   EnsureMTA();
+  PR_DEBUG("ProcessRuntime ctor EnsureMTA done");
   /**
    * From this point forward, all threads in this process are implicitly
    * members of the multi-threaded apartment, with the following exceptions:
@@ -157,9 +220,13 @@ ProcessRuntime::~ProcessRuntime() {
   // running, it could start or keep running while the process tears down
   // state it depends on.
   nsCOMPtr<nsIComponentManager> compMgr;
-  if (NS_FAILED(NS_GetComponentManager(getter_AddRefs(compMgr)))) {
+  nsresult rv = NS_GetComponentManager(getter_AddRefs(compMgr));
+  PR_DEBUG("~ProcessRuntime this=%p NS_GetComponentManager rv=0x%08x", this,
+           (unsigned)rv);
+  if (NS_FAILED(rv)) {
     EnsureMTA::ShutdownPersistentMTAThread();
   }
+  PR_DEBUG("~ProcessRuntime done");
 }
 
 void ProcessRuntime::InitUsingPersistentMTAThread(bool aNeedsSandboxedInit) {

@@ -18,14 +18,26 @@
 
 #include "private/pprthred.h"
 
+#include <stdio.h>
+#include <windows.h>
+
+#define MTA_DEBUG(fmt, ...)                                              \
+  fprintf(stderr, "[MTA-DEBUG pid=%lu tid=%lu t=%llu] " fmt "\n",        \
+          ::GetCurrentProcessId(), ::GetCurrentThreadId(),                \
+          (unsigned long long)::GetTickCount64(), ##__VA_ARGS__);        \
+  fflush(stderr)
+
 namespace {
 
 class EnterMTARunnable : public mozilla::Runnable {
  public:
   EnterMTARunnable() : mozilla::Runnable("EnterMTARunnable") {}
   NS_IMETHOD Run() override {
-    mozilla::DebugOnly<HRESULT> hr =
+    MTA_DEBUG("EnterMTARunnable::Run start");
+    HRESULT hr =
         mozilla::mscom::wrapped::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    MTA_DEBUG("EnterMTARunnable::Run CoInitializeEx hr=0x%08lx",
+              (unsigned long)hr);
     MOZ_ASSERT(SUCCEEDED(hr));
     return NS_OK;
   }
@@ -34,20 +46,32 @@ class EnterMTARunnable : public mozilla::Runnable {
 class BackgroundMTAData {
  public:
   BackgroundMTAData() {
+    MTA_DEBUG("BackgroundMTAData ctor this=%p main=%d", this,
+              NS_IsMainThread());
     nsCOMPtr<nsIRunnable> runnable = new EnterMTARunnable();
-    mozilla::DebugOnly<nsresult> rv = NS_NewNamedThread(
+    nsresult rv = NS_NewNamedThread(
         "COM MTA", getter_AddRefs(mThread), runnable.forget());
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rv), "NS_NewNamedThread failed");
+    MTA_DEBUG("BackgroundMTAData ctor NS_NewNamedThread rv=0x%08x thread=%p",
+              (unsigned)rv, mThread.get());
     MOZ_ASSERT(NS_SUCCEEDED(rv));
   }
 
   ~BackgroundMTAData() {
+    MTA_DEBUG("~BackgroundMTAData this=%p thread=%p main=%d", this,
+              mThread.get(), NS_IsMainThread());
     if (mThread) {
-      mThread->Dispatch(
+      nsresult rv = mThread->Dispatch(
           NS_NewRunnableFunction("BackgroundMTAData::~BackgroundMTAData",
-                                 &mozilla::mscom::wrapped::CoUninitialize),
+                                 []() {
+                                   MTA_DEBUG("CoUninitialize start");
+                                   mozilla::mscom::wrapped::CoUninitialize();
+                                   MTA_DEBUG("CoUninitialize done");
+                                 }),
           NS_DISPATCH_NORMAL);
-      mThread->Shutdown();
+      MTA_DEBUG("~BackgroundMTAData Dispatch rv=0x%08x", (unsigned)rv);
+      rv = mThread->Shutdown();
+      MTA_DEBUG("~BackgroundMTAData Shutdown rv=0x%08x", (unsigned)rv);
     }
   }
 
@@ -114,9 +138,11 @@ EnsureMTA::EnsureMTA() {
 nsCOMPtr<nsIThread> EnsureMTA::GetPersistentMTAThread() {
   static StaticLocalAutoPtr<BackgroundMTAData> sMTADataOwner(
       []() -> BackgroundMTAData* {
+        MTA_DEBUG("GetPersistentMTAThread init");
         BackgroundMTAData* bgData = new BackgroundMTAData();
 
         auto setClearOnShutdown = [ptr = &sMTADataOwner]() -> void {
+          MTA_DEBUG("GetPersistentMTAThread ClearOnShutdown registered");
           ClearOnShutdown(ptr, ShutdownPhase::XPCOMShutdownThreads);
         };
 
@@ -135,6 +161,8 @@ nsCOMPtr<nsIThread> EnsureMTA::GetPersistentMTAThread() {
   MOZ_ASSERT(sMTADataOwner);
 
   if (!sMTAData) {
+    MTA_DEBUG("GetPersistentMTAThread publish sMTAData=%p owner=%p",
+              &sMTADataOwner, sMTADataOwner.get());
     sMTAData = &sMTADataOwner;
   }
 
@@ -143,10 +171,14 @@ nsCOMPtr<nsIThread> EnsureMTA::GetPersistentMTAThread() {
 
 /* static */
 void EnsureMTA::ShutdownPersistentMTAThread() {
+  MTA_DEBUG("ShutdownPersistentMTAThread start main=%d sMTAData=%p",
+            NS_IsMainThread(), (void*)sMTAData);
   MOZ_ASSERT(NS_IsMainThread());
   if (StaticLocalAutoPtr<BackgroundMTAData>* data = sMTAData) {
+    MTA_DEBUG("ShutdownPersistentMTAThread owner=%p", data->get());
     *data = nullptr;
   }
+  MTA_DEBUG("ShutdownPersistentMTAThread done");
 }
 
 /* static */
