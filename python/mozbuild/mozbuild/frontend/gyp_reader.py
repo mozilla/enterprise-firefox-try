@@ -412,8 +412,10 @@ def process_gyp_result(
 
 
 # A version of gyp.Load that doesn't return the generator (because module objects
-# aren't Pickle-able, and we don't use it anyway).
-def load_gyp(*args):
+# aren't Pickle-able, and we don't use it anyway). env is applied in the worker
+# process so that it doesn't leak into the environment of the caller.
+def load_gyp(env, *args):
+    os.environ.update(env)
     _, flat_list, targets, data = gyp.Load(*args)
     return flat_list, targets, data
 
@@ -465,10 +467,10 @@ class GypProcessor:
         }
         # The NSS gyp configuration uses CC and CFLAGS to determine the
         # floating-point ABI on arm.
-        os.environ.update(
-            CC=mozshellutil.quote(*config.substs["CC"]),
-            CFLAGS=mozshellutil.quote(*config.substs["CC_BASE_FLAGS"]),
-        )
+        gyp_env = {
+            "CC": mozshellutil.quote(*config.substs["CC"]),
+            "CFLAGS": mozshellutil.quote(*config.substs["CC_BASE_FLAGS"]),
+        }
 
         if gyp_dir_attrs.no_chromium:
             includes = []
@@ -497,7 +499,7 @@ class GypProcessor:
         str_vars = normalize(gyp_dir_attrs.variables)
         str_vars["python"] = sys.executable
         self._gyp_loader_future = executor.submit(
-            load_gyp, [path], "mozbuild", str_vars, includes, depth, params
+            load_gyp, gyp_env, [path], "mozbuild", str_vars, includes, depth, params
         )
 
     @property
