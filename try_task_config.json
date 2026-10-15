@@ -1,0 +1,19 @@
+{
+    "parameters": {
+        "base_rev": "a8a53602712591b57b81eaa22a1193962efb35ff",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-gtest-1proc",
+                "test-macosx1500-64-enterprise/opt-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/debug-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/opt-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
