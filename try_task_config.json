@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "812e5b78655c38a2e0c62b4ec8761be9963f4ff9",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"xpcshell\": [\"toolkit/components/enterprisepolicies/tests/xpcshell/live\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
