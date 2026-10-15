@@ -1,0 +1,37 @@
+{
+    "parameters": {
+        "base_rev": "7cedd5b69e8921317e9627b30c1331abc0e22ba3",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"marionette-enterprise\": [\"testing/enterprise\"], \"xpcshell\": [\"netwerk/test/unit\", \"dom/system/tests/xpcshell\"], \"null\": [\"netwerk/test/unit\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "rebuild": 2,
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-integration",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-marionette-integration",
+                "test-macosx1500-64-enterprise/debug-marionette-integration-swr",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-marionette-integration",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration-swr",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-integration",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
