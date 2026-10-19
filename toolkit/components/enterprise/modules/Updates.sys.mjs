@@ -199,23 +199,66 @@ export const Updates = {
       return null;
     });
     if (history) {
+      // Default branch only since the FELT profile is user-writable.
       // The UpdaterManager history's capped at 10 max.
-      const maxConsecutiveUpdateFailures = Math.min(
-        Services.prefs.getIntPref(
-          "enterprise.felt.max_consecutive_update_failure",
-          3
-        ),
-        10
+      const maxConsecutiveUpdateFailures = Math.max(
+        1,
+        Math.min(
+          Services.prefs
+            .getDefaultBranch(null)
+            .getIntPref("enterprise.felt.max_consecutive_update_failure", 3),
+          10
+        )
       );
+      // Failures for updates we're already past are stale. This mirrors
+      // updateIsAtLeastAsOldAs in UpdateService.sys.mjs, so any update the
+      // updater would offer again still counts.
+      const isAtLeastAsOldAsCurrent = update => {
+        if (!update.appVersion || !update.buildID) {
+          return false;
+        }
+        const versionComparison = Services.vc.compare(
+          update.appVersion,
+          Services.appinfo.version
+        );
+        return (
+          versionComparison < 0 ||
+          (versionComparison == 0 &&
+            update.buildID == Services.appinfo.appBuildID)
+        );
+      };
       const firstNonFailed = history.findIndex(
-        update => update.state !== "failed"
+        update => update.state !== "failed" || isAtLeastAsOldAsCurrent(update)
       );
       const consecutiveUpdateFailures =
         firstNonFailed === -1 ? history.length : firstNonFailed;
-      lazy.log.warn(
-        `FeltUpdates: updateCheckingAllowed: ${consecutiveUpdateFailures}, max ${maxConsecutiveUpdateFailures}`
+
+      // Seconds after the latest failure before allowing a retry, so a system
+      // fixed without a version change can recover.
+      const updateFailurePeriod = Math.max(
+        3600,
+        Math.min(
+          Services.prefs
+            .getDefaultBranch(null)
+            .getIntPref("enterprise.felt.update_failure_period", 86400),
+          604800
+        )
       );
-      if (consecutiveUpdateFailures > maxConsecutiveUpdateFailures) {
+      // A future date would otherwise block checks indefinitely.
+      const timeSinceLatestFailure = consecutiveUpdateFailures
+        ? (Date.now() - history[0].installDate) / 1000
+        : Infinity;
+      const isWithinFailurePeriod =
+        timeSinceLatestFailure >= 0 &&
+        timeSinceLatestFailure <= updateFailurePeriod;
+
+      lazy.log.warn(
+        `FeltUpdates: updateCheckingAllowed: ${consecutiveUpdateFailures}, max ${maxConsecutiveUpdateFailures}, timeSinceLatestFailure ${timeSinceLatestFailure}, period ${updateFailurePeriod}`
+      );
+      if (
+        consecutiveUpdateFailures > maxConsecutiveUpdateFailures &&
+        isWithinFailurePeriod
+      ) {
         lazy.log.warn(
           `FeltUpdates: updateCheckingAllowed: skip startup update check because consecutive update failures: ${consecutiveUpdateFailures}, max ${maxConsecutiveUpdateFailures}`
         );
