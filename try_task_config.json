@@ -1,0 +1,23 @@
+{
+    "parameters": {
+        "base_rev": "f9000e30777d8d909535469f994704f2dadacb50",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"browser/components/enterprisepolicies/tests/browser\"], \"marionette-enterprise\": [\"testing/enterprise\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*"
+            ]
+        }
+    },
+    "version": 2
+}
