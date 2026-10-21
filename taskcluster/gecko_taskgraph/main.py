@@ -693,7 +693,12 @@ def trigger_action(options):
     description="Check that the actions registered by a decision or action task "
     "target the hooks of the .taskcluster.yml it was created from",
 )
-@argument("task_id", help="Task providing the public/actions.json artifact")
+@argument("task_id", help="Task providing the actions.json artifact")
+@argument(
+    "--artifact",
+    default="public/actions.json",
+    help="Name of the actions.json artifact",
+)
 def verify_actions(options):
     import hashlib
 
@@ -717,7 +722,7 @@ def verify_actions(options):
 
     hooks = get_taskcluster_client("hooks")
     errors = 0
-    for action in get_artifact(task_id, "public/actions.json")["actions"]:
+    for action in get_artifact(task_id, options["artifact"])["actions"]:
         hook_group_id, hook_id = action["hookGroupId"], action["hookId"]
         problems = []
         if hook_id.rsplit("/", 1)[-1] != tcyml_hash:

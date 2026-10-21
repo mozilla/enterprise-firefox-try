@@ -19,10 +19,16 @@ tasks:
         worker-type: t-linux-docker-amd
         worker:
             docker-image: {in-tree: "lint"}
-            max-run-time: 900
+            max-run-time: 3600
             taskcluster-proxy: true
             env:
                 DECISION_TASK_ID: {task-reference: <decision>}
+                # WIP - HACK FOR TRY
+                COMM_DECISION_DRY_RUN: "1"
+            artifacts:
+                - type: directory
+                  name: public/comm-decision
+                  path: /builds/worker/artifacts/comm-decision
         treeherder:
             kind: other
             platform: gecko-decision/opt
@@ -31,5 +37,18 @@ tasks:
         run:
             using: run-task
             cwd: '{checkout}'
-            command: ./mach taskgraph trigger-action --decision-task-id "$DECISION_TASK_ID" comm-decision
+            # WIP - HACK FOR TRY: run the comm-decision callback in dry-run
+            # mode instead of triggering its hook.
+            command: >-
+                git init -q comm &&
+                git -C comm fetch -q --depth 1 "$DCT_COMM_REPOSITORY" "$DCT_COMM_REV" &&
+                git -C comm checkout -q FETCH_HEAD &&
+                sed -i 's|^trust-domain: .*|trust-domain: enterprise|g' comm/taskcluster/config.yml &&
+                sed -i 's|^    scope-prefix: .*|    scope-prefix: project:enterprise:releng|g' comm/taskcluster/config.yml &&
+                mkdir -p /builds/worker/artifacts/comm-decision &&
+                ln -s /builds/worker/artifacts/comm-decision artifacts &&
+                ./mach taskgraph test-action-callback
+                --parameters "task-id=$DECISION_TASK_ID"
+                --task-group-id "$DECISION_TASK_ID"
+                comm-decision
             sparse-profile: taskgraph

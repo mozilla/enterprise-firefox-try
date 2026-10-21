@@ -252,6 +252,10 @@ def taskgraph_decision(options, parameters):
 
     decision_task_id = os.environ["TASK_ID"]
 
+    # WIP - HACK FOR TRY: generate the graph without creating any task.
+    if os.environ.get("TASKGRAPH_DRY_RUN"):
+        create.testing = True
+
     # Start querying bugbug early, so its results are ready sooner for the
     # optimizers, and so they are stored even on pushes that don't use them
     # (e.g. backstop pushes).

@@ -81,7 +81,8 @@ def comm_decision_index_paths(parameters, graph_config):
     available=is_comm_decision_available,
     # Not `generic`: the graph contains signing tasks, so the hook role needs
     # the scopes of the branch rather than those of the generic actions.
-    permission="comm-decision",
+    # WIP - HACK FOR TRY: use the existing generic hooks.
+    permission="generic",
     comm_checkout=True,
 )
 def comm_decision_action(parameters, graph_config, input, task_group_id, task_id):
@@ -97,7 +98,16 @@ def comm_decision_action(parameters, graph_config, input, task_group_id, task_id
 
     command = comm_decision_command(parameters)
     logger.info(f"Running {shlex.join(command)}")
-    if create.testing:
+    # WIP - HACK FOR TRY: COMM_DECISION_DRY_RUN generates the graph and its
+    # artifacts without creating any task, from the comm-decision-thunderbird
+    # task, until a decision task is allowed to trigger the hook.
+    dry_run = os.environ.get("COMM_DECISION_DRY_RUN")
+    if create.testing and not dry_run:
+        return
+    if dry_run:
+        env["TASKGRAPH_DRY_RUN"] = "1"
+        with open(os.path.join(GECKO, "artifacts", "created-tasks.log"), "w") as fh:
+            subprocess.run(command, env=env, cwd=GECKO, check=True, stdout=fh)
         return
     for index_path in comm_decision_index_paths(parameters, graph_config):
         insert_index(index_path, os.environ["TASK_ID"])
