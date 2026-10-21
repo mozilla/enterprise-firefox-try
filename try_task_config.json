@@ -1,0 +1,39 @@
+{
+    "parameters": {
+        "base_rev": "9e4b0f7d6627dccb9b7e0c2fe2ba59ea7425d06b",
+        "comm_checkout": {
+            "base_ref": "refs/heads/try/5fb5c1dbc2e48efa4b6821b1a3fff68af23629ee",
+            "base_repository": "https://github.com/lissyx/thunderbird-desktop",
+            "base_rev": "5fb5c1dbc2e48efa4b6821b1a3fff68af23629ee",
+            "head_ref": "refs/heads/try/5fb5c1dbc2e48efa4b6821b1a3fff68af23629ee",
+            "head_repository": "https://github.com/lissyx/thunderbird-desktop",
+            "head_rev": "5fb5c1dbc2e48efa4b6821b1a3fff68af23629ee"
+        },
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "comm-decision-thunderbird",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-macosx1470-64-enterprise/debug-marionette-enterprise",
+                "test-macosx1470-64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-macosx1470-64-enterprise/opt-marionette-enterprise",
+                "test-macosx1470-64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-thunderbird"
+            ]
+        }
+    },
+    "version": 2
+}
