@@ -1,0 +1,55 @@
+{
+    "parameters": {
+        "base_rev": "e18e8b290fca6bdd33460f3771624ee0f6bef11e",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-enterprise-rusttests/opt",
+                "build-linux64-enterprise/debug",
+                "build-linux64-enterprise/opt",
+                "build-linux64-plain/debug",
+                "build-linux64-plain/opt",
+                "build-mac-signing-macosx64-aarch64-enterprise/debug",
+                "build-mac-signing-macosx64-aarch64-enterprise/opt",
+                "build-mac-signing-macosx64-aarch64/debug",
+                "build-mac-signing-macosx64/debug",
+                "build-macosx64-aarch64-enterprise/debug",
+                "build-macosx64-aarch64-enterprise/opt",
+                "build-macosx64-aarch64/debug",
+                "build-macosx64/debug",
+                "build-signing-win32/debug",
+                "build-signing-win64-enterprise/debug",
+                "build-signing-win64-enterprise/opt",
+                "build-signing-win64/debug",
+                "build-win64-aarch64-enterprise/debug",
+                "build-win64-aarch64-enterprise/opt",
+                "build-win64-enterprise/debug",
+                "build-win64-enterprise/opt",
+                "build-win64-plain/debug",
+                "build-win64-plain/opt",
+                "source-test-buildconfig-buildconfig-android-components",
+                "source-test-buildconfig-buildconfig-fenix",
+                "source-test-buildconfig-buildconfig-focus",
+                "test-android-em-14-x86_64/debug-geckoview-junit-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-mochitest-media-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-mochitest-plain-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-crashtest-isolated",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-eme-isolated",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-reftest-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-wdspec-*",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-wdspec-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-wdspec-nofis-*",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-webcodecs",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-webcodecs-isolated",
+                "test-android-em-14-x86_64/debug-geckoview-web-platform-tests-webrtc-isolated",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-isolated-*",
+                "webrender-cargotest-macos-build",
+                "webrender-wrench-macos-build"
+            ]
+        }
+    },
+    "version": 2
+}
