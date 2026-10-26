@@ -211,6 +211,9 @@ def use_artifact(config, jobs):
         ):
             job["treeherder"]["symbol"] = add_suffix(job["treeherder"]["symbol"], "a")
             job["worker"]["env"]["USE_ARTIFACT"] = "1"
+            if "enterprise" in config.params.get("project", ""):
+                if not job["attributes"].get("shippable"):
+                    job["worker"]["env"]["MOZ_ARTIFACT_ALLOW_NON_SHIPPABLE"] = "1"
             job["attributes"]["artifact-build"] = True
             # Artifact builds don't compile anything.
             job["use-sccache"] = False
