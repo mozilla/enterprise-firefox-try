@@ -1,0 +1,31 @@
+{
+    "parameters": {
+        "base_rev": "c11bf3702799b38411495eddd860b4963b021cff",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"browser/components/preferences/tests\"], \"mochitest-chrome\": [\"browser/components/preferences/tests\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2204-64-wayland/debug-mochitest-chrome-gpu-1proc",
+                "test-linux2404-64/debug-mochitest-browser-chrome-swr-*",
+                "test-linux2404-64/debug-mochitest-chrome-1proc-*",
+                "test-linux2404-64/debug-mochitest-chrome-gpu-1proc",
+                "test-linux2404-64/debug-mochitest-chrome-gpu-swr-1proc",
+                "test-linux2404-64/debug-mochitest-chrome-swr-1proc-*",
+                "test-windows10-64-2009-qr/debug-mochitest-chrome-1proc-*",
+                "test-windows10-64-2009-qr/debug-mochitest-chrome-gpu-1proc",
+                "test-windows11-32-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-32-25h2/debug-mochitest-chrome-1proc-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-msix-*",
+                "test-windows11-64-25h2/debug-mochitest-chrome-1proc-*",
+                "test-windows11-64-25h2/debug-mochitest-chrome-gpu-1proc"
+            ]
+        }
+    },
+    "version": 2
+}
