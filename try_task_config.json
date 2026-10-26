@@ -1,0 +1,38 @@
+{
+    "parameters": {
+        "base_rev": "c34d94afff6112695de5ed8090dd13ad8208c48e",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-enterprise-rusttests/opt",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-*",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-isolated-*",
+                "test-android-em-14-x86_64/debug-geckoview-xpcshell-nofis-*",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-enterprise-end2end-current",
+                "test-linux2404-64-enterprise/opt-enterprise-end2end-main",
+                "test-linux2404-64-enterprise/opt-enterprise-end2end-minimal",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows10-64-2009-qr/debug-xpcshell-*",
+                "test-windows11-32-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2/debug-xpcshell-*",
+                "test-windows11-64-25h2/debug-xpcshell-msix-*"
+            ]
+        }
+    },
+    "version": 2
+}
