@@ -129,6 +129,7 @@
 #include "mozilla/ipc/PBackgroundChild.h"
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/net/ExtensionProtocolHandler.h"
+#include "mozilla/storage/SQLiteEncryption.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsBaseHashtable.h"
 #include "nsCOMPtr.h"
@@ -691,6 +692,22 @@ Result<nsCOMPtr<nsIFile>, nsresult> GetLocalStorageArchiveTmpFile(
       lsArchiveTmpFile->Append(nsLiteralString(LS_ARCHIVE_TMP_FILE_NAME))));
 
   return lsArchiveTmpFile;
+}
+
+Result<Ok, nsresult> CopyDatabaseEncryptionKey(nsIFile& aSourceFile,
+                                               nsIFile& aDestFile) {
+  AssertIsOnIOThread();
+
+  QM_TRY_INSPECT(const auto& sourcePath, MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
+                                             nsString, aSourceFile, GetPath));
+
+  QM_TRY_INSPECT(const auto& destPath, MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
+                                           nsString, aDestFile, GetPath));
+
+  QM_TRY(MOZ_TO_RESULT(storage::CopyEncryptionKey(
+      NS_ConvertUTF16toUTF8(sourcePath), NS_ConvertUTF16toUTF8(destPath))));
+
+  return Ok{};
 }
 
 Result<bool, nsresult> IsLocalStorageArchiveInitialized(
@@ -5443,6 +5460,10 @@ Result<Ok, nsresult> QuotaManager::CopyLocalStorageArchiveFromWebAppsStore(
     QM_TRY_INSPECT(const auto& lsArchiveTmpFile,
                    GetLocalStorageArchiveTmpFile(*mStoragePath));
 
+    // Encryption keys are looked up by path, so the copy needs the key of the
+    // file it was copied from to be readable.
+    QM_TRY(CopyDatabaseEncryptionKey(*webAppsStoreFile, *lsArchiveTmpFile));
+
     if (journalMode.EqualsLiteral("wal")) {
       QM_TRY_INSPECT(
           const auto& lsArchiveTmpConnection,
@@ -5461,6 +5482,8 @@ Result<Ok, nsresult> QuotaManager::CopyLocalStorageArchiveFromWebAppsStore(
       // Close the connection explicitly. We are going to rename the file below.
       QM_TRY(MOZ_TO_RESULT(lsArchiveTmpConnection->Close()));
     }
+
+    QM_TRY(CopyDatabaseEncryptionKey(*lsArchiveTmpFile, aLsArchiveFile));
 
     // Finally, rename ls-archive-tmp.sqlite to ls-archive.sqlite
     QM_TRY(MOZ_TO_RESULT(lsArchiveTmpFile->MoveTo(

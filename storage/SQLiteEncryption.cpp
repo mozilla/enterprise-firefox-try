@@ -50,6 +50,8 @@ using mozilla::security::lockstore::keystore_add_kek;
 using mozilla::security::lockstore::keystore_close;
 using mozilla::security::lockstore::keystore_create_dek;
 using mozilla::security::lockstore::keystore_create_kek;
+using mozilla::security::lockstore::keystore_dek_exists;
+using mozilla::security::lockstore::keystore_delete_dek;
 using mozilla::security::lockstore::keystore_delete_kek;
 using mozilla::security::lockstore::keystore_get_dek;
 using mozilla::security::lockstore::keystore_import_dek;
@@ -834,6 +836,20 @@ nsresult GetDatabaseEncryptionStatus(const nsACString& aDatabasePath,
   return NS_OK;
 }
 
+// The lockstore collection name of a database is its path relative to the
+// profile directory (e.g. "places.sqlite",
+// "storage/permanent/.../idb/x.sqlite"). Unique by construction and
+// human-readable when inspecting the lockstore SQLite directly.
+static nsresult GetCollectionName(nsIFile* aProfileDir,
+                                  const nsACString& aDatabasePath,
+                                  nsACString& aOutCollection) {
+  nsCOMPtr<nsIFile> dbFile = new nsLocalFile();
+  nsresult rv = dbFile->InitWithPath(NS_ConvertUTF8toUTF16(aDatabasePath));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return dbFile->GetRelativePath(aProfileDir, aOutCollection);
+}
+
 nsresult GetEncryptionKey(const nsACString& aDatabasePath, OpenIntent aIntent,
                           nsACString& aOutHexKey) {
   // Defense in depth: this can run on a worker thread (the QuotaManager /
@@ -864,16 +880,8 @@ nsresult GetEncryptionKey(const nsACString& aDatabasePath, OpenIntent aIntent,
   rv = profileDir->InitWithPath(profilePath);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIFile> dbFile = new nsLocalFile();
-  rv = dbFile->InitWithPath(NS_ConvertUTF8toUTF16(aDatabasePath));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // The collection name is the database's path relative to the profile
-  // directory (e.g. "places.sqlite", "storage/permanent/.../idb/x.sqlite").
-  // Unique by construction and human-readable when inspecting the
-  // lockstore SQLite directly.
   nsAutoCString collection;
-  rv = dbFile->GetRelativePath(profileDir, collection);
+  rv = GetCollectionName(profileDir, aDatabasePath, collection);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Open the lockstore handle (memoised per-path), resolve the shared
@@ -986,6 +994,91 @@ nsresult GetEncryptionKey(const nsACString& aDatabasePath, OpenIntent aIntent,
   }
   HexEncode(dek, aOutHexKey);
   return NS_OK;
+}
+
+nsresult CopyEncryptionKey(const nsACString& aSourcePath,
+                           const nsACString& aDestPath) {
+  EncryptionStatus sourceStatus = EncryptionStatus::Unset;
+  nsresult rv = GetDatabaseEncryptionStatus(aSourcePath, sourceStatus);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  EncryptionStatus destStatus = EncryptionStatus::Unset;
+  rv = GetDatabaseEncryptionStatus(aDestPath, destStatus);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (sourceStatus == EncryptionStatus::Plaintext &&
+      destStatus == EncryptionStatus::Plaintext) {
+    return NS_OK;
+  }
+  if (sourceStatus != EncryptionStatus::Encrypted ||
+      destStatus != EncryptionStatus::Encrypted) {
+    // Moving a database in or out of the profile would need re-encrypting it.
+    return NS_ERROR_NOT_IMPLEMENTED;
+  }
+
+  nsString profilePath;
+  rv = GetCachedProfilePath(profilePath);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIFile> profileDir = new nsLocalFile();
+  rv = profileDir->InitWithPath(profilePath);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoCString sourceCollection;
+  rv = GetCollectionName(profileDir, aSourcePath, sourceCollection);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoCString destCollection;
+  rv = GetCollectionName(profileDir, aDestPath, destCollection);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // GetEncryptionKey takes sStateMutex itself, opens the keystore and
+  // unlocks the KEK the source DEK is wrapped under.
+  nsTArray<uint8_t> dek;
+  nsAutoCString hexKey;
+  nsresult keyRv =
+      GetEncryptionKey(aSourcePath, OpenIntent::LoadExisting, hexKey);
+  if (NS_SUCCEEDED(keyRv)) {
+    rv = HexDecode(hexKey, dek);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  StaticMutexAutoLock lock(sStateMutex);
+  if (sShuttingDown || !sHandle) {
+    return NS_FAILED(keyRv) ? keyRv : NS_ERROR_FAILURE;
+  }
+
+  if (NS_FAILED(keyRv)) {
+    // Only a source without any key is fine: its copy must not have one
+    // either.
+    bool sourceHasDek = true;
+    if (NS_FAILED(
+            keystore_dek_exists(sHandle, &sourceCollection, &sourceHasDek)) ||
+        sourceHasDek) {
+      return keyRv;
+    }
+  }
+
+  // Drop whatever key the destination had (e.g. left over from a database
+  // that was removed without its key), so it ends up keyed like the source.
+  bool destHasDek = false;
+  rv = keystore_dek_exists(sHandle, &destCollection, &destHasDek);
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (destHasDek) {
+    rv = keystore_delete_dek(sHandle, &destCollection);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  if (dek.IsEmpty()) {
+    return NS_OK;
+  }
+
+  rv = keystore_import_dek(sHandle, &destCollection, &sKekRef, dek.Elements(),
+                           dek.Length(), /* extractable */ true);
+  MOZ_LOG(GetSQLiteEncryptionLog(), LogLevel::Info,
+          ("Copied DEK of %s to %s (rv=0x%" PRIx32 ")", sourceCollection.get(),
+           destCollection.get(), static_cast<uint32_t>(rv)));
+  return rv;
 }
 
 // Delivery point for the console-supplied primarySecret, called from the Felt

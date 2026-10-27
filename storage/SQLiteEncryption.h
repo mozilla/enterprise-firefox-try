@@ -96,6 +96,15 @@ bool IsBootstrapDatabasePath(const nsACString& aPath);
 nsresult GetEncryptionKey(const nsACString& aDatabasePath, OpenIntent aIntent,
                           nsACString& aOutHexKey);
 
+// Give the database at |aDestPath| the key of the database at |aSourcePath|,
+// replacing any key |aDestPath| had. Call it after copying or renaming an
+// encrypted database file at the file system level and before opening the
+// copy, since keys are looked up by path. If the source has no key, the
+// destination is left without one too. A no-op when neither database is
+// encrypted; NS_ERROR_NOT_IMPLEMENTED when only one of them would be.
+nsresult CopyEncryptionKey(const nsACString& aSourcePath,
+                           const nsACString& aDestPath);
+
 // Release the process-wide lockstore handle held by this module. Called
 // from mozStorageService shutdown.
 void ShutdownEncryptionKeystore();

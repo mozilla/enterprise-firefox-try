@@ -52,13 +52,13 @@ class CacheAPIEncryptionLockstore(QuotaTestCase):
             self.origin,
             self.persistenceType,
         ):
-            self.marionette.execute_async_script(
+            error = self.marionette.execute_async_script(
                 """
                     const [name, requestStr, responseStr, resolve] = arguments;
                     const request = new Request(requestStr);
                     const response = new Response(responseStr);
                     window.wrappedJSObject.addDataIntoCache(name, request, response)
-                                        .then(resolve);
+                                        .then(() => resolve(null), e => resolve(String(e)));
                 """,
                 script_args=(
                     self.cacheName,
@@ -66,6 +66,7 @@ class CacheAPIEncryptionLockstore(QuotaTestCase):
                     self.cacheResponseStr,
                 ),
             )
+            self.assertIsNone(error, "Failed to add data into the cache")
 
             self.ensureInvariantHolds(
                 lambda _: os.path.exists(self.getCacheAPIStoragePath())
@@ -108,13 +109,13 @@ class CacheAPIEncryptionLockstore(QuotaTestCase):
             self.origin,
             self.persistenceType,
         ):
-            self.marionette.execute_async_script(
+            error = self.marionette.execute_async_script(
                 """
                     const [name, requestStr, responseStr, resolve] = arguments;
                     const request = new Request(requestStr);
                     const response = new Response(responseStr);
                     window.wrappedJSObject.addDataIntoCache(name, request, response)
-                                        .then(resolve);
+                                        .then(() => resolve(null), e => resolve(String(e)));
                 """,
                 script_args=(
                     self.cacheName,
@@ -122,6 +123,7 @@ class CacheAPIEncryptionLockstore(QuotaTestCase):
                     self.cacheResponseStr,
                 ),
             )
+            self.assertIsNone(error, "Failed to add data into the cache")
 
             self.ensureInvariantHolds(
                 lambda _: os.path.exists(self.getCacheAPIStoragePath())
@@ -204,13 +206,13 @@ class CacheAPIEncryptionLockstoreControl(QuotaTestCase):
             self.origin,
             self.persistenceType,
         ):
-            self.marionette.execute_async_script(
+            error = self.marionette.execute_async_script(
                 """
                     const [name, requestStr, responseStr, resolve] = arguments;
                     const request = new Request(requestStr);
                     const response = new Response(responseStr);
                     window.wrappedJSObject.addDataIntoCache(name, request, response)
-                                        .then(resolve);
+                                        .then(() => resolve(null), e => resolve(String(e)));
                 """,
                 script_args=(
                     self.cacheName,
@@ -218,6 +220,7 @@ class CacheAPIEncryptionLockstoreControl(QuotaTestCase):
                     self.cacheResponseStr,
                 ),
             )
+            self.assertIsNone(error, "Failed to add data into the cache")
 
             self.ensureInvariantHolds(
                 lambda _: os.path.exists(self.getCacheAPIStoragePath())
