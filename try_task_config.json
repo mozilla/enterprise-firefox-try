@@ -1,0 +1,30 @@
+{
+    "parameters": {
+        "base_rev": "0b13fe57edcc4d414f4a79e5f81bb40e18091310",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"marionette-integration\": [\"dom/cache/test/marionette\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-integration",
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/debug-marionette-integration",
+                "test-macosx1500-64-enterprise/debug-marionette-integration-swr",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-marionette-integration",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration",
+                "test-windows11-64-25h2-enterprise/debug-marionette-integration-swr",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-integration"
+            ]
+        }
+    },
+    "version": 2
+}
