@@ -1,0 +1,24 @@
+{
+    "parameters": {
+        "base_rev": "c11bf3702799b38411495eddd860b4963b021cff",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"xpcshell\": [\"toolkit/components/felt/tests/xpcshell\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-win64-aarch64-enterprise/opt",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-gtest-1proc",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
