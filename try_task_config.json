@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "base_rev": "e3091880cf30e3e5bb18fb760498cf572d989e50",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-macosx1500-64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-64-enterprise/opt-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
