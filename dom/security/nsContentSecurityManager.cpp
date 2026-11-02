@@ -57,7 +57,7 @@
 #  include <deque>
 #  include <utility>
 
-#  include "mozilla/glean/EnterprisepoliciesMetrics.h"
+#  include "mozilla/glean/EnterprisepoliciesMetricsEnterprise.h"
 #  include "mozilla/glean/GleanPings.h"
 #endif
 
