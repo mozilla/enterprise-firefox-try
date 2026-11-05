@@ -1,0 +1,24 @@
+{
+    "parameters": {
+        "base_rev": "8a7d396c7a8bfb881c82226b8fa85636611cfe84",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"xpcshell\": [\"toolkit/components/glean/tests/xpcshell\", \"toolkit/components/reputationservice/test/unit\", \"toolkit/mozapps/extensions/test/xpcshell\", \"browser/components/downloads/test/unit\", \"browser/components/contentanalysis/test/unit\"], \"mochitest-browser-chrome\": [\"toolkit/components/contentanalysis/tests/browser\", \"browser/components/enterprisepolicies/tests/browser\", \"browser/base/content/test/browser-safebrowsing\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/debug-xpcshell-*",
+                "test-macosx1500-64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
