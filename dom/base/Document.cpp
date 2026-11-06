@@ -9298,8 +9298,9 @@ void Document::CreateCustomContentContainerIfNeeded() {
 }
 
 already_AddRefed<AnonymousContent> Document::InsertAnonymousContent(
+    const AnonymousContentOptions& aOptions,
     ErrorResult& aRv) {
-  RefPtr<AnonymousContent> anonContent = AnonymousContent::Create(*this);
+  RefPtr<AnonymousContent> anonContent = AnonymousContent::Create(*this, aOptions.mIncludeInPrint);
   if (!anonContent) {
     aRv.Throw(NS_ERROR_OUT_OF_MEMORY);
     return nullptr;
@@ -13395,7 +13396,11 @@ nsresult Document::CloneDocHelper(Document* clone) const {
     cloneOptions.SetAsBoolean() = true;
 
     for (auto& content : mAnonymousContents) {
-      RefPtr destination = clone->InsertAnonymousContent(IgnoreErrors());
+      if (!content->IsIncludedInPrint()) {
+        continue;
+      }
+
+      RefPtr destination = clone->InsertAnonymousContent(AnonymousContentOptions{}, IgnoreErrors());
       for (nsIContent* child = content->Root()->GetFirstChild(); child; child = child->GetNextSibling()) {
         RefPtr clonedChild = clone->ImportNode(*child, cloneOptions, IgnoreErrors());
         destination->Root()->AppendChild(*clonedChild, IgnoreErrors());

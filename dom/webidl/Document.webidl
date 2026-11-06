@@ -540,6 +540,9 @@ partial interface Document {
   [ChromeOnly] readonly attribute DOMString? sandboxFlagsAsString;
 };
 
+dictionary AnonymousContentOptions {
+  boolean includeInPrint = false;
+};
 
 /**
  * Chrome document anonymous content management.
@@ -548,7 +551,7 @@ partial interface Document {
  */
 partial interface Document {
   [ChromeOnly, NewObject, Throws]
-  AnonymousContent insertAnonymousContent();
+  AnonymousContent insertAnonymousContent(optional AnonymousContentOptions options = {});
 
   /**
    * Removes the element inserted into the CanvasFrame given an AnonymousContent
