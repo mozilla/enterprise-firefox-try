@@ -1,0 +1,12 @@
+{
+    "parameters": {
+        "base_rev": "8a7d396c7a8bfb881c82226b8fa85636611cfe84",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "tasks": [
+                "comm-decision"
+            ]
+        }
+    },
+    "version": 2
+}

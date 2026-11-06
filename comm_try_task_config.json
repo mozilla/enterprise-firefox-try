@@ -1,0 +1,30 @@
+{
+    "parameters": {
+        "base_rev": "8a7d396c7a8bfb881c82226b8fa85636611cfe84",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-macosx1470-64-enterprise/debug-marionette-enterprise",
+                "test-macosx1470-64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-macosx1470-64-enterprise/opt-marionette-enterprise",
+                "test-macosx1470-64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-thunderbird"
+            ]
+        }
+    },
+    "version": 2
+}
