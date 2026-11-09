@@ -1,0 +1,33 @@
+{
+    "parameters": {
+        "base_rev": "350030ed8655f3c6a835310e7e38847c92aefe69",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-macosx1470-64-enterprise/debug-marionette-enterprise",
+                "test-macosx1470-64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-macosx1470-64-enterprise/opt-marionette-enterprise",
+                "test-macosx1470-64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise-thunderbird",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-thunderbird",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-thunderbird"
+            ],
+            "worker-overrides": {
+                "linux-signing": "scriptworker-k8s/enterprise-t-signingdev"
+            }
+        }
+    },
+    "version": 2
+}
