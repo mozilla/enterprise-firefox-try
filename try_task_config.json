@@ -1,0 +1,27 @@
+{
+    "parameters": {
+        "base_rev": "52e92a95d089ede6503dd06261c47299237d73a8",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "source-test-python-marionette-harness-linux2404-64/opt",
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/debug-marionette-integration",
+                "test-linux2404-64-enterprise/debug-marionette-integration-swr",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-integration",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64/debug-marionette-integration",
+                "test-linux2404-64/debug-marionette-integration-swr",
+                "test-linux2404-64/debug-marionette-unittest",
+                "test-linux2404-64/debug-marionette-unittest-swr",
+                "test-linux2404-64/debug-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
