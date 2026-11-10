@@ -1,0 +1,19 @@
+{
+    "parameters": {
+        "base_rev": "f6a5dcf5c9824c8971069511c3c7146d3e56e2d7",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"toolkit/components/enterprisepolicies\", \"browser/components/enterprisepolicies\"], \"xpcshell\": [\"toolkit/components/enterprisepolicies\", \"browser/components/enterprisepolicies\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-linux2404-64/debug-mochitest-browser-chrome-swr-*",
+                "test-linux2404-64/debug-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
