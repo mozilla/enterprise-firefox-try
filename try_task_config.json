@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "29234c544afd9883ce57ac990bcd3f9701b13547",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
