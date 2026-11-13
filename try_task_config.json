@@ -1,0 +1,20 @@
+{
+    "parameters": {
+        "base_rev": "a47e68f64540683f3febf1c834620959834b4570",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-marionette-enterprise-*",
+                "test-linux2404-64-enterprise/opt-marionette-enterprise-*",
+                "test-macosx1500-aarch64-enterprise/debug-marionette-enterprise-*",
+                "test-macosx1500-aarch64-enterprise/opt-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/debug-marionette-enterprise-*",
+                "test-windows11-64-25h2-enterprise/opt-marionette-enterprise-*"
+            ]
+        }
+    },
+    "version": 2
+}
