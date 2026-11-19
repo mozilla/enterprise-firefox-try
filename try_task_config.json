@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "ae38a15bc1080c0205eff2fa9ffe009dfdf7a746",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-enterprise/opt",
+                "build-macosx64-enterprise/opt",
+                "build-win64-enterprise/opt"
+            ]
+        }
+    },
+    "version": 2
+}
