@@ -227,7 +227,6 @@ win64-enterprise/debug:
         platform: windows2012-64-enterprise/debug
         symbol: Bent
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 7200
         env:
@@ -537,7 +536,6 @@ win64-enterprise-shippable/opt:
         platform: windows2012-64-enterprise-shippable/opt
         symbol: Bpgo(Bent)
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 7200
         env:
@@ -596,7 +594,6 @@ win64-enterprise/opt:
         platform: windows2012-64-enterprise/opt
         symbol: Bent
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 7200
         env:
@@ -654,7 +651,6 @@ win64-aarch64-enterprise/opt:
         tier: 1
     run-on-projects: ["enterprise-firefox"]
     run-on-repo-type: ["git"]
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         # env:
@@ -710,7 +706,6 @@ win64-aarch64-enterprise/debug:
         tier: 1
     run-on-projects: ["enterprise-firefox"]
     run-on-repo-type: ["git"]
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         # env:
@@ -770,7 +765,6 @@ win64-aarch64-enterprise-shippable/opt:
         tier: 1
     run-on-projects: ["enterprise-firefox"]
     run-on-repo-type: ["git"]
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         env:
@@ -940,7 +934,6 @@ win64-shippable/opt:
         symbol: Bpgo(B)
         tier: 1
     run-on-projects: ['release']
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         env:
@@ -992,7 +985,6 @@ win64-nightlyasrelease/opt:
     treeherder:
         platform: win64-nightlyasrelease/opt
         symbol: Bpgo(Bnar)
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         env:
@@ -1736,7 +1728,6 @@ win64-devedition/opt:
         platform: windows2012-64-devedition/opt
         symbol: B
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         env:
@@ -1900,7 +1891,6 @@ win64-aarch64-shippable/opt:
         symbol: Bpgo(B)
         tier: 1
     run-on-projects: ['release']
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         env:
@@ -1956,7 +1946,6 @@ win64-aarch64-devedition/opt:
         platform: windows2012-aarch64-devedition/opt
         symbol: Bpgo(B)
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 10800
         env:

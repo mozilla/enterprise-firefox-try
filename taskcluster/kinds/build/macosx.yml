@@ -73,7 +73,6 @@ macosx64/debug:
 
 macosx64-enterprise/debug:
     description: "MacOS X x64 Enterprise Cross-compile"
-    worker-type: b-linux-docker-xlarge-amd
     index:
         job-name: macosx64-enterprise-debug
     attributes:
@@ -116,7 +115,6 @@ macosx64-aarch64-enterprise/debug:
         platform: osx-cross-aarch64-enterprise/debug
         symbol: Bent
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 5400
         env:
@@ -276,7 +274,6 @@ macosx64/opt:
 
 macosx64-enterprise/opt:
     description: "MacOS X x64 Enterprise Cross-compile"
-    worker-type: b-linux-docker-xlarge-amd
     index:
         job-name: macosx64-enterprise-opt
     attributes:
@@ -354,7 +351,6 @@ macosx64-x64-enterprise-shippable/opt:
         tier: 1
     run-on-projects: ["enterprise-firefox"]
     run-on-repo-type: ["git"]
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 7200
         env:
@@ -392,7 +388,6 @@ macosx64-aarch64-enterprise-shippable/opt:
         symbol: Bpgo(Bent)
         tier: 1
     run-on-projects: ["enterprise-firefox"]
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 7200
         env:
@@ -581,7 +576,6 @@ macosx64-aarch64-enterprise/opt:
         platform: osx-cross-aarch64-enterprise/opt
         symbol: Bent
         tier: 1
-    worker-type: b-linux-docker-xlarge-amd
     worker:
         max-run-time: 7200
         env:
