@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "base_rev": "d3e9e2f72a947dab36a4199d6814ace0e6ccdec9",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "source-test-mozlint-py-ruff-format",
+                "source-test-mozlint-test-manifest"
+            ]
+        }
+    },
+    "version": 2
+}
