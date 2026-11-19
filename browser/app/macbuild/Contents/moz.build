@@ -10,6 +10,7 @@ for s in (
     "MOZ_TSAN",
     "FUZZING",
     "MOZ_CRASHREPORTER",
+    "MOZ_ENTERPRISE",
     "MOZ_APP_NAME",
 ):
     if CONFIG[s]:

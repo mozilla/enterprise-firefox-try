@@ -35,3 +35,37 @@ access_connector:
           The hostname of the site that failed to load through the Access
           Connector proxy.
         type: string
+
+enterprise_mcp:
+  operation:
+    type: event
+    data_sensitivity:
+      - highly_sensitive
+    description: >
+      Records whether Firefox Enterprise authorized a local MCP operation.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=TBD
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=TBD
+    notification_emails:
+      - security-telemetry@mozilla.org
+      - enterprise-telemetry@mozilla.org
+    expires: never
+    send_in_pings:
+      - enterprise
+    extra_keys:
+      session:
+        description: Random identifier for this browser connection.
+        type: string
+      category:
+        description: The tool grant checked.
+        type: string
+      operation:
+        description: The operation requested by the connector.
+        type: string
+      origin:
+        description: The HTTP(S) origin involved, if known.
+        type: string
+      decision:
+        description: Whether the browser allowed or denied the operation.
+        type: string

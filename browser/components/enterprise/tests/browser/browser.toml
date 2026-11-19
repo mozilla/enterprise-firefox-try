@@ -2,6 +2,11 @@
 
 ["browser_access_connector_button.js"]
 
+["browser_enterprise_mcp_integration.js"]
+run-if = ["os == 'linux' || os == 'mac'"]
+
+["browser_enterprise_mcp_read.js"]
+
 ["browser_fxa_ui_hidden.js"]
 
 ["browser_profile_management_disabled.js"]

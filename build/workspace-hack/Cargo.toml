@@ -266,6 +266,7 @@ version = "0.8"
 optional = true
 
 [features]
+firefox-enterprise-mcp = ["dep:serde_json"]
 backgroundtaskregistrar = []
 msixcomserver_s = []
 crash_helper_server = ["dep:cc", "dep:num-traits", "dep:log", "dep:once_cell", "dep:uuid", "dep:windows-sys"]

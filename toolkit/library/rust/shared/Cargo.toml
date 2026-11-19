@@ -47,6 +47,7 @@ bitsdownload = { path = "../../../components/bitsdownload", optional = true }
 storage = { path = "../../../../storage/rust" }
 bookmark_sync = { path = "../../../components/places/bookmark_sync", optional = true }
 buildid_reader_ffi = { path = "../../buildid_reader/ffi" }
+firefox-enterprise-mcp = { path = "../../../../browser/app/enterprise-mcp", optional = true, features = ["gecko"] }
 felt = { path = "../../../../toolkit/components/felt/rust", optional = true }
 chardetng_c = "1.0.0"
 audio_thread_priority = { version = "0.38.0", default-features = false }
@@ -185,6 +186,7 @@ for_xul = [
     "rusqlite/in_gecko"
 ]
 felt = ["dep:felt", "fog_control/felt"]
+enterprise-mcp = ["dep:firefox-enterprise-mcp"]
 webrender_debugger = ["webrender_bindings/debugger"]
 shell_windows = ["dep:shell_windows"]
 backgroundtaskregistrar = ["dep:backgroundtaskregistrar"]

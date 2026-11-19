@@ -56,6 +56,7 @@ const PREF_POLICIES_APPLIED = "browser.policies.applied";
 const PREF_REMOTE_POLICIES_ENABLED = "enterprise.policies.live.enabled";
 
 const POLICY_DISABLE_LOCAL_POLICIES = "DisableLocalPolicies";
+const POLICY_ENTERPRISE_MCP = "EnterpriseMCP";
 
 const STATUS_NAMES = {
   [Ci.nsIEnterprisePolicies.UNINITIALIZED]: "UNINITIALIZED",
@@ -562,7 +563,10 @@ EnterprisePoliciesManager.prototype = {
 
       if (!isValid) {
         lazy.log.debug(`Updated policy params for ${policyName} are invalid.`);
-        if (policyName in previousPolicies) {
+        if (
+          policyName !== POLICY_ENTERPRISE_MCP &&
+          policyName in previousPolicies
+        ) {
           // Keep the previously applied policy version in effect.
           parsedPolicies[policyName] = previousPolicies[policyName];
           appliedHashes.set(
@@ -727,8 +731,9 @@ EnterprisePoliciesManager.prototype = {
       parsedValue: parsedParams,
       error: validationError,
     } = lazy.PolicySchemaValidator.validate(policyParams, policySchema, {
-      allowAdditionalProperties: true,
+      allowAdditionalProperties: policyName !== POLICY_ENTERPRISE_MCP,
       policyName,
+      strict: policyName === POLICY_ENTERPRISE_MCP,
     });
 
     if (!isValid) {
@@ -965,6 +970,7 @@ EnterprisePoliciesManager.prototype = {
       RemotePoliciesProvider.dropInstance();
     }
     this._provider = null;
+    Services.obs.notifyObservers(null, "EnterprisePolicies:Discarded");
   },
 
   async _resetEngine() {
@@ -1594,6 +1600,8 @@ class RemotePoliciesProvider extends PoliciesProvider {
     this._updateInProgress = false;
     this._lastPoliciesHash = null;
     this._lastPollError = null;
+    this._mcpPolicyAvailable = false;
+    this._destroyed = false;
     this._pollingFrequency = Services.prefs.getIntPref(
       this.POLLING_FREQUENCY_PREF,
       this.POLLING_FREQUENCY_FALLBACK
@@ -1604,6 +1612,7 @@ class RemotePoliciesProvider extends PoliciesProvider {
   }
 
   _destroy() {
+    this._destroyed = true;
     this._stopPolling();
     Services.prefs.removeObserver(this.POLLING_FREQUENCY_PREF, this);
     Services.obs.removeObserver(this, "EnterprisePolicies:Initialized");
@@ -1649,6 +1658,18 @@ class RemotePoliciesProvider extends PoliciesProvider {
     }
   }
 
+  get enterpriseMCPPolicy() {
+    if (
+      this._mcpPolicyAvailable &&
+      Services.felt.isFeltBrowser() &&
+      !Services.felt.isManagedAppDisconnectedFromFelt() &&
+      Object.hasOwn(this._policies, POLICY_ENTERPRISE_MCP)
+    ) {
+      return this._policies[POLICY_ENTERPRISE_MCP];
+    }
+    return undefined;
+  }
+
   _stopPolling() {
     if (!this._poller) {
       return;
@@ -1669,8 +1690,8 @@ class RemotePoliciesProvider extends PoliciesProvider {
     try {
       lazy.log.debug("Polling for remote policies.");
       const changed = await this.ingestPolicies();
-      if (!changed) {
-        lazy.log.debug("Remote policies unchanged, not firing an update.");
+      if (this._destroyed || !changed) {
+        lazy.log.debug("Remote policies unchanged or provider retired.");
         return;
       }
       lazy.log.debug("Remote policies changed; firing update.");
@@ -1680,6 +1701,10 @@ class RemotePoliciesProvider extends PoliciesProvider {
         `Failed to poll for remote policies: ${describeConsoleRequestError(e)}`,
         e
       );
+      if (!this._destroyed && this._mcpPolicyAvailable) {
+        this._mcpPolicyAvailable = false;
+        Services.obs.notifyObservers(null, "EnterprisePolicies:Update");
+      }
     } finally {
       this._updateInProgress = false;
     }
@@ -1724,14 +1749,23 @@ class RemotePoliciesProvider extends PoliciesProvider {
    */
   async ingestPolicies() {
     const res = await lazy.ConsoleClient.getRemotePolicies();
-    if (!res?.policies) {
+    if (this._destroyed) {
+      return false;
+    }
+    const mcpPolicyWasAvailable = this._mcpPolicyAvailable;
+    const validPolicies =
+      !!res?.policies &&
+      typeof res.policies === "object" &&
+      !Array.isArray(res.policies);
+    this._mcpPolicyAvailable = validPolicies && res.trustedMCPSource === true;
+    if (!validPolicies) {
       this._reportPollFailure(
         `The console response has no policies field: ${JSON.stringify(res)}.`
       );
       const wasFailed = this._failed;
       this._failed = true;
       // A new failure must refresh the engine status to FAILED
-      return !wasFailed;
+      return !wasFailed || mcpPolicyWasAvailable;
     }
 
     const wasFailed = this._failed;
@@ -1761,7 +1795,10 @@ class RemotePoliciesProvider extends PoliciesProvider {
     // changed. Recovering from a failure must refresh the status too, even if
     // the payload matches the last good set.
     const policiesHash = hashValue(this._policies);
-    const changed = policiesHash !== this._lastPoliciesHash || wasFailed;
+    const changed =
+      policiesHash !== this._lastPoliciesHash ||
+      wasFailed ||
+      mcpPolicyWasAvailable !== this._mcpPolicyAvailable;
     this._lastPoliciesHash = policiesHash;
     return changed;
   }
@@ -1883,6 +1920,14 @@ export class CombinedProvider extends PoliciesProvider {
       userOnly = {};
     }
     this._policies = { ...userOnly, ...policies };
+    delete this._policies[POLICY_ENTERPRISE_MCP];
+    const remoteProvider = this._providers.find(
+      provider => provider instanceof RemotePoliciesProvider
+    );
+    const enterpriseMCP = remoteProvider?.enterpriseMCPPolicy;
+    if (enterpriseMCP !== undefined) {
+      this._policies[POLICY_ENTERPRISE_MCP] = enterpriseMCP;
+    }
   }
 
   _disablesUserPolicies(policies) {

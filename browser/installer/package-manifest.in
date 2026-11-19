@@ -166,6 +166,9 @@
 @RESPATH@/application.ini
 #ifdef MOZ_ENTERPRISE
 @RESPATH@/firefox.cfg
+#if defined(XP_LINUX) || defined(XP_MACOSX)
+@BINPATH@/firefox-enterprise-mcp@BIN_SUFFIX@
+#endif
 #endif
 #ifdef MOZ_UPDATER
 # update-settings.ini has been removed on macOS.

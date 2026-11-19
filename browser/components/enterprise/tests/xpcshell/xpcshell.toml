@@ -1,6 +1,8 @@
 [DEFAULT]
 firefox-appdir = "browser"
 
+["test_enterprise_mcp_policy.js"]
+
 ["test_nimbus_disabled.js"]
 head = "../../../../../toolkit/profile/test/xpcshell/head.js ../../../profiles/tests/unit/head.js ../../../../../toolkit/components/nimbus/test/unit/head.js"
 prefs = [

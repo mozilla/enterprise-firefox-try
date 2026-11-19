@@ -12,6 +12,10 @@ MOZ_SRC_FILES += [
     "EnterpriseForcedQuit.sys.mjs",
     "EnterpriseHandler.sys.mjs",
     "EnterpriseThemeMigration.sys.mjs",
+    "mcp/EnterpriseMCP.sys.mjs",
+    "mcp/EnterpriseMCPChild.sys.mjs",
+    "mcp/EnterpriseMCPParent.sys.mjs",
+    "mcp/EnterpriseMCPPolicy.sys.mjs",
 ]
 
 XPCOM_MANIFESTS += ["components.conf"]
