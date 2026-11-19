@@ -13,3 +13,5 @@
 if test -n "$USE_ARTIFACT"; then
 . "$topsrcdir/build/mozconfig.artifact"
 fi
+
+ac_add_options --disable-updater

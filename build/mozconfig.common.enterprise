@@ -3,3 +3,4 @@ ac_add_options --enable-enterprise
 # Enterprise builds use Telemetry for security logging,
 # and it goes to the console, so enable it by default.
 ac_add_options MOZ_TELEMETRY_REPORTING=1
+ac_add_options --disable-updater
