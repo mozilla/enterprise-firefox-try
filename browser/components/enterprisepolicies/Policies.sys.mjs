@@ -23,6 +23,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AddonManager: "resource://gre/modules/AddonManager.sys.mjs",
   AddonManagerPrivate: "resource://gre/modules/AddonManager.sys.mjs",
   BookmarksPolicies: "resource:///modules/policies/BookmarksPolicies.sys.mjs",
+  EnterpriseMCP:
+    "moz-src:///browser/components/enterprise/mcp/EnterpriseMCP.sys.mjs",
+  compilePolicy:
+    "moz-src:///browser/components/enterprise/mcp/EnterpriseMCPPolicy.sys.mjs",
   ContentAnalysisPolicies:
     "moz-src:///browser/components/enterprisepolicies/helpers/ContentAnalysisPolicies.sys.mjs",
   CustomizableUI:
@@ -1893,6 +1897,23 @@ export var Policies = {
           param.Locked
         );
       }
+    },
+  },
+
+  EnterpriseMCP: {
+    validate(param) {
+      try {
+        lazy.compilePolicy(param);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    onBeforeUIStartup(manager, param) {
+      lazy.EnterpriseMCP.apply(param);
+    },
+    onRemove() {
+      lazy.EnterpriseMCP.remove();
     },
   },
 

@@ -32,6 +32,8 @@ extern crate dom_speculationrules;
 extern crate encoding_glue;
 #[cfg(feature = "felt")]
 extern crate felt;
+#[cfg(feature = "enterprise-mcp")]
+extern crate firefox_enterprise_mcp;
 extern crate fog_control;
 #[cfg(feature = "fontations")]
 extern crate fontations_glue;

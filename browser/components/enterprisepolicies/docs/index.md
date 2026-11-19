@@ -109,3 +109,9 @@ Notes inside a release channel apply only to that channel:
   "firefox_enterprise": { "version_added": "149" }
 }
 ```
+
+```{toctree}
+:maxdepth: 1
+
+enterprise-mcp
+```

@@ -86,6 +86,11 @@ if CONFIG["USE_LIBZ_RS"]:
 
 if CONFIG["MOZ_ENTERPRISE"]:
     gkrust_features += ["felt"]
+    if CONFIG["MOZ_BUILD_APP"] == "browser" and CONFIG["OS_TARGET"] in (
+        "Linux",
+        "Darwin",
+    ):
+        gkrust_features += ["enterprise-mcp"]
 
 if CONFIG["MOZ_FONTATIONS"]:
     gkrust_features += ["fontations"]

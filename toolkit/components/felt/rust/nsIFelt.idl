@@ -31,6 +31,9 @@ interface nsIFelt : nsISupports {
   [must_use]
   boolean isFeltBrowser();
 
+  [must_use]
+  boolean hasActiveManagedSession();
+
   /**
    * Whether the managed application has lost its IPC connection to felt. Throws
    * NS_ERROR_UNEXPECTED when called outside the felt browser.

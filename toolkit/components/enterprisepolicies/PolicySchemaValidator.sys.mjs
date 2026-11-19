@@ -62,6 +62,8 @@ const JSON_MEDIA_TYPE = "application/json";
  * @param {boolean} [options.allowAdditionalProperties]
  *   When true, object properties not described by the schema are stripped from
  *   the parsed value. When false, they cause validation to fail.
+ * @param {boolean} [options.strict]
+ *   Validate the original JSON without coercing values or dropping entries.
  * @param {string} [options.policyName]
  *   Name of the policy being validated, used to root the paths reported when an
  *   invalid entry is dropped.
@@ -74,14 +76,12 @@ const JSON_MEDIA_TYPE = "application/json";
 export function validate(
   value,
   schema,
-  { allowAdditionalProperties = false, policyName = "" } = {}
+  { allowAdditionalProperties = false, policyName = "", strict = false } = {}
 ) {
   try {
-    const normalized = trimInvalidEntries(
-      normalize(value, schema),
-      schema,
-      policyName
-    );
+    const normalized = strict
+      ? value
+      : trimInvalidEntries(normalize(value, schema), schema, policyName);
 
     const { valid, errors } = lazy.JsonSchema.validate(normalized, schema);
     if (!valid) {
