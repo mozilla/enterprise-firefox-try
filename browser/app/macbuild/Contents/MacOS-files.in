@@ -16,6 +16,9 @@
 #if defined(MOZ_CRASHREPORTER)
 /crashhelper
 #endif
+#if defined(MOZ_ENTERPRISE)
+/firefox-enterprise-mcp
+#endif
 /nmhproxy
 /pingsender
 /pk12util

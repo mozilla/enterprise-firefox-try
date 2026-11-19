@@ -321,10 +321,26 @@ export const ConsoleClient = {
    * A plain authenticated GET; posture is reported on the same cadence by the
    * Felt posture monitor, not here.
    *
-   * @returns {Promise<{policies: Record<string, any>}>}
+   * @returns {Promise<{policies: Record<string, any>, trustedMCPSource: boolean}>}
    */
   async getRemotePolicies() {
-    return this._get(this._paths.REMOTE_POLICIES);
+    const path = this._paths.REMOTE_POLICIES;
+    const { body, requestedURL, responseURL } = await this._fetch(path, "GET", {
+      includeResponseURL: true,
+    });
+    let trustedMCPSource = false;
+    if (Services.felt.isFeltBrowser()) {
+      try {
+        const consoleURL = new URL(path, Services.felt.getConsoleUrl());
+        trustedMCPSource =
+          consoleURL.protocol === "https:" &&
+          consoleURL.href === requestedURL &&
+          requestedURL === responseURL;
+      } catch {
+        // Felt has not supplied a trusted console address yet.
+      }
+    }
+    return { ...body, trustedMCPSource };
   },
 
   /**
@@ -350,8 +366,8 @@ export const ConsoleClient = {
    * which native fetch() does not expose.
    *
    * Limitations compared to native fetch():
-   * - Response object only has: ok, status, json(), text(), arrayBuffer()
-   * - Missing: statusText, headers, url, redirected, clone(), blob(),
+   * - Response object only has: ok, status, url, json(), text(), arrayBuffer()
+   * - Missing: statusText, headers, redirected, clone(), blob(),
    *   formData()
    * - json()/text() can be called multiple times (no body consumption)
    *
@@ -365,7 +381,7 @@ export const ConsoleClient = {
    * @param {string|null} [options.body=null] - Request body
    * @param {""|"arraybuffer"} [options.responseType=""] - XHR response type -
    *   use "arraybuffer" for binary responses and "" for text responses.
-   * @returns {Promise<{ok: boolean, status: number, json: Function, text: Function, arrayBuffer: Function}>}
+   * @returns {Promise<{ok: boolean, status: number, url: string, json: Function, text: Function, arrayBuffer: Function}>}
    */
   _xhrFetch(
     url,
@@ -389,6 +405,7 @@ export const ConsoleClient = {
         const response = {
           ok: xhr.status >= 200 && xhr.status < 300,
           status: xhr.status,
+          url: xhr.responseURL,
           json() {
             try {
               return Promise.resolve(JSON.parse(xhr.responseText));
@@ -456,11 +473,15 @@ export const ConsoleClient = {
    *
    * @param {string} path - Console API to request
    * @param {"GET"|"POST"} method - Console API method to use
-   * @param {{ _didRefresh?: boolean, jsonBody?: object }} [options]
+   * @param {{ _didRefresh?: boolean, jsonBody?: object, includeResponseURL?: boolean }} [options]
    * @throws {Error}
    * @returns {Promise<any>} Parsed JSON response body.
    */
-  async _fetch(path, method, { _didRefresh = false, jsonBody = null } = {}) {
+  async _fetch(
+    path,
+    method,
+    { _didRefresh = false, jsonBody = null, includeResponseURL = false } = {}
+  ) {
     if (method !== "GET" && method !== "POST") {
       throw new TypeError(
         `Invalid method: ${method}. Expected "GET" or "POST".`
@@ -483,12 +504,19 @@ export const ConsoleClient = {
     });
 
     if (res.ok) {
-      return await res.json();
+      const body = await res.json();
+      return includeResponseURL
+        ? { body, requestedURL: url, responseURL: res.url }
+        : body;
     }
 
     if ((res.status === 403 || res.status === 401) && !_didRefresh) {
       await this._refreshSession();
-      return this._fetch(path, method, { _didRefresh: true, jsonBody });
+      return this._fetch(path, method, {
+        _didRefresh: true,
+        jsonBody,
+        includeResponseURL,
+      });
     }
 
     const text = await res.text().catch(() => "");

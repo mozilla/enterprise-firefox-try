@@ -14,6 +14,7 @@ for feature in gkrust_features:
         "gkrust-shared/gecko_refcount_logging",
         "gkrust-shared/glean_with_gecko",
         "gkrust-shared/noise_xpcom",
+        "enterprise-mcp",
     ):
         RUST_TEST_FEATURES.append(feature)
 

@@ -1900,3 +1900,8 @@ reduced-protection-infobar-reload-button = Reload
   .accesskey = R
 reduced-protection-infobar-never-show-button = Don’t show again
   .accesskey = D
+
+enterprise-mcp-active = A local agent can read this tab.
+enterprise-mcp-stop = Stop
+enterprise-mcp-stopped = Local agent access to this tab is stopped.
+enterprise-mcp-allow = Allow agent access

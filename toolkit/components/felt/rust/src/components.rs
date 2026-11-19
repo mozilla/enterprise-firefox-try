@@ -34,6 +34,7 @@ pub struct FeltXPCOM {
     is_felt_ui: bool,
     is_felt_browser: bool,
     is_felt_safe_mode: bool,
+    managed_session_ending: AtomicBool,
 }
 
 /// The authorization decision for a connecting peer, made from its OS process id
@@ -74,6 +75,7 @@ impl FeltXPCOM {
             is_felt_ui: _is_felt_ui,
             is_felt_browser: _is_felt_browser,
             is_felt_safe_mode: _is_felt_safe_mode,
+            managed_session_ending: AtomicBool::new(false),
         })
     }
 
@@ -389,6 +391,8 @@ impl FeltXPCOM {
         let guard = crate::FELT_CLIENT.lock().expect("Could not get lock");
         match &*guard {
             Some(client) => {
+                self.managed_session_ending.store(true, Ordering::Relaxed);
+                utils::notify_observers("felt-firefox-signout-requested".to_string());
                 client.notify_signout();
                 NS_OK
             }
@@ -707,6 +711,19 @@ impl FeltXPCOM {
             return Err(NS_ERROR_UNEXPECTED);
         }
         Ok(crate::is_managed_app_disconnected_from_felt())
+    }
+
+    xpcom_method!(has_active_managed_session => HasActiveManagedSession() -> bool);
+    fn has_active_managed_session(&self) -> Result<bool, nsresult> {
+        if !self.is_felt_browser
+            || self.managed_session_ending.load(Ordering::Relaxed)
+            || crate::is_managed_app_disconnected_from_felt()
+        {
+            return Ok(false);
+        }
+        let tokens = TOKENS.read().map_err(|_| NS_ERROR_FAILURE)?;
+        Ok(!tokens.access_token.is_empty()
+            && tokens.expires_at > UtcDateTime::now().unix_timestamp())
     }
 
     xpcom_method!(is_felt_safe_mode => IsFeltSafeMode() -> bool);

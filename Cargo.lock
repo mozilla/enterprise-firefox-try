@@ -2422,6 +2422,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "firefox-enterprise-mcp"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "mozilla-central-workspace-hack",
+ "nserror",
+ "nsstring",
+ "serde",
+ "serde_json",
+ "xpcom",
+]
+
+[[package]]
 name = "firefox-on-glean"
 version = "0.1.0"
 dependencies = [
@@ -3086,6 +3099,7 @@ dependencies = [
  "etagere",
  "etp_engine",
  "felt",
+ "firefox-enterprise-mcp",
  "fluent",
  "fluent-fallback",
  "fluent-ffi",
