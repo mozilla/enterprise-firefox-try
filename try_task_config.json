@@ -1,0 +1,21 @@
+{
+    "parameters": {
+        "base_rev": "7653cf245d38ad2a517b6d5b29c470af3c1c6d26",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"browser/components/uitour/test\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64/debug-mochitest-browser-chrome-swr-*",
+                "test-windows11-32-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2/debug-mochitest-browser-chrome-msix-*"
+            ]
+        }
+    },
+    "version": 2
+}
