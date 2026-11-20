@@ -325,6 +325,7 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
     const principal = document?.nodePrincipal;
     if (
       this.browsingContext.parent ||
+      !this.manager.isCurrentGlobal ||
       !document?.body ||
       document.visibilityState !== "visible" ||
       document.contentType !== "text/html" ||
@@ -396,11 +397,7 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
     return controls;
   }
 
-  #interact(
-    window,
-    document,
-    { element: handle, action, ticket, existingTab }
-  ) {
+  #interact(window, document, { element: handle, action, existingTab }) {
     const control = this.#controls.get(handle);
     const element = control?.element;
     const kind = element && controlKind(document, element);
@@ -428,15 +425,7 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
       return false;
     }
 
-    const [allowed] = Services.cpmm.sendSyncMessage("EnterpriseMCP:Authorize", {
-      ticket,
-    });
-    if (
-      !allowed ||
-      !element.isConnected ||
-      window.document !== document ||
-      document.hasValidTransientUserGestureActivation
-    ) {
+    if (!element.isConnected || window.document !== document) {
       return false;
     }
 
