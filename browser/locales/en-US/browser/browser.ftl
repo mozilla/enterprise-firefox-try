@@ -1905,3 +1905,4 @@ enterprise-mcp-active = A local agent can read this tab.
 enterprise-mcp-stop = Stop
 enterprise-mcp-stopped = Local agent access to this tab is stopped.
 enterprise-mcp-allow = Allow agent access
+enterprise-mcp-agent-tab = A local agent opened this tab. Stopping the agent will close it.

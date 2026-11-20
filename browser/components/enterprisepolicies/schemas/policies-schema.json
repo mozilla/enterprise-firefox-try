@@ -4,14 +4,7 @@
   "definitions": {
     "enterpriseMCPTool": {
       "type": "string",
-      "enum": [
-        "Navigation",
-        "ReadPage",
-        "Interact",
-        "NetworkMetadata",
-        "ConsoleSummaries",
-        "VisiblePageScreenshots"
-      ]
+      "enum": ["Navigation", "ReadPage", "Interact"]
     },
     "url": { "type": "string", "format": "moz-url" },
     "urlOrEmpty": {
@@ -2369,6 +2362,32 @@
       }
     },
 
+    "EncryptedMediaExtensions": {
+      "type": "object",
+      "x-category": "Content settings",
+      "x-compatibility": {
+        "firefox": { "version_added": "77" },
+        "firefox_esr": { "version_added": "68.9.0" },
+        "firefox_enterprise": { "version_added": "149" }
+      },
+      "x-restart-required": true,
+      "description": "Enable or disable Encrypted Media Extensions and optionally lock it.",
+      "examples": [
+        {
+          "Enabled": true,
+          "Locked": true
+        }
+      ],
+      "properties": {
+        "Enabled": {
+          "type": "boolean"
+        },
+        "Locked": {
+          "type": "boolean"
+        }
+      }
+    },
+
     "EnterpriseMCP": {
       "type": "object",
       "x-category": "Security",
@@ -2394,22 +2413,7 @@
       "properties": {
         "ClientAccess": {
           "type": "string",
-          "enum": ["Disabled", "LocalUser", "ApprovedClients"]
-        },
-        "ApprovedClients": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["Id", "PublicKey"],
-            "properties": {
-              "Id": { "type": "string" },
-              "PublicKey": {
-                "type": "string",
-                "description": "Base64-encoded SubjectPublicKeyInfo for the enrolled client-installation key."
-              }
-            }
-          }
+          "enum": ["Disabled", "LocalUser"]
         },
         "SiteMode": {
           "type": "string",
@@ -2442,32 +2446,6 @@
               }
             }
           }
-        }
-      }
-    },
-
-    "EncryptedMediaExtensions": {
-      "type": "object",
-      "x-category": "Content settings",
-      "x-compatibility": {
-        "firefox": { "version_added": "77" },
-        "firefox_esr": { "version_added": "68.9.0" },
-        "firefox_enterprise": { "version_added": "149" }
-      },
-      "x-restart-required": true,
-      "description": "Enable or disable Encrypted Media Extensions and optionally lock it.",
-      "examples": [
-        {
-          "Enabled": true,
-          "Locked": true
-        }
-      ],
-      "properties": {
-        "Enabled": {
-          "type": "boolean"
-        },
-        "Locked": {
-          "type": "boolean"
         }
       }
     },

@@ -47,9 +47,12 @@ export function compilePolicy(policy) {
   );
   return {
     clientAccess: policy.ClientAccess,
-    hasReadGrant:
-      defaultTools.has("ReadPage") ||
-      sites.some(({ tools }) => tools.has("ReadPage")),
+    hasGrant(category) {
+      return (
+        defaultTools.has(category) ||
+        sites.some(({ tools }) => tools.has(category))
+      );
+    },
     grants(url, category) {
       return (
         (url.protocol === "http:" || url.protocol === "https:") &&
