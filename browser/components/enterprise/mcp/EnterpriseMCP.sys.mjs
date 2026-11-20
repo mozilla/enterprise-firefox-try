@@ -424,7 +424,7 @@ export const EnterpriseMCP = new (class {
     const client = this.#clients.get(id);
     const challenge = client?.challenge;
     const key = this.#policy.approvedKeys.get(request.key_id);
-    if (!challenge || !key || request.signature.length !== 86) {
+    if (!challenge || !key) {
       recordSession(client, this.#policy.clientAccess, "rejected");
       this.#forget(id, true);
       return;
@@ -685,7 +685,7 @@ export const EnterpriseMCP = new (class {
   }
 
   async #openTab(clientId, client, request, stillPending) {
-    const url = request.url.length <= 4096 && this.#navigationURL(request.url);
+    const url = this.#navigationURL(request.url);
     const window = Services.wm.getMostRecentWindow("navigator:browser");
     if (
       !url ||
@@ -799,7 +799,7 @@ export const EnterpriseMCP = new (class {
 
   async #navigateAgentTab(clientId, client, request, stillPending) {
     const { agentTab, owner, handle } = client;
-    const url = request.url.length <= 4096 && this.#navigationURL(request.url);
+    const url = this.#navigationURL(request.url);
     if (
       !url ||
       !agentTab ||
@@ -861,7 +861,7 @@ export const EnterpriseMCP = new (class {
 
   async #navigateExistingTab(clientId, client, request, stillPending) {
     const handle = client.handle;
-    const url = request.url.length <= 4096 && this.#navigationURL(request.url);
+    const url = this.#navigationURL(request.url);
     if (
       !url ||
       handle?.token !== request.tab ||

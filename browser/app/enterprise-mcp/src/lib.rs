@@ -85,6 +85,48 @@ pub enum Request {
     },
 }
 
+pub const MAX_URL_LENGTH: usize = 4096;
+pub const MAX_FILL_LENGTH: usize = 1024;
+pub const MAX_SELECT_INDEX: u32 = 31;
+pub const MAX_SCROLL_DISTANCE: i16 = 2048;
+
+impl Request {
+    pub fn is_valid(&self) -> bool {
+        let valid_url = |url: &str| !url.is_empty() && url.len() <= MAX_URL_LENGTH;
+        match self {
+            Self::Authenticate { key_id, signature } => {
+                !key_id.is_empty() && key_id.len() <= 64 && signature.len() == 86
+            }
+            Self::ListTabs { .. } | Self::Cancel { .. } => true,
+            Self::ReadPage { tab, .. }
+            | Self::ListElements { tab, .. }
+            | Self::NetworkMetadata { tab, .. }
+            | Self::ConsoleSummary { tab, .. }
+            | Self::Screenshot { tab, .. } => tab.len() == 36,
+            Self::OpenTab { url, .. } => valid_url(url),
+            Self::NavigateTab { tab, url, .. } => tab.len() == 36 && valid_url(url),
+            Self::Interact {
+                tab,
+                element,
+                action,
+                ..
+            } => {
+                tab.len() == 36
+                    && element.len() == 36
+                    && match action {
+                        Action::Fill { value } => value.encode_utf16().count() <= MAX_FILL_LENGTH,
+                        Action::Select { index } => *index <= MAX_SELECT_INDEX,
+                        Action::Scroll { x, y } => {
+                            (-MAX_SCROLL_DISTANCE..=MAX_SCROLL_DISTANCE).contains(x)
+                                && (-MAX_SCROLL_DISTANCE..=MAX_SCROLL_DISTANCE).contains(y)
+                        }
+                        Action::Click {} | Action::Submit {} => true,
+                    }
+            }
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Event {

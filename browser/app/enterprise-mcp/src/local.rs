@@ -81,11 +81,6 @@ fn peer(stream: &UnixStream) -> io::Result<(libc::uid_t, u32)> {
     Ok((uid, pid as u32))
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
-fn peer(_: &UnixStream) -> io::Result<(libc::uid_t, u32)> {
-    Err(io::ErrorKind::Unsupported.into())
-}
-
 pub struct Stream(UnixStream);
 
 impl Stream {

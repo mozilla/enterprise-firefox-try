@@ -75,7 +75,10 @@ impl Client {
             if newline >= MAX_REQUEST {
                 return Err(io::ErrorKind::InvalidData.into());
             }
-            let request = serde_json::from_slice(&self.input[..newline])?;
+            let request: Request = serde_json::from_slice(&self.input[..newline])?;
+            if !request.is_valid() {
+                return Err(io::ErrorKind::InvalidData.into());
+            }
             self.input.drain(..=newline);
 
             if self.admission == Admission::AwaitingProof && self.output.is_empty() {
@@ -227,17 +230,18 @@ impl EnterpriseMCPTransport {
             .transpose()
             .map_err(|_| NS_ERROR_INVALID_ARG)?;
         let mut server = self.server.borrow_mut();
-        if server.is_none() {
-            *server = Some(Server {
-                listener: Listener::bind().map_err(|_| NS_ERROR_FAILURE)?,
-                clients: BTreeMap::new(),
-                last_client: 0,
-                require_proof,
-                applications,
-                ready: encode(&Event::Ready { capabilities }, MAX_RESPONSE)
-                    .map_err(|_| NS_ERROR_FAILURE)?,
-            });
+        if server.is_some() {
+            return Err(NS_ERROR_FAILURE);
         }
+        *server = Some(Server {
+            listener: Listener::bind().map_err(|_| NS_ERROR_FAILURE)?,
+            clients: BTreeMap::new(),
+            last_client: 0,
+            require_proof,
+            applications,
+            ready: encode(&Event::Ready { capabilities }, MAX_RESPONSE)
+                .map_err(|_| NS_ERROR_FAILURE)?,
+        });
         Ok(())
     }
 
@@ -250,13 +254,14 @@ impl EnterpriseMCPTransport {
             .and_then(|server| server.clients.get_mut(&client))
             .filter(|connection| connection.admission == Admission::AwaitingChallenge)
             .ok_or(NS_ERROR_NOT_AVAILABLE)?;
-        connection.output = encode(
+        let frame = encode(
             &Event::Challenge {
                 payload: payload.to_owned(),
             },
             MAX_RESPONSE,
         )
         .map_err(|_| NS_ERROR_INVALID_ARG)?;
+        connection.output.extend_from_slice(&frame);
         connection.admission = Admission::AwaitingProof;
         Ok(())
     }
@@ -270,7 +275,7 @@ impl EnterpriseMCPTransport {
             .get_mut(&client)
             .filter(|connection| connection.admission == Admission::Verifying)
             .ok_or(NS_ERROR_NOT_AVAILABLE)?;
-        connection.output = server.ready.clone();
+        connection.output.extend_from_slice(&server.ready);
         connection.admission = Admission::Admitted;
         Ok(())
     }
@@ -315,7 +320,8 @@ impl EnterpriseMCPTransport {
         if connection.pending != Some(id) {
             return Err(NS_ERROR_NOT_AVAILABLE);
         }
-        connection.output = encode(&event, MAX_RESPONSE).map_err(|_| NS_ERROR_INVALID_ARG)?;
+        let frame = encode(&event, MAX_RESPONSE).map_err(|_| NS_ERROR_INVALID_ARG)?;
+        connection.output.extend_from_slice(&frame);
         connection.pending = None;
         if connection.flush().is_err() {
             clients.remove(&client);
