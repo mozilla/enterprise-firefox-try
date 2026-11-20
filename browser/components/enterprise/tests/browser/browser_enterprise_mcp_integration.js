@@ -70,10 +70,16 @@ async function connect(externalSigner) {
     );
   }
 
+  async function startRequest(method, params) {
+    const id = ++nextId;
+    await send(method, params, id);
+    return id;
+  }
+
   return {
+    startRequest,
     async request(method, params) {
-      const id = ++nextId;
-      await send(method, params, id);
+      const id = await startRequest(method, params);
       let response;
       do {
         response = await receive();
@@ -912,6 +918,29 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
     "?id=" +
     encodeURIComponent(Services.uuid.generateUUID().toString());
   const tabCount = gBrowser.tabs.length;
+  const cancelURL = heldURL + "-cancelled";
+  const cancelled = await mcp.startRequest("tools/call", {
+    name: "open_tab",
+    arguments: { url: cancelURL + "&hold" },
+  });
+  try {
+    await TestUtils.waitForCondition(
+      async () => (await (await fetch(cancelURL + "&count")).text()) === "1",
+      "The navigation reached the held response before cancellation"
+    );
+    await mcp.sendNotification("notifications/cancelled", {
+      requestId: cancelled,
+    });
+    await mcp.waitForChange();
+    await mcp.waitForChange();
+    await TestUtils.waitForCondition(
+      () => gBrowser.tabs.length === tabCount,
+      "An MCP cancellation closes the pending agent tab"
+    );
+  } finally {
+    await fetch(cancelURL + "&release");
+  }
+
   const opening = mcp.request("tools/call", {
     name: "open_tab",
     arguments: { url: heldURL + "&hold" },

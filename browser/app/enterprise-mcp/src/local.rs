@@ -142,6 +142,39 @@ impl Listener {
     }
 }
 
+#[cfg(feature = "browser-transport")]
+pub(crate) use mio::net::UnixStream as BrowserStream;
+
+#[cfg(feature = "browser-transport")]
+pub(crate) struct BrowserListener {
+    endpoint: Listener,
+}
+
+#[cfg(feature = "browser-transport")]
+impl BrowserListener {
+    pub fn bind(registry: &mio::Registry, token: mio::Token) -> io::Result<Self> {
+        use mio::unix::SourceFd;
+        let endpoint = Listener::bind()?;
+        registry.register(
+            &mut SourceFd(&endpoint.listener.as_raw_fd()),
+            token,
+            mio::Interest::READABLE,
+        )?;
+        Ok(Self { endpoint })
+    }
+
+    pub fn accept(
+        &mut self,
+        _registry: &mio::Registry,
+        _listener_token: mio::Token,
+        _client_token: mio::Token,
+    ) -> io::Result<(BrowserStream, u32)> {
+        let stream = self.endpoint.accept()?;
+        let pid = stream.peer_pid()?;
+        Ok((BrowserStream::from_std(stream.0), pid))
+    }
+}
+
 impl Drop for Listener {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.path);
