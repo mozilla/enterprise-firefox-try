@@ -956,7 +956,7 @@ nsresult nsWindowWatcher::OpenWindowInternal(
     // without 'allow-popups', this is not allowed and we fail here.
     if (parentDoc) {
       // Save sandbox flags for copying to new browsing context (docShell).
-      activeDocsSandboxFlags = parentDoc->GetSandboxFlags();
+      activeDocsSandboxFlags = parentDoc->GetSandboxFlagsForInheritance();
 
       if (!aForceNoOpener) {
         // Inherit from the entry global, e.g. for window.open and fall
@@ -975,7 +975,7 @@ nsresult nsWindowWatcher::OpenWindowInternal(
       // Check to see if this frame is allowed to navigate, but don't check if
       // we're printing, as that's not a real navigation.
       if (aPrintKind == PRINT_NONE &&
-          (activeDocsSandboxFlags & SANDBOXED_AUXILIARY_NAVIGATION)) {
+          (parentDoc->GetSandboxFlags() & SANDBOXED_AUXILIARY_NAVIGATION)) {
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
       }
     }

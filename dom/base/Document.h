@@ -1208,6 +1208,9 @@ class Document : public nsINode,
     return mSandboxFlags | mEnterpriseMCPRestrictions;
   }
 
+  // MCP restrictions apply only to actions on this document.
+  uint32_t GetSandboxFlagsForInheritance() const { return mSandboxFlags; }
+
   void SetEnterpriseMCPRestrictions(bool aRestricted);
 
   Maybe<nsILoadInfo::CrossOriginEmbedderPolicy> GetEmbedderPolicy() const {
