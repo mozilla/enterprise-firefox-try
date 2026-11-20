@@ -25,7 +25,6 @@ const AUTH_TIMEOUT_MS = 10000;
 const ACTIVE_POLL_MS = 100;
 const IDLE_POLL_MS = 1000;
 const MAX_START_RETRY_MS = 30000;
-const AUTHORIZE = "EnterpriseMCP:Authorize";
 const TRANSPORT = "@mozilla.org/enterprise-mcp/transport;1";
 const ACTOR_PATH = "moz-src:///browser/components/enterprise/mcp/";
 const HTTP_STOP = "http-on-stop-request";
@@ -105,7 +104,6 @@ export const EnterpriseMCP = new (class {
   #generation = 0;
   #clients = new Map();
   #owners = new Map();
-  #tickets = new Map();
   #stoppedBrowsers = new WeakSet();
   #initialized = false;
   #listening = false;
@@ -147,7 +145,6 @@ export const EnterpriseMCP = new (class {
         safeForUntrustedWebProcess: true,
         allFrames: false,
       });
-      Services.ppmm.addMessageListener(AUTHORIZE, this);
       Services.obs.addObserver(this, HTTP_STOP);
       for (const topic of MANAGED_TOPICS) {
         Services.obs.addObserver(this, topic);
@@ -172,7 +169,6 @@ export const EnterpriseMCP = new (class {
     this.#startRetry = IDLE_POLL_MS;
     if (this.#initialized) {
       this.#initialized = false;
-      Services.ppmm.removeMessageListener(AUTHORIZE, this);
       Services.obs.removeObserver(this, HTTP_STOP);
       ChromeUtils.unregisterWindowActor("EnterpriseMCP");
       for (const topic of MANAGED_TOPICS) {
@@ -191,25 +187,9 @@ export const EnterpriseMCP = new (class {
     }
   }
 
-  receiveMessage({ sync, data, target }) {
-    const ticket = this.#tickets.get(data?.ticket);
-    if (
-      !sync ||
-      !ticket ||
-      target?.processParent?.childID !== ticket.global.contentParentId
-    ) {
-      return false;
-    }
-    this.#tickets.delete(data.ticket);
-    this.#poll();
-    ticket.authorized = ticket.check();
-    return ticket.authorized;
-  }
-
   #reset() {
     this.#generation++;
     this.#refreshing = false;
-    this.#tickets.clear();
     this.#transport?.stop();
     this.#listening = false;
     for (const client of this.#clients.keys()) {
@@ -1091,34 +1071,17 @@ export const EnterpriseMCP = new (class {
     if (!client.controls?.has(request.element)) {
       return null;
     }
-    const ticket = uuid();
-    const approval = {
-      check: () => {
-        if (!check()) {
-          return false;
-        }
-        if (existingTab) {
-          this.#restrictInteraction(owner);
-        }
-        return true;
-      },
-      global: document.global,
-      authorized: false,
-    };
-    this.#tickets.set(ticket, approval);
-    try {
-      const acted = await actor.sendQuery("EnterpriseMCP:Interact", {
-        ...scope,
-        ticket,
-        existingTab,
-        element: request.element,
-        action: request.action,
-      });
-      if (acted && approval.authorized && check()) {
-        return { event: "interacted", id };
-      }
-    } finally {
-      this.#tickets.delete(ticket);
+    if (existingTab) {
+      this.#restrictInteraction(owner);
+    }
+    const acted = await actor.sendQuery("EnterpriseMCP:Interact", {
+      ...scope,
+      existingTab,
+      element: request.element,
+      action: request.action,
+    });
+    if (acted && check()) {
+      return { event: "interacted", id };
     }
     return null;
   }
