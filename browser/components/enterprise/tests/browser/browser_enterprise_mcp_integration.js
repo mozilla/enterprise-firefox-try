@@ -871,4 +871,50 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
       null
     );
   });
+
+  const executable = Services.dirsvc.get("XREExeF", Ci.nsIFile);
+  const connectorPath = PathUtils.join(
+    executable.parent.path,
+    Services.appinfo.OS === "WINNT"
+      ? "firefox-enterprise-mcp.exe"
+      : "firefox-enterprise-mcp"
+  );
+  async function allowApplications(applications) {
+    const update = EnterprisePolicyTesting.awaitNextPolicyUpdate();
+    body = {
+      policies: {
+        DisableDeveloperTools: true,
+        EnterpriseMCP: {
+          ...POLICY,
+          ClientAccess: "AllowedApplications",
+          AllowedApplications: applications,
+        },
+      },
+    };
+    await update;
+  }
+  await allowApplications([
+    { Id: "browser-mochitest", ExecutablePath: connectorPath },
+  ]);
+  const unmatched = await initializeMCP({ waitForTools: false });
+  Assert.deepEqual(
+    (await unmatched.request("tools/list")).tools,
+    [],
+    "An MCP client name that matches the policy ID does not approve its executable"
+  );
+
+  await allowApplications([
+    { Id: "browser-mochitest", ExecutablePath: executable.path },
+  ]);
+  const stock = await initializeMCP();
+  Assert.ok(
+    (await stock.request("tools/list")).tools.some(
+      tool => tool.name === "read_page"
+    )
+  );
+  await allowApplications([
+    { Id: "browser-mochitest", ExecutablePath: connectorPath },
+  ]);
+  await stock.waitForChange();
+  Assert.deepEqual((await stock.request("tools/list")).tools, []);
 });

@@ -5,6 +5,11 @@
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufRead};
 
+#[cfg(all(
+    any(target_os = "linux", target_os = "macos", windows),
+    any(feature = "gecko", test)
+))]
+mod applications;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub mod local;
 #[cfg(windows)]

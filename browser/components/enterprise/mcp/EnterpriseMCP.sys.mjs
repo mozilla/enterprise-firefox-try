@@ -111,6 +111,8 @@ export const EnterpriseMCP = new (class {
     if (
       !(
         compiled.clientAccess === "LocalUser" ||
+        (compiled.clientAccess === "AllowedApplications" &&
+          compiled.applications.length) ||
         (compiled.clientAccess === "ApprovedClients" &&
           compiled.approvedKeys.size)
       ) ||
@@ -282,8 +284,21 @@ export const EnterpriseMCP = new (class {
         this.#reset();
       }
       if (!this.#listening) {
+        const settings = { capabilities };
+        if (this.#policy.clientAccess === "AllowedApplications") {
+          const executable = Services.dirsvc.get("XREExeF", Ci.nsIFile);
+          settings.application_policy = {
+            connector: PathUtils.join(
+              executable.parent.path,
+              Services.appinfo.OS === "WINNT"
+                ? "firefox-enterprise-mcp.exe"
+                : "firefox-enterprise-mcp"
+            ),
+            allowed: this.#policy.applications,
+          };
+        }
         this.#transport.start(
-          JSON.stringify(capabilities),
+          JSON.stringify(settings),
           this.#policy.clientAccess === "ApprovedClients"
         );
         this.#capabilities = capabilities;
@@ -308,7 +323,7 @@ export const EnterpriseMCP = new (class {
       for (const incoming of JSON.parse(this.#transport.poll())) {
         const { client, type, request } = incoming;
         if (type === "connected") {
-          this.#connected(client, incoming.pid);
+          this.#connected(client, incoming.pid, incoming.application);
         } else if (type === "disconnected") {
           this.#forget(client);
         } else if (request.operation === "authenticate") {
@@ -333,7 +348,7 @@ export const EnterpriseMCP = new (class {
     }
   }
 
-  #connected(id, pid) {
+  #connected(id, pid, application) {
     const client = {
       auditId: uuid(),
       handle: null,
@@ -341,8 +356,9 @@ export const EnterpriseMCP = new (class {
       owner: null,
     };
     this.#clients.set(id, client);
-    if (this.#policy.clientAccess === "LocalUser") {
+    if (this.#policy.clientAccess === "LocalUser" || application) {
       client.admitted = true;
+      client.clientIdentity = application;
       return;
     }
     const nonce = crypto.getRandomValues(new Uint8Array(32));

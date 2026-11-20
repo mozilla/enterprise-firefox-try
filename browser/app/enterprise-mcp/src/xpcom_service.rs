@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use crate::applications::{ApplicationAllowlist, ApplicationPolicy};
 use crate::{
     encode,
     local::{Listener, Stream},
@@ -9,7 +10,7 @@ use crate::{
 };
 use nserror::{nsresult, NS_ERROR_FAILURE, NS_ERROR_INVALID_ARG, NS_ERROR_NOT_AVAILABLE, NS_OK};
 use nsstring::{nsACString, nsCString};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     cell::RefCell,
     collections::BTreeMap,
@@ -111,9 +112,25 @@ impl Client {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum Incoming {
-    Connected { client: u32, pid: u32 },
-    Request { client: u32, request: Request },
-    Disconnected { client: u32 },
+    Connected {
+        client: u32,
+        pid: u32,
+        application: Option<String>,
+    },
+    Request {
+        client: u32,
+        request: Request,
+    },
+    Disconnected {
+        client: u32,
+    },
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Settings {
+    capabilities: crate::Capabilities,
+    application_policy: Option<ApplicationPolicy>,
 }
 
 struct Server {
@@ -122,6 +139,7 @@ struct Server {
     last_client: u32,
     ready: Vec<u8>,
     require_proof: bool,
+    applications: Option<ApplicationAllowlist>,
 }
 
 impl Server {
@@ -130,29 +148,36 @@ impl Server {
         if self.clients.len() < MAX_CONNECTIONS {
             if let Ok(stream) = self.listener.accept() {
                 let pid = stream.peer_pid()?;
-                self.last_client = self
-                    .last_client
-                    .checked_add(1)
-                    .ok_or_else(|| io::Error::other("MCP identifier exhausted"))?;
-                let (admission, output) = if self.require_proof {
-                    (Admission::AwaitingChallenge, Vec::new())
-                } else {
-                    (Admission::Admitted, self.ready.clone())
-                };
-                incoming.push(Incoming::Connected {
-                    client: self.last_client,
-                    pid,
-                });
-                self.clients.insert(
-                    self.last_client,
-                    Client {
-                        stream,
-                        input: Vec::new(),
-                        output,
-                        pending: None,
-                        admission,
-                    },
-                );
+                let application = self
+                    .applications
+                    .as_ref()
+                    .and_then(|applications| applications.approve(pid));
+                if self.applications.is_none() || application.is_some() {
+                    self.last_client = self
+                        .last_client
+                        .checked_add(1)
+                        .ok_or_else(|| io::Error::other("MCP identifier exhausted"))?;
+                    let (admission, output) = if self.require_proof {
+                        (Admission::AwaitingChallenge, Vec::new())
+                    } else {
+                        (Admission::Admitted, self.ready.clone())
+                    };
+                    incoming.push(Incoming::Connected {
+                        client: self.last_client,
+                        pid,
+                        application: application.map(str::to_owned),
+                    });
+                    self.clients.insert(
+                        self.last_client,
+                        Client {
+                            stream,
+                            input: Vec::new(),
+                            output,
+                            pending: None,
+                            admission,
+                        },
+                    );
+                }
             }
         }
 
@@ -178,10 +203,16 @@ struct EnterpriseMCPTransport {
 
 #[allow(non_snake_case)]
 impl EnterpriseMCPTransport {
-    xpcom_method!(start => Start(capabilities: *const nsACString, require_proof: bool));
-    fn start(&self, capabilities: &nsACString, require_proof: bool) -> Result<(), nsresult> {
-        let capabilities =
-            serde_json::from_slice(capabilities).map_err(|_| NS_ERROR_INVALID_ARG)?;
+    xpcom_method!(start => Start(settings: *const nsACString, require_proof: bool));
+    fn start(&self, settings: &nsACString, require_proof: bool) -> Result<(), nsresult> {
+        let Settings {
+            capabilities,
+            application_policy,
+        } = serde_json::from_slice(settings).map_err(|_| NS_ERROR_INVALID_ARG)?;
+        let applications = application_policy
+            .map(ApplicationAllowlist::new)
+            .transpose()
+            .map_err(|_| NS_ERROR_INVALID_ARG)?;
         let mut server = self.server.borrow_mut();
         if server.is_none() {
             *server = Some(Server {
@@ -189,6 +220,7 @@ impl EnterpriseMCPTransport {
                 clients: BTreeMap::new(),
                 last_client: 0,
                 require_proof,
+                applications,
                 ready: encode(&Event::Ready { capabilities }, MAX_RESPONSE)
                     .map_err(|_| NS_ERROR_FAILURE)?,
             });

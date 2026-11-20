@@ -2420,7 +2420,7 @@
       "properties": {
         "ClientAccess": {
           "type": "string",
-          "enum": ["Disabled", "LocalUser", "ApprovedClients"]
+          "enum": ["Disabled", "LocalUser", "ApprovedClients", "AllowedApplications"]
         },
         "ApprovedClients": {
           "type": "array",
@@ -2433,6 +2433,22 @@
               "PublicKey": {
                 "type": "string",
                 "description": "Base64-encoded ECDSA P-256 SubjectPublicKeyInfo for the enrolled client-installation key."
+              }
+            }
+          }
+        },
+        "AllowedApplications": {
+          "type": "array",
+          "description": "Applications that may launch the standard connector in AllowedApplications mode. Firefox checks executable paths on a best-effort basis.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["Id", "ExecutablePath"],
+            "properties": {
+              "Id": { "type": "string" },
+              "ExecutablePath": {
+                "type": "string",
+                "description": "Absolute path of the application executable that directly launches the Firefox Enterprise MCP connector."
               }
             }
           }
