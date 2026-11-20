@@ -22,9 +22,10 @@ const SANDBOXED_DOWNLOADS = 0x10000;
 const SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS = 0x40000;
 
 const AUTH_TIMEOUT_MS = 10000;
-const ACTIVE_POLL_MS = 100;
-const IDLE_POLL_MS = 1000;
+const ACTIVE_CHECK_MS = 100;
+const IDLE_CHECK_MS = 1000;
 const MAX_START_RETRY_MS = 30000;
+const TRANSPORT_READY = "enterprise-mcp-transport-ready";
 const TRANSPORT = "@mozilla.org/enterprise-mcp/transport;1";
 const ACTOR_PATH = "moz-src:///browser/components/enterprise/mcp/";
 const HTTP_STOP = "http-on-stop-request";
@@ -47,6 +48,8 @@ const MAX_NETWORK_REQUESTS = 64;
 const MANAGED_TOPICS = [
   "felt-firefox-shutdown",
   "felt-firefox-signout-requested",
+  "felt-firefox-access-token-refreshed",
+  TRANSPORT_READY,
   "quit-application",
   "EnterprisePolicies:Discarded",
   "EnterprisePolicies:PolicyUpdatesApplied",
@@ -110,7 +113,7 @@ export const EnterpriseMCP = new (class {
   #capabilities = null;
   #refreshing = false;
   #nextStart = 0;
-  #startRetry = IDLE_POLL_MS;
+  #startRetry = IDLE_CHECK_MS;
 
   apply(policy) {
     this.remove();
@@ -154,7 +157,7 @@ export const EnterpriseMCP = new (class {
     this.#transport = Cc[TRANSPORT].createInstance(
       Ci.nsIEnterpriseMCPTransport
     );
-    this.#schedulePoll(0);
+    this.#scheduleCheck(0);
   }
 
   remove() {
@@ -166,7 +169,7 @@ export const EnterpriseMCP = new (class {
     this.#policy = null;
     this.#transport = null;
     this.#nextStart = 0;
-    this.#startRetry = IDLE_POLL_MS;
+    this.#startRetry = IDLE_CHECK_MS;
     if (this.#initialized) {
       this.#initialized = false;
       Services.obs.removeObserver(this, HTTP_STOP);
@@ -177,11 +180,18 @@ export const EnterpriseMCP = new (class {
     }
   }
 
-  observe(subject, topic) {
+  observe(subject, topic, data) {
     if (topic === HTTP_STOP) {
       this.#recordRequest(subject);
-    } else if (topic === "EnterprisePolicies:PolicyUpdatesApplied") {
-      this.#poll();
+    } else if (topic === TRANSPORT_READY) {
+      if (Number(data) === this.#generation) {
+        this.#receiveTransport();
+      }
+    } else if (
+      topic === "EnterprisePolicies:PolicyUpdatesApplied" ||
+      topic === "felt-firefox-access-token-refreshed"
+    ) {
+      this.#updateSession();
     } else {
       this.remove();
     }
@@ -248,12 +258,14 @@ export const EnterpriseMCP = new (class {
     }
   }
 
-  #schedulePoll(delay) {
+  #scheduleCheck(delay) {
     this.#timer = setTimeout(() => {
       this.#timer = null;
-      this.#poll();
+      this.#updateSession();
       if (this.#transport) {
-        this.#schedulePoll(this.#clients.size ? ACTIVE_POLL_MS : IDLE_POLL_MS);
+        this.#scheduleCheck(
+          this.#clients.size ? ACTIVE_CHECK_MS : IDLE_CHECK_MS
+        );
       }
     }, delay);
   }
@@ -279,11 +291,30 @@ export const EnterpriseMCP = new (class {
     if (!currentConsole()) {
       this.#reset();
     } else {
-      this.#poll();
+      this.#updateSession();
+      if (generation === this.#generation) {
+        for (const [id, client] of this.#clients) {
+          const request = client.waiting;
+          if (request) {
+            client.waiting = null;
+            this.#receiveRequest(id, request, generation);
+          }
+        }
+      }
     }
   }
 
-  #poll() {
+  #startFailed() {
+    if (this.#startRetry === IDLE_CHECK_MS) {
+      console.warn(
+        "Firefox Enterprise could not start or run the MCP listener."
+      );
+    }
+    this.#nextStart = ChromeUtils.now() + this.#startRetry;
+    this.#startRetry = Math.min(this.#startRetry * 2, MAX_START_RETRY_MS);
+  }
+
+  #updateSession() {
     try {
       const policyActive =
         Services.policies.status === Ci.nsIEnterprisePolicies.ACTIVE;
@@ -348,20 +379,13 @@ export const EnterpriseMCP = new (class {
         try {
           this.#transport.start(
             JSON.stringify(settings),
-            this.#policy.clientAccess === "ApprovedClients"
+            this.#policy.clientAccess === "ApprovedClients",
+            this.#generation
           );
         } catch {
-          if (this.#startRetry === IDLE_POLL_MS) {
-            console.warn(
-              "Firefox Enterprise could not start the MCP listener."
-            );
-          }
-          this.#nextStart = ChromeUtils.now() + this.#startRetry;
-          this.#startRetry = Math.min(this.#startRetry * 2, MAX_START_RETRY_MS);
+          this.#startFailed();
           return;
         }
-        this.#nextStart = 0;
-        this.#startRetry = IDLE_POLL_MS;
         this.#capabilities = capabilities;
         this.#listening = true;
       }
@@ -381,36 +405,72 @@ export const EnterpriseMCP = new (class {
           this.#forget(id, true);
         }
       }
+    } catch (error) {
+      console.error("Firefox Enterprise MCP session check failed", error);
+      this.#reset();
+    }
+  }
 
+  #receiveTransport() {
+    try {
+      const events = JSON.parse(this.#transport.drain());
+      if (events.some(({ type }) => type === "failed")) {
+        this.#reset();
+        this.#startFailed();
+        return;
+      }
+      this.#nextStart = 0;
+      this.#startRetry = IDLE_CHECK_MS;
       const generation = this.#generation;
-      for (const incoming of JSON.parse(this.#transport.poll())) {
-        const { client, type, request } = incoming;
+      this.#updateSession();
+      for (const { client, type, pid, application, request } of events) {
+        if (generation !== this.#generation) {
+          break;
+        }
         if (type === "connected") {
-          this.#connected(client, incoming.pid, incoming.application);
+          if (this.#refreshing) {
+            this.#transport.disconnect(client);
+          } else {
+            this.#connected(client, pid, application);
+          }
         } else if (type === "application_rejected") {
           recordSession(null, this.#policy.clientAccess, "rejected");
         } else if (type === "disconnected") {
           this.#forget(client);
-        } else if (request.operation === "authenticate") {
-          this.#authenticate(client, request, generation);
-        } else if (request.operation === "cancel") {
-          const state = this.#clients.get(client);
-          if (state?.pending?.id === request.id) {
-            state.pending = null;
-            if (
-              state.agentTab?.requestId === request.id ||
-              state.attachedLoad?.requestId === request.id
-            ) {
-              this.#forget(client, true);
-            }
-          }
         } else {
-          this.#run(client, request, generation);
+          this.#receiveRequest(client, request, generation);
         }
       }
     } catch (error) {
-      console.error("Firefox Enterprise MCP polling failed", error);
+      console.error("Firefox Enterprise MCP transport failed", error);
       this.#reset();
+    }
+  }
+
+  #receiveRequest(id, request, generation) {
+    const client = this.#clients.get(id);
+    if (!client) {
+      return;
+    }
+    if (request.operation === "cancel") {
+      if (client.waiting?.id === request.id) {
+        client.waiting = null;
+      }
+      if (client.pending?.id === request.id) {
+        client.pending = null;
+        if (
+          client.agentTab?.requestId === request.id ||
+          client.attachedLoad?.requestId === request.id
+        ) {
+          this.#forget(id, true);
+        }
+      }
+    } else if (this.#refreshing) {
+      client.waiting = request;
+    } else if (request.operation === "authenticate") {
+      this.#authenticate(id, request, generation);
+    } else {
+      this.#run(id, request, generation);
     }
   }
 

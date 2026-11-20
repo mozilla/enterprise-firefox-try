@@ -240,6 +240,12 @@ pub struct Listener {
 
 impl Listener {
     pub fn bind() -> io::Result<Self> {
+        let mut listener = Self::new()?;
+        listener.handle = Some(listener.instance(FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_NOWAIT)?);
+        Ok(listener)
+    }
+
+    fn new() -> io::Result<Self> {
         let sid = process_sid(unsafe { GetCurrentProcess() })?;
         let name = pipe_name(&sid);
         let policy = wide(&format!("D:P(A;;GA;;;{sid})"));
@@ -266,18 +272,16 @@ impl Listener {
         if status == ERROR_ALREADY_EXISTS {
             return Err(io::ErrorKind::AddrInUse.into());
         }
-        let mut listener = Self {
+        Ok(Self {
             handle: None,
             sid,
             name,
             descriptor,
             _endpoint_lock: endpoint_lock,
-        };
-        listener.handle = Some(listener.instance(FILE_FLAG_FIRST_PIPE_INSTANCE)?);
-        Ok(listener)
+        })
     }
 
-    fn instance(&self, flags: u32) -> io::Result<OwnedHandle> {
+    fn instance(&self, flags: u32, mode: u32) -> io::Result<OwnedHandle> {
         let security = SECURITY_ATTRIBUTES {
             nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
             lpSecurityDescriptor: self.descriptor.0,
@@ -287,7 +291,7 @@ impl Listener {
             CreateNamedPipeW(
                 self.name.as_ptr(),
                 PIPE_ACCESS_DUPLEX | flags,
-                PIPE_NOWAIT | PIPE_REJECT_REMOTE_CLIENTS,
+                mode | PIPE_REJECT_REMOTE_CLIENTS,
                 PIPE_UNLIMITED_INSTANCES,
                 65536,
                 16384,
@@ -305,16 +309,71 @@ impl Listener {
                 Some(ERROR_PIPE_CONNECTED) => (),
                 Some(ERROR_PIPE_LISTENING) => return Err(io::ErrorKind::WouldBlock.into()),
                 Some(ERROR_NO_DATA) => {
-                    self.handle = Some(self.instance(0)?);
+                    self.handle = Some(self.instance(0, PIPE_NOWAIT)?);
                     return Err(io::ErrorKind::WouldBlock.into());
                 }
                 _ => return Err(error),
             }
         }
-        let next = self.instance(0)?;
+        let next = self.instance(0, PIPE_NOWAIT)?;
         let connected = self.handle.replace(next).unwrap();
         let pid = peer(connected.as_raw_handle(), true, &self.sid)?;
         Ok(Stream::new(connected, pid, false))
+    }
+}
+
+#[cfg(feature = "browser-transport")]
+pub(crate) use mio::windows::NamedPipe as BrowserStream;
+
+#[cfg(feature = "browser-transport")]
+pub(crate) struct BrowserListener {
+    endpoint: Listener,
+    pipe: BrowserStream,
+}
+
+#[cfg(feature = "browser-transport")]
+impl BrowserListener {
+    fn pipe(
+        endpoint: &Listener,
+        flags: u32,
+        registry: &mio::Registry,
+        token: mio::Token,
+    ) -> io::Result<BrowserStream> {
+        use std::os::windows::io::IntoRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_OVERLAPPED;
+
+        let handle = endpoint.instance(FILE_FLAG_OVERLAPPED | flags, 0)?;
+        let mut pipe = unsafe { BrowserStream::from_raw_handle(handle.into_raw_handle()) };
+        registry.register(&mut pipe, token, mio::Interest::READABLE)?;
+        match pipe.connect() {
+            Ok(()) => Ok(pipe),
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => Ok(pipe),
+            Err(error) => Err(error),
+        }
+    }
+
+    pub fn bind(registry: &mio::Registry, token: mio::Token) -> io::Result<Self> {
+        let endpoint = Listener::new()?;
+        let pipe = Self::pipe(&endpoint, FILE_FLAG_FIRST_PIPE_INSTANCE, registry, token)?;
+        Ok(Self { endpoint, pipe })
+    }
+
+    pub fn accept(
+        &mut self,
+        registry: &mio::Registry,
+        listener_token: mio::Token,
+        client_token: mio::Token,
+    ) -> io::Result<(BrowserStream, u32)> {
+        let error = self.pipe.take_error()?;
+        let replacement = Self::pipe(&self.endpoint, 0, registry, listener_token)?;
+        let mut connected = std::mem::replace(&mut self.pipe, replacement);
+        if error.is_some() {
+            return Err(io::ErrorKind::ConnectionAborted.into());
+        }
+        let pid = peer(connected.as_raw_handle(), true, &self.endpoint.sid)
+            .map_err(|_| io::ErrorKind::PermissionDenied)?;
+        registry.reregister(&mut connected, client_token, mio::Interest::READABLE)?;
+        Ok((connected, pid))
     }
 }
 
@@ -339,7 +398,7 @@ pub fn connect() -> io::Result<Stream> {
     Ok(Stream::new(handle, pid, true))
 }
 
-#[cfg(any(feature = "gecko", test))]
+#[cfg(any(feature = "browser-transport", test))]
 pub(crate) fn process(pid: u32) -> io::Result<(std::path::PathBuf, u32)> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt, path::PathBuf};
     use windows_sys::Win32::System::{
@@ -389,5 +448,40 @@ mod tests {
         let mut received = [0; 5];
         server.read_exact(&mut received).unwrap();
         assert_eq!(&received, b"hello");
+
+        #[cfg(feature = "browser-transport")]
+        {
+            drop(server);
+            drop(client);
+            drop(listener);
+            let mut poll = mio::Poll::new().unwrap();
+            let mut events = mio::Events::with_capacity(8);
+            let accept = mio::Token(1);
+            let readable = mio::Token(2);
+            let mut listener = BrowserListener::bind(poll.registry(), accept).unwrap();
+            let mut client = connect().unwrap();
+            let timeout = Duration::from_secs(2);
+            poll.poll(&mut events, Some(timeout)).unwrap();
+            assert!(events.iter().any(|event| event.token() == accept));
+            let (mut server, pid) = listener.accept(poll.registry(), accept, readable).unwrap();
+            assert_eq!(pid, std::process::id());
+            client.write_all(b"hello").unwrap();
+            let deadline = Instant::now() + timeout;
+            let mut bytes = Vec::new();
+            while bytes.len() < 5 && Instant::now() < deadline {
+                poll.poll(
+                    &mut events,
+                    Some(deadline.saturating_duration_since(Instant::now())),
+                )
+                .unwrap();
+                let mut buffer = [0; 5];
+                match server.read(&mut buffer) {
+                    Ok(count) => bytes.extend_from_slice(&buffer[..count]),
+                    Err(error) if error.kind() == io::ErrorKind::WouldBlock => {}
+                    Err(error) => panic!("Overlapped read failed: {error}"),
+                }
+            }
+            assert_eq!(bytes, b"hello");
+        }
     }
 }

@@ -10,6 +10,8 @@ path = "src/main.rs"
 
 [dependencies]
 libc = "0.2"
+mio = { version = "1", features = ["net", "os-ext", "os-poll"], optional = true }
+moz_task = { path = "../../../xpcom/rust/moz_task", optional = true }
 mozilla-central-workspace-hack = { version = "0.1", features = ["firefox-enterprise-mcp"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -28,4 +30,5 @@ windows-sys = { version = "0.61.2", features = [
 ] }
 
 [features]
-gecko = ["dep:nserror", "dep:nsstring", "dep:xpcom"]
+browser-transport = ["dep:mio"]
+gecko = ["browser-transport", "dep:moz_task", "dep:nserror", "dep:nsstring", "dep:xpcom"]

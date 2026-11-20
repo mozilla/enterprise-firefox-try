@@ -2426,6 +2426,8 @@ name = "firefox-enterprise-mcp"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "mio",
+ "moz_task",
  "mozilla-central-workspace-hack",
  "nserror",
  "nsstring",

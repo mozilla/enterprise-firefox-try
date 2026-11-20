@@ -6,11 +6,11 @@
 
 [scriptable, uuid(eac5bc60-552f-43e1-982f-bf3f18539387)]
 interface nsIEnterpriseMCPTransport : nsISupports {
-  void start(in ACString settings, in boolean requireProof);
+  void start(in ACString settings, in boolean requireProof, in uint32_t generation);
   void challenge(in uint32_t client, in ACString payload);
   void admit(in uint32_t client);
   void stop();
-  ACString poll();
+  ACString drain();
   void reply(in uint32_t client, in ACString payload);
   void disconnect(in uint32_t client);
 };
