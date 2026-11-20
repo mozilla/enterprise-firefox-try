@@ -7,7 +7,6 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
     io::{self, BufReader, Write},
-    os::unix::net::UnixStream,
     sync::mpsc::{self, RecvTimeoutError, SyncSender},
     thread,
     time::{Duration, Instant},
@@ -31,7 +30,7 @@ enum Initialization {
 }
 
 struct Browser {
-    stream: UnixStream,
+    stream: local::Stream,
     connection: u32,
     ready: bool,
     deadline: Instant,
@@ -154,7 +153,7 @@ impl Server {
 
     fn close_browser(&mut self, output: &mut impl Write) -> io::Result<()> {
         if let Some(browser) = self.browser.take() {
-            let _ = browser.stream.shutdown(std::net::Shutdown::Both);
+            let _ = browser.stream.close();
             if let Some((_, id)) = browser.pending {
                 unavailable(output, id)?;
             }

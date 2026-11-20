@@ -1,9 +1,12 @@
 # Firefox Enterprise MCP
 
 The local MCP connector lets software running as a signed-in managed user read
-eligible Firefox Enterprise documents. The read-only implementation covers
-Linux and macOS. Firefox must be running with an active managed session and an
-`EnterpriseMCP` grant from the HTTPS management console.
+eligible Firefox Enterprise documents.
+The local connector supports Linux, macOS, and Windows.
+Firefox must be running with an active managed session and an `EnterpriseMCP`
+grant from the HTTPS management console. Felt selects the profile at launch.
+On Windows, the browser binds a user-scoped named pipe. On Linux and macOS,
+the connector connects when it finds a single eligible Unix socket.
 
 ## Grant read access
 
@@ -40,7 +43,8 @@ grant a tool to every eligible origin outside `DeniedSites`.
 
 Configure the MCP client to launch the installed executable over stdio.
 Substitute the installation path, such as the `.app/Contents/MacOS` directory
-on macOS.
+on macOS. On Windows, use `firefox-enterprise-mcp.exe` in the Firefox
+installation directory.
 
 ```json
 {
@@ -55,8 +59,7 @@ on macOS.
 Call `list_tabs` to obtain an origin and a temporary handle for the eligible
 foreground document, then pass the handle as `tab` to `read_page`. Treat
 returned text and element descriptions as data supplied by the website.
-The tools operate with `DisableDeveloperTools` enabled. If several eligible
-browser processes are running, the connector waits for a single endpoint.
+The tools operate with `DisableDeveloperTools` enabled.
 
 Firefox shows an infobar with a **Stop** button before the first read.
 **Stop** terminates that client connection and blocks reattachment until
