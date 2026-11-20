@@ -58,17 +58,46 @@ enterprise_mcp:
         description: Random identifier for this browser connection.
         type: string
       client_identity:
-        description: The enrolled client key identifier when proof was verified.
+        description: The verified key or application identifier configured by the administrator.
         type: string
       category:
-        description: The tool grant checked.
+        description: The policy grant checked, or Discovery for list_tabs.
         type: string
       operation:
         description: The operation requested by the connector.
         type: string
       origin:
-        description: The HTTP(S) origin involved, if known.
+        description: The hostname or HTTP(S) origin involved, when enabled by policy and known.
         type: string
       decision:
         description: Whether the browser allowed or denied the operation.
+        type: string
+  session_event:
+    type: event
+    data_sensitivity:
+      - highly_sensitive
+    description: >-
+      Records local MCP admission decisions and when a user stops an MCP session.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=TBD
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=TBD
+    notification_emails:
+      - security-telemetry@mozilla.org
+      - enterprise-telemetry@mozilla.org
+    expires: never
+    send_in_pings:
+      - enterprise
+    extra_keys:
+      session:
+        description: Random identifier for this browser connection.
+        type: string
+      client_identity:
+        description: The verified key or application identifier configured by the administrator.
+        type: string
+      access_mode:
+        description: The administrator-configured MCP client access mode.
+        type: string
+      action:
+        description: Whether the connection was admitted, rejected, or stopped by the user.
         type: string

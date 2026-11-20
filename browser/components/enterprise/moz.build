@@ -13,6 +13,7 @@ MOZ_SRC_FILES += [
     "EnterpriseHandler.sys.mjs",
     "EnterpriseThemeMigration.sys.mjs",
     "mcp/EnterpriseMCP.sys.mjs",
+    "mcp/EnterpriseMCPAudit.sys.mjs",
     "mcp/EnterpriseMCPChild.sys.mjs",
     "mcp/EnterpriseMCPNavigation.sys.mjs",
     "mcp/EnterpriseMCPNetwork.sys.mjs",

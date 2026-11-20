@@ -588,6 +588,94 @@ async function testDiagnostics(mcp) {
   });
 }
 
+async function testSecurityLogging(mcp, updateLogging) {
+  const operations = () =>
+    Glean.enterpriseMcp.operation.testGetValue("enterprise") ?? [];
+  const sessionEvents = () =>
+    Glean.enterpriseMcp.sessionEvent.testGetValue("enterprise") ?? [];
+  await BrowserTestUtils.withNewTab(
+    ALLOWED + "/document-builder.sjs?html=%3Ch1%3EPrivate%20report%3C%2Fh1%3E",
+    async browser => {
+      await TestUtils.waitForCondition(
+        () => !browser.webProgress.isLoadingDocument
+      );
+      const call = (name, arguments_) =>
+        mcp.request("tools/call", { name, arguments: arguments_ });
+      const { tabs } = (await call("list_tabs", {})).structuredContent;
+      const read = () => call("read_page", { tab: tabs[0].handle });
+      Assert.deepEqual(operations(), [], "MCP logging is disabled by default");
+      Assert.deepEqual(sessionEvents(), []);
+
+      await updateLogging({ Enabled: true, UrlLogging: "domain" });
+      Assert.equal(
+        (await read()).structuredContent.page.text,
+        "Private report"
+      );
+      const [allowed] = operations();
+      Assert.ok(allowed.extra.session);
+      Assert.deepEqual(allowed.extra, {
+        session: allowed.extra.session,
+        category: "ReadPage",
+        operation: "read_page",
+        origin: "example.com",
+        decision: "allow",
+      });
+      const bad = Services.uuid.generateUUID().toString().slice(1, -1);
+      Assert.ok((await call("read_page", { tab: bad })).isError);
+      Assert.equal(operations().at(-1).extra.decision, "deny");
+
+      await updateLogging({ Enabled: true, UrlLogging: "full" });
+      await call("list_tabs", {});
+      Assert.equal(operations().at(-1).extra.category, "Discovery");
+      Assert.equal(operations().at(-1).extra.origin, ALLOWED);
+
+      await updateLogging({ Enabled: true, UrlLogging: "none" });
+      await call("list_tabs", {});
+      Assert.ok(!("origin" in operations().at(-1).extra));
+
+      await updateLogging(null);
+      const count = operations().length;
+      await call("list_tabs", {});
+      Assert.equal(operations().length, count, "Removing policy stops logging");
+
+      await updateLogging({ Enabled: true });
+      gBrowser
+        .getNotificationBox(browser)
+        .currentNotification.buttonContainer.querySelector(
+          ".notification-button"
+        )
+        .click();
+      Assert.deepEqual(sessionEvents().at(-1).extra, {
+        session: allowed.extra.session,
+        access_mode: "LocalUser",
+        action: "stopped",
+      });
+      await mcp.waitForChange();
+      await mcp.waitForChange();
+      Assert.equal(sessionEvents().at(-1).extra.action, "admitted");
+      await SpecialPowers.pushPrefEnv({
+        set: [
+          [
+            "browser.policies.enterprise.telemetry.testing.disableSubmit",
+            false,
+          ],
+        ],
+      });
+      try {
+        let submitted;
+        GleanPings.enterprise.testBeforeNextSubmit(() => {
+          submitted = operations().at(-1)?.extra.operation;
+        });
+        await call("list_tabs", {});
+        Assert.equal(submitted, "list_tabs", "MCP submits the enterprise ping");
+      } finally {
+        await SpecialPowers.popPrefEnv();
+      }
+      await updateLogging(null);
+    }
+  );
+}
+
 add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
   let body = {
     policies: { DisableDeveloperTools: true, EnterpriseMCP: POLICY },
@@ -626,6 +714,7 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
       ["enterprise.policies.live.polling_interval", 250],
       ["security.notification_enable_delay", 0],
       ["dom.disable_open_during_load", false],
+      ["browser.policies.enterprise.telemetry.testing.disableSubmit", true],
     ],
   });
   const applied = EnterprisePolicyTesting.awaitAllPoliciesApplied();
@@ -636,6 +725,18 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
   Assert.deepEqual(Services.policies.getActivePolicies().EnterpriseMCP, POLICY);
 
   const mcp = await initializeMCP();
+  const updateLogging = async settings => {
+    const updated = EnterprisePolicyTesting.awaitNextPolicyUpdate();
+    body = {
+      policies: {
+        DisableDeveloperTools: true,
+        EnterpriseMCP: POLICY,
+        ...(settings && { SecurityLogging: { EnterpriseMCP: settings } }),
+      },
+    };
+    await updated;
+  };
+  await testSecurityLogging(mcp, updateLogging);
   await testAgentTab(mcp);
   await testExistingTab(mcp);
   await testDiagnostics(mcp);
