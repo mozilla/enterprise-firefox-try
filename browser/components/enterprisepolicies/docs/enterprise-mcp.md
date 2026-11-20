@@ -105,3 +105,24 @@ website's state before retrying a transaction after an interruption.
 When acting on an existing tab, Firefox temporarily blocks popups, downloads,
 page-issued modal dialogs and external protocol launches from that document.
 The same restrictions apply throughout the lifetime of an agent-owned tab.
+
+## Diagnostics access
+
+Grant each diagnostic separately for the sites where it is needed.
+
+- `NetworkMetadata` enables `network_metadata`. The first call starts
+  collection and later calls return up to 64 completed same-origin requests
+  from the attached top-level document. Each entry contains the HTTP method,
+  response status and duration in milliseconds. Firefox omits URLs, headers,
+  bodies, and requests involving another origin or frame.
+- `ConsoleSummaries` enables `console_summary`. The first call starts a
+  collection window for the attached top-level document. Later calls return
+  severity counts for recent page console API events. Firefox omits message
+  text and events from other frames and workers.
+- `VisiblePageScreenshots` enables `screenshot`. Firefox returns a bounded
+  JPEG of the visible document area. It refuses captures with embedded
+  documents, protected controls, or active Enterprise watermark requirements.
+
+Firefox displays the same Stop control for diagnostics and clears diagnostic
+collection on detachment. Managed data loss prevention or content analysis
+blocks all three diagnostic tools.

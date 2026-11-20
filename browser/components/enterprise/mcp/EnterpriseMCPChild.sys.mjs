@@ -4,6 +4,12 @@
 
 import { dom } from "chrome://remote/content/shared/DOM.sys.mjs";
 
+const CAPTURE_EXCLUDED =
+  "input, textarea, select, [contenteditable], frame, iframe, object, embed";
+const JPEG_PREFIX = "data:image/jpeg;base64,";
+const MAX_IMAGE_BASE64 = 100_000;
+const MAX_IMAGE_DIMENSION = 480;
+
 const MAX_NODES = 2000;
 const MAX_TEXT = 8000;
 const MAX_ELEMENTS = 64;
@@ -202,6 +208,92 @@ function controlLabel(window, document, element) {
   return shortLabel(text);
 }
 
+function consoleCounts(documentId, since) {
+  const consoleStorage = Cc["@mozilla.org/consoleAPI-storage;1"].getService(
+    Ci.nsIConsoleAPIStorage
+  );
+  const counts = { debug: 0, info: 0, warn: 0, error: 0 };
+  for (const event of consoleStorage.getEvents(String(documentId))) {
+    if (event.private || event.timeStamp <= since) {
+      continue;
+    }
+    switch (event.level) {
+      case "debug":
+        counts.debug++;
+        break;
+      case "log":
+      case "info":
+        counts.info++;
+        break;
+      case "warn":
+        counts.warn++;
+        break;
+      case "assert":
+      case "error":
+        counts.error++;
+        break;
+    }
+  }
+  return counts;
+}
+
+function canCapture(window, document) {
+  if (window.frames.length || !window.innerWidth || !window.innerHeight) {
+    return false;
+  }
+  const pending = [document.documentElement];
+  for (let count = 0; pending.length; count++) {
+    const element = pending.pop();
+    if (count >= MAX_NODES || element.matches(CAPTURE_EXCLUDED)) {
+      return false;
+    }
+    if (element.nextElementSibling) {
+      pending.push(element.nextElementSibling);
+    }
+    if (element.firstElementChild) {
+      pending.push(element.firstElementChild);
+    }
+    if (element.openOrClosedShadowRoot?.firstElementChild) {
+      pending.push(element.openOrClosedShadowRoot.firstElementChild);
+    }
+  }
+  return true;
+}
+
+function capturePage(window, document) {
+  if (!canCapture(window, document)) {
+    return null;
+  }
+  const { innerWidth: width, innerHeight: height } = window;
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
+  const canvas = document.createElementNS(
+    "http://www.w3.org/1999/xhtml",
+    "canvas"
+  );
+  canvas.width = Math.max(1, Math.floor(width * scale));
+  canvas.height = Math.max(1, Math.floor(height * scale));
+  const context = canvas.getContext("2d", { alpha: false });
+  context.scale(scale, scale);
+  context.drawWindow(
+    window,
+    0,
+    0,
+    width,
+    height,
+    "white",
+    context.DRAWWINDOW_DRAW_VIEW
+  );
+  const image = canvas.toDataURL("image/jpeg", 0.75);
+  if (
+    !image.startsWith(JPEG_PREFIX) ||
+    image.length - JPEG_PREFIX.length > MAX_IMAGE_BASE64 ||
+    !canCapture(window, document)
+  ) {
+    return null;
+  }
+  return image.slice(JPEG_PREFIX.length);
+}
+
 /** Reads and interacts with the actor's top-level document. */
 export class EnterpriseMCPChild extends JSWindowActorChild {
   #controls = new Map();
@@ -247,6 +339,10 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
         return this.#list(window, document);
       case "EnterpriseMCP:Interact":
         return this.#interact(window, document, data);
+      case "EnterpriseMCP:ConsoleSummary":
+        return consoleCounts(data.documentId, data.since);
+      case "EnterpriseMCP:Screenshot":
+        return capturePage(window, document);
       default:
         return null;
     }

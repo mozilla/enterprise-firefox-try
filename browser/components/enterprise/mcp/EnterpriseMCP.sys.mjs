@@ -7,6 +7,7 @@ import {
   clearInterval,
 } from "resource://gre/modules/Timer.sys.mjs";
 import { guardTab } from "./EnterpriseMCPNavigation.sys.mjs";
+import { sameDocumentRequest } from "./EnterpriseMCPNetwork.sys.mjs";
 import { compilePolicy } from "./EnterpriseMCPPolicy.sys.mjs";
 
 const lazy = {};
@@ -23,6 +24,14 @@ const SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS = 0x40000;
 const AUTHORIZE = "EnterpriseMCP:Authorize";
 const TRANSPORT = "@mozilla.org/enterprise-mcp/transport;1";
 const ACTOR_PATH = "moz-src:///browser/components/enterprise/mcp/";
+const HTTP_STOP = "http-on-stop-request";
+const DIAGNOSTICS = new Map([
+  ["network_metadata", "NetworkMetadata"],
+  ["console_summary", "ConsoleSummaries"],
+  ["screenshot", "VisiblePageScreenshots"],
+]);
+const MAX_NETWORK_REQUESTS = 64;
+
 const MANAGED_TOPICS = [
   "felt-firefox-shutdown",
   "felt-firefox-signout-requested",
@@ -71,6 +80,11 @@ function canExportPage() {
   }
 }
 
+function canCapturePages() {
+  const policy = Services.policies.getActivePolicies();
+  return !!policy && !policy.Watermark && !policy.DisableFirefoxScreenshots;
+}
+
 export const EnterpriseMCP = new (class {
   #policy = null;
   #transport = null;
@@ -95,8 +109,8 @@ export const EnterpriseMCP = new (class {
     }
     if (
       compiled.clientAccess !== "LocalUser" ||
-      !["ReadPage", "Navigation", "Interact"].some(category =>
-        compiled.hasGrant(category)
+      !["ReadPage", "Navigation", "Interact", ...DIAGNOSTICS.values()].some(
+        category => compiled.hasGrant(category)
       ) ||
       !(TRANSPORT in Cc)
     ) {
@@ -113,6 +127,7 @@ export const EnterpriseMCP = new (class {
         allFrames: false,
       });
       Services.ppmm.addMessageListener(AUTHORIZE, this);
+      Services.obs.addObserver(this, HTTP_STOP);
       for (const topic of MANAGED_TOPICS) {
         Services.obs.addObserver(this, topic);
       }
@@ -135,6 +150,7 @@ export const EnterpriseMCP = new (class {
     if (this.#initialized) {
       this.#initialized = false;
       Services.ppmm.removeMessageListener(AUTHORIZE, this);
+      Services.obs.removeObserver(this, HTTP_STOP);
       ChromeUtils.unregisterWindowActor("EnterpriseMCP");
       for (const topic of MANAGED_TOPICS) {
         Services.obs.removeObserver(this, topic);
@@ -143,7 +159,9 @@ export const EnterpriseMCP = new (class {
   }
 
   observe(subject, topic) {
-    if (topic === "EnterprisePolicies:PolicyUpdatesApplied") {
+    if (topic === HTTP_STOP) {
+      this.#recordRequest(subject);
+    } else if (topic === "EnterprisePolicies:PolicyUpdatesApplied") {
       this.#reset();
     } else {
       this.remove();
@@ -237,6 +255,12 @@ export const EnterpriseMCP = new (class {
         read_page: mayExport && this.#policy.hasGrant("ReadPage"),
         navigation,
         interact: mayExport && this.#policy.hasGrant("Interact"),
+        network_metadata: mayExport && this.#policy.hasGrant("NetworkMetadata"),
+        console_summary: mayExport && this.#policy.hasGrant("ConsoleSummaries"),
+        screenshot:
+          mayExport &&
+          canCapturePages() &&
+          this.#policy.hasGrant("VisiblePageScreenshots"),
       };
       if (!Object.values(capabilities).some(Boolean)) {
         if (this.#listening) {
@@ -353,7 +377,8 @@ export const EnterpriseMCP = new (class {
       new URL(global.documentURI.spec).origin !== url.origin ||
       sameManagementHost(url, consoleURL) ||
       !this.#policy?.grants(url, category) ||
-      (foreground && !canExportPage())
+      (foreground && !canExportPage()) ||
+      (category === "VisiblePageScreenshots" && !canCapturePages())
     ) {
       return null;
     }
@@ -622,6 +647,8 @@ export const EnterpriseMCP = new (class {
     const handle = uuid();
     client.handle = { ...document, token: handle };
     client.controls = null;
+    client.owner.network = null;
+    client.owner.consoleSince = null;
     if (client.agentTab) {
       client.agentTab.requestId = null;
     }
@@ -929,6 +956,7 @@ export const EnterpriseMCP = new (class {
     for (const [tool, category] of [
       ["interact", "Interact"],
       ["navigation", "Navigation"],
+      ...DIAGNOSTICS,
     ]) {
       if (this.#capabilities[tool]) {
         const document = this.#documentFor(browser, category);
@@ -940,6 +968,80 @@ export const EnterpriseMCP = new (class {
     return null;
   }
 
+  #recordRequest(subject) {
+    if (!this.#listening || !this.#capabilities.network_metadata) {
+      return;
+    }
+    try {
+      const channel = subject.QueryInterface(Ci.nsIHttpChannel);
+      const context = channel.loadInfo.browsingContext;
+      const owner = this.#owners.get(context?.embedderElement);
+      if (
+        !owner?.network ||
+        owner.box.currentNotification !== owner.notification ||
+        !this.#checkedDocument(owner, "NetworkMetadata")
+      ) {
+        return;
+      }
+      const { requests, since } = owner.network;
+      const request = sameDocumentRequest(channel, owner, since);
+      if (request) {
+        requests.push(request);
+        if (requests.length > MAX_NETWORK_REQUESTS) {
+          requests.shift();
+        }
+      }
+    } catch {}
+  }
+
+  async #diagnostic(clientId, client, request, stillPending) {
+    const { id, operation } = request;
+    const category = DIAGNOSTICS.get(operation);
+    const document = client.handle;
+    const eligible = () =>
+      stillPending() &&
+      this.#checkedDocument(document, category) &&
+      !document.browser.hasAttribute("tabDialogShowing");
+    if (
+      document?.token !== request.tab ||
+      !eligible() ||
+      !(await this.#indicate(clientId, client, document, category)) ||
+      !eligible()
+    ) {
+      return null;
+    }
+    const owner = client.owner;
+    const check = () =>
+      eligible() && owner.box.currentNotification === owner.notification;
+    if (!check()) {
+      return null;
+    }
+    if (operation === "network_metadata") {
+      owner.network ??= { since: Date.now(), requests: [] };
+      return { event: operation, id, requests: owner.network.requests };
+    }
+    const actor = document.global.getActor("EnterpriseMCP");
+    const message = {
+      origin: document.origin,
+      documentId: document.global.innerWindowId,
+    };
+    if (operation === "console_summary") {
+      const since = (owner.consoleSince ??= Date.now());
+      const counts = await actor.sendQuery("EnterpriseMCP:ConsoleSummary", {
+        ...message,
+        since,
+      });
+      return counts && check() ? { event: operation, id, counts } : null;
+    }
+    if (document.browser.browsingContext.children.length) {
+      return null;
+    }
+    const image = await actor.sendQuery("EnterpriseMCP:Screenshot", message);
+    return image && check() && !document.browser.browsingContext.children.length
+      ? { event: operation, id, image }
+      : null;
+  }
+
   async #run(clientId, request, generation) {
     const { id, operation } = request;
     let category = "read_page";
@@ -947,6 +1049,8 @@ export const EnterpriseMCP = new (class {
       category = "navigation";
     } else if (operation === "list_elements" || operation === "interact") {
       category = "interact";
+    } else if (DIAGNOSTICS.has(operation)) {
+      category = operation;
     }
     const client = this.#clients.get(clientId);
     if (!client) {
@@ -994,6 +1098,17 @@ export const EnterpriseMCP = new (class {
         response =
           (await this.#interact(clientId, client, request, stillPending)) ??
           response;
+      } else if (
+        stillPending() &&
+        DIAGNOSTICS.has(operation) &&
+        this.#capabilities[operation]
+      ) {
+        if (client.handle?.token === request.tab) {
+          origin = client.handle.origin;
+          response =
+            (await this.#diagnostic(clientId, client, request, stillPending)) ??
+            response;
+        }
       } else if (stillPending() && operation === "list_tabs") {
         const browser =
           Services.wm.getMostRecentWindow("navigator:browser")?.gBrowser

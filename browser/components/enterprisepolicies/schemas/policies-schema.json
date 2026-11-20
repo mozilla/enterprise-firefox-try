@@ -4,7 +4,14 @@
   "definitions": {
     "enterpriseMCPTool": {
       "type": "string",
-      "enum": ["Navigation", "ReadPage", "Interact"]
+      "enum": [
+        "Navigation",
+        "ReadPage",
+        "Interact",
+        "NetworkMetadata",
+        "ConsoleSummaries",
+        "VisiblePageScreenshots"
+      ]
     },
     "url": { "type": "string", "format": "moz-url" },
     "urlOrEmpty": {

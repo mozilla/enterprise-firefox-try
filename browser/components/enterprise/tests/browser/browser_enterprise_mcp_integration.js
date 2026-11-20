@@ -20,6 +20,7 @@ const CONSOLE_ORIGIN = "https://console.example.com";
 const POLICIES_URL = CONSOLE_ORIGIN + "/api/browser/policies";
 const ALLOWED = "https://example.com";
 const NAVIGATION_ONLY = "https://test1.example.com";
+const DIAGNOSTICS_ONLY = "https://test2.example.com";
 const NAVIGATION_FIXTURE =
   "/browser/browser/components/enterprise/tests/browser/enterprise_mcp_navigation.sjs";
 const POLICY = {
@@ -27,6 +28,10 @@ const POLICY = {
   Sites: [
     { Origin: ALLOWED, Tools: ["ReadPage", "Navigation", "Interact"] },
     { Origin: NAVIGATION_ONLY, Tools: ["Navigation"] },
+    {
+      Origin: DIAGNOSTICS_ONLY,
+      Tools: ["NetworkMetadata", "ConsoleSummaries", "VisiblePageScreenshots"],
+    },
   ],
 };
 
@@ -423,6 +428,139 @@ async function testExistingTab(mcp) {
   });
 }
 
+async function testDiagnostics(mcp) {
+  const url = DIAGNOSTICS_ONLY + NAVIGATION_FIXTURE;
+  await BrowserTestUtils.withNewTab(url, async browser => {
+    const discovery = await mcp.request("tools/call", { name: "list_tabs" });
+    const [{ handle: tab, origin }] = discovery.structuredContent.tabs;
+    Assert.equal(origin, DIAGNOSTICS_ONLY);
+    const call = name =>
+      mcp.request("tools/call", { name, arguments: { tab } });
+    Assert.ok(
+      (await call("read_page")).isError,
+      "Diagnostic grants do not allow page reads"
+    );
+    Assert.deepEqual(
+      (await call("network_metadata")).structuredContent.requests,
+      []
+    );
+    Assert.deepEqual((await call("console_summary")).structuredContent.counts, {
+      debug: 0,
+      info: 0,
+      warn: 0,
+      error: 0,
+    });
+
+    await SpecialPowers.spawn(
+      browser,
+      [DIAGNOSTICS_ONLY, NAVIGATION_FIXTURE],
+      async (origin_, path) => {
+        content.document.body.style.backgroundColor = "rgb(250, 0, 20)";
+        content.console.debug("Actual console text is excluded");
+        content.console.warn("Sensitive warning");
+        const response = await content.fetch(
+          origin_ + path + "?id=private-query",
+          {
+            method: "POST",
+            body: "private request body",
+            headers: { "x-private-header": "private header" },
+          }
+        );
+        await response.text();
+        const crossOrigin = await content.fetch("https://example.org" + path, {
+          mode: "no-cors",
+        });
+        await crossOrigin.text();
+      }
+    );
+    const summary = await call("console_summary");
+    Assert.deepEqual(summary.structuredContent.counts, {
+      debug: 1,
+      info: 0,
+      warn: 1,
+      error: 0,
+    });
+    Assert.ok(!JSON.stringify(summary).includes("Sensitive warning"));
+
+    let requests;
+    await TestUtils.waitForCondition(async () => {
+      requests = (await call("network_metadata")).structuredContent?.requests;
+      return requests?.length > 0;
+    }, "The same-origin POST appeared in the network summary");
+    Assert.equal(requests.length, 1, "The cross-origin request was excluded");
+    Assert.equal(requests[0].method, "POST");
+    Assert.equal(requests[0].status, 200);
+    Assert.greaterOrEqual(requests[0].duration_ms, 0);
+    Assert.deepEqual(Object.keys(requests[0]).sort(), [
+      "duration_ms",
+      "method",
+      "status",
+    ]);
+
+    const image = (await call("screenshot")).content[0];
+    Assert.equal(image.type, "image");
+    Assert.equal(image.mimeType, "image/jpeg");
+    const bitmap = new Image();
+    bitmap.src = "data:image/jpeg;base64," + image.data;
+    await bitmap.decode();
+    const canvas = document.createElementNS(
+      "http://www.w3.org/1999/xhtml",
+      "canvas"
+    );
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d");
+    context.drawImage(bitmap, 0, 0);
+    const [red, green, blue] = context.getImageData(
+      Math.floor(bitmap.width / 2),
+      Math.floor(bitmap.height / 2),
+      1,
+      1
+    ).data;
+    Assert.ok(
+      red > 210 && green < 30 && blue < 60,
+      "The capture contains the web document"
+    );
+
+    await SpecialPowers.spawn(browser, [], () => {
+      const doc = content.document;
+      const host = doc.createElement("div");
+      host.id = "protected";
+      const root = host.attachShadow({ mode: "closed" });
+      root.appendChild(doc.createElement("input")).type = "password";
+      doc.body.appendChild(host);
+    });
+    Assert.ok(
+      (await call("screenshot")).isError,
+      "A closed shadow tree with protected input blocks capture"
+    );
+    await SpecialPowers.spawn(browser, [NAVIGATION_FIXTURE], async path => {
+      const doc = content.document;
+      doc.getElementById("protected").remove();
+      const frame = doc.createElement("iframe");
+      const loaded = new content.Promise(resolve => (frame.onload = resolve));
+      frame.src = "https://example.org" + path;
+      doc.body.appendChild(frame);
+      await loaded;
+    });
+    Assert.ok(
+      (await call("screenshot")).isError,
+      "An embedded frame blocks capture"
+    );
+    const box = gBrowser.getNotificationBox(browser);
+    box.currentNotification.buttonContainer
+      .querySelector(".notification-button")
+      .click();
+    await mcp.waitForChange();
+    await mcp.waitForChange();
+    Assert.deepEqual(
+      (await mcp.request("tools/call", { name: "list_tabs" })).structuredContent
+        .tabs,
+      []
+    );
+  });
+}
+
 add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
   let body = {
     policies: { DisableDeveloperTools: true, EnterpriseMCP: POLICY },
@@ -473,6 +611,7 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
   const mcp = await initializeMCP();
   await testAgentTab(mcp);
   await testExistingTab(mcp);
+  await testDiagnostics(mcp);
 
   await BrowserTestUtils.withNewTab(
     "https://example.org/document-builder.sjs?html=Denied",
@@ -597,7 +736,13 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
     arguments: { url: heldURL + "&controls" },
   });
   const tab = opened.structuredContent.tab.handle;
-  for (const tool of ["read_page", "list_elements"]) {
+  for (const tool of [
+    "read_page",
+    "list_elements",
+    "network_metadata",
+    "console_summary",
+    "screenshot",
+  ]) {
     const result = await restrictedMCP.request("tools/call", {
       name: tool,
       arguments: { tab },

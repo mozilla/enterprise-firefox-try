@@ -25,6 +25,9 @@ pub struct Capabilities {
     pub read_page: bool,
     pub navigation: bool,
     pub interact: bool,
+    pub network_metadata: bool,
+    pub console_summary: bool,
+    pub screenshot: bool,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -56,6 +59,18 @@ pub enum Request {
         element: String,
         action: Action,
     },
+    NetworkMetadata {
+        id: u32,
+        tab: String,
+    },
+    ConsoleSummary {
+        id: u32,
+        tab: String,
+    },
+    Screenshot {
+        id: u32,
+        tab: String,
+    },
     Cancel {
         id: u32,
     },
@@ -64,13 +79,43 @@ pub enum Request {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Event {
-    Ready { capabilities: Capabilities },
-    Tabs { id: u32, tabs: Vec<Tab> },
-    Page { id: u32, page: Page },
-    TabOpened { id: u32, tab: Tab },
-    Elements { id: u32, elements: Vec<Control> },
-    Interacted { id: u32 },
-    Denied { id: u32 },
+    Ready {
+        capabilities: Capabilities,
+    },
+    Tabs {
+        id: u32,
+        tabs: Vec<Tab>,
+    },
+    Page {
+        id: u32,
+        page: Page,
+    },
+    TabOpened {
+        id: u32,
+        tab: Tab,
+    },
+    Elements {
+        id: u32,
+        elements: Vec<Control>,
+    },
+    Interacted {
+        id: u32,
+    },
+    NetworkMetadata {
+        id: u32,
+        requests: Vec<NetworkRequest>,
+    },
+    ConsoleSummary {
+        id: u32,
+        counts: ConsoleCounts,
+    },
+    Screenshot {
+        id: u32,
+        image: String,
+    },
+    Denied {
+        id: u32,
+    },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -129,6 +174,36 @@ pub enum ControlKind {
     Select,
     Submit,
     Scroll,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NetworkRequest {
+    pub method: HttpMethod,
+    pub status: u16,
+    pub duration_ms: u32,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum HttpMethod {
+    Get,
+    Head,
+    Post,
+    Put,
+    Patch,
+    Delete,
+    Options,
+    Other,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConsoleCounts {
+    pub debug: u32,
+    pub info: u32,
+    pub warn: u32,
+    pub error: u32,
 }
 
 pub fn read_line(reader: &mut impl BufRead, limit: usize) -> io::Result<Option<Vec<u8>>> {
