@@ -27,7 +27,12 @@ const POLICY = {
 async function connect() {
   const firefox = Services.dirsvc.get("XREExeF", Ci.nsIFile);
   const process = await Subprocess.call({
-    command: PathUtils.join(firefox.parent.path, "firefox-enterprise-mcp"),
+    command: PathUtils.join(
+      firefox.parent.path,
+      Services.appinfo.OS === "WINNT"
+        ? "firefox-enterprise-mcp.exe"
+        : "firefox-enterprise-mcp"
+    ),
   });
   let buffered = "";
   let nextId = 0;

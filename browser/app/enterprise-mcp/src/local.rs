@@ -86,6 +86,38 @@ fn peer(_: &UnixStream) -> io::Result<(libc::uid_t, u32)> {
     Err(io::ErrorKind::Unsupported.into())
 }
 
+pub struct Stream(UnixStream);
+
+impl Stream {
+    pub fn peer_pid(&self) -> io::Result<u32> {
+        peer(&self.0).map(|(_, pid)| pid)
+    }
+
+    pub fn try_clone(&self) -> io::Result<Self> {
+        self.0.try_clone().map(Self)
+    }
+
+    pub fn close(&self) -> io::Result<()> {
+        self.0.shutdown(std::net::Shutdown::Both)
+    }
+}
+
+impl io::Read for Stream {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        self.0.read(bytes)
+    }
+}
+
+impl io::Write for Stream {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0.write(bytes)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
+    }
+}
+
 pub struct Listener {
     listener: UnixListener,
     path: PathBuf,
@@ -104,14 +136,14 @@ impl Listener {
         Ok(endpoint)
     }
 
-    pub fn accept(&self) -> io::Result<UnixStream> {
+    pub fn accept(&mut self) -> io::Result<Stream> {
         let (stream, _) = self.listener.accept()?;
         let (user, _) = peer(&stream)?;
         if user != uid() {
             return Err(io::ErrorKind::PermissionDenied.into());
         }
         stream.set_nonblocking(true)?;
-        Ok(stream)
+        Ok(Stream(stream))
     }
 }
 
@@ -142,7 +174,7 @@ fn endpoint_pid(name: &OsStr) -> Option<u32> {
     pid.parse().ok()
 }
 
-pub fn connect() -> io::Result<UnixStream> {
+pub fn connect() -> io::Result<Stream> {
     let mut chosen = None;
     for entry in fs::read_dir(directory(false)?)? {
         let entry = entry?;
@@ -163,7 +195,9 @@ pub fn connect() -> io::Result<UnixStream> {
             Err(error) => return Err(error),
         }
     }
-    chosen.ok_or_else(|| io::ErrorKind::NotConnected.into())
+    chosen
+        .map(Stream)
+        .ok_or_else(|| io::ErrorKind::NotConnected.into())
 }
 
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
@@ -172,7 +206,7 @@ mod tests {
 
     #[test]
     fn endpoint_name_matches_os_attested_peer() {
-        let listener = Listener::bind().unwrap();
+        let mut listener = Listener::bind().unwrap();
         let pid = endpoint_pid(listener.path.file_name().unwrap()).unwrap();
         assert_eq!(pid, std::process::id());
         let connection = connect_endpoint(&listener.path, pid).unwrap();

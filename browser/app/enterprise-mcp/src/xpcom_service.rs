@@ -2,7 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use crate::{encode, local::Listener, Event, Request, MAX_REQUEST, MAX_RESPONSE};
+use crate::{
+    encode,
+    local::{Listener, Stream},
+    Event, Request, MAX_REQUEST, MAX_RESPONSE,
+};
 use nserror::{nsresult, NS_ERROR_FAILURE, NS_ERROR_INVALID_ARG, NS_ERROR_NOT_AVAILABLE, NS_OK};
 use nsstring::{nsACString, nsCString};
 use serde::Serialize;
@@ -10,14 +14,13 @@ use std::{
     cell::RefCell,
     collections::BTreeMap,
     io::{self, Read, Write},
-    os::unix::net::UnixStream,
 };
 use xpcom::{xpcom, xpcom_method};
 
 const MAX_CONNECTIONS: usize = 8;
 
 struct Client {
-    stream: UnixStream,
+    stream: Stream,
     input: Vec<u8>,
     output: Vec<u8>,
     pending: Option<u32>,

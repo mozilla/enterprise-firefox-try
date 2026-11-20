@@ -2431,6 +2431,7 @@ dependencies = [
  "nsstring",
  "serde",
  "serde_json",
+ "windows-sys",
  "xpcom",
 ]
 

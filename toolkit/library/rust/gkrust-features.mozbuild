@@ -89,6 +89,7 @@ if CONFIG["MOZ_ENTERPRISE"]:
     if CONFIG["MOZ_BUILD_APP"] == "browser" and CONFIG["OS_TARGET"] in (
         "Linux",
         "Darwin",
+        "WINNT",
     ):
         gkrust_features += ["enterprise-mcp"]
 

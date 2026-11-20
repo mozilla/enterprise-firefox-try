@@ -5,9 +5,15 @@
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufRead};
 
-#[cfg(unix)]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub mod local;
-#[cfg(all(unix, feature = "gecko"))]
+#[cfg(windows)]
+#[path = "windows.rs"]
+pub mod local;
+#[cfg(all(
+    any(target_os = "linux", target_os = "macos", windows),
+    feature = "gecko"
+))]
 mod xpcom_service;
 
 pub const MAX_REQUEST: usize = 16 * 1024;

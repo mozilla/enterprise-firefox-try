@@ -6,6 +6,7 @@
 run-if = [
   "os == 'linux'",
   "os == 'mac'",
+  "os == 'win'",
 ]
 
 ["browser_enterprise_mcp_read.js"]

@@ -166,7 +166,7 @@
 @RESPATH@/application.ini
 #ifdef MOZ_ENTERPRISE
 @RESPATH@/firefox.cfg
-#if defined(XP_LINUX) || defined(XP_MACOSX)
+#if defined(XP_LINUX) || defined(XP_MACOSX) || defined(XP_WIN)
 @BINPATH@/firefox-enterprise-mcp@BIN_SUFFIX@
 #endif
 #endif

@@ -36,7 +36,7 @@ fn framing_rejects_truncated_and_oversized_input() {
     );
 }
 
-#[cfg(unix)]
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
 #[test]
 fn stdio_negotiates_protocol_and_validates_calls() {
     let mut process = Command::new(env!("CARGO_BIN_EXE_firefox-enterprise-mcp"))
