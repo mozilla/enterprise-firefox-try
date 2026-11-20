@@ -48,6 +48,16 @@ function handleRequest(request, response) {
               } catch {
                 this.dataset.opened = 'blocked';
               }">Popup</button>
+      <button type="button"
+              onclick="const frame = document.createElement('iframe');
+                        document.body.append(frame);
+                        try {
+                          this.dataset.framePopup = Boolean(frame.contentWindow.eval(
+                            &quot;open('about:blank')&quot;
+                          ));
+                        } catch {
+                          this.dataset.framePopup = 'blocked';
+                        }">Frame popup</button>
       <label>Title <input id="title" maxlength="20"></label>
       <input id="subject" aria-label="Subject" maxlength="20"
              oninput="this.dataset.edited = 'yes'">

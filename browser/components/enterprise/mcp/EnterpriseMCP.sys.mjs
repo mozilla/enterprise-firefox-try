@@ -104,7 +104,6 @@ export const EnterpriseMCP = new (class {
   #clients = new Map();
   #owners = new Map();
   #tickets = new Map();
-  #cancelledLoads = new WeakSet();
   #stoppedBrowsers = new WeakSet();
   #initialized = false;
   #listening = false;
@@ -576,8 +575,6 @@ export const EnterpriseMCP = new (class {
         this.#forget(clientId, true);
       }
     };
-    gBrowser.addTabsProgressListener(watch);
-    gBrowser.tabContainer.addEventListener("TabSelect", tabChanged);
     const box = gBrowser.getNotificationBox(browser);
     const owner = {
       ...document,
@@ -590,6 +587,8 @@ export const EnterpriseMCP = new (class {
         gBrowser.tabContainer.removeEventListener("TabSelect", tabChanged);
       },
     };
+    gBrowser.addTabsProgressListener(watch);
+    gBrowser.tabContainer.addEventListener("TabSelect", tabChanged);
     client.owner = owner;
     this.#owners.set(browser, owner);
     const stop = () => {
@@ -597,11 +596,12 @@ export const EnterpriseMCP = new (class {
         return;
       }
       recordSession(client, this.#policy.clientAccess, "stopped");
-      if (client.agentTab) {
-        this.#forget(clientId, true);
-      } else {
+      const existingTab = !client.agentTab;
+      if (existingTab) {
         this.#stoppedBrowsers.add(browser);
-        this.#forget(clientId, true);
+      }
+      this.#forget(clientId, true);
+      if (existingTab) {
         this.#offerReattachment(browser, box);
       }
     };
@@ -844,11 +844,18 @@ export const EnterpriseMCP = new (class {
       return;
     }
     load.cancelled = true;
-    load.channel?.cancel(Cr.NS_ERROR_BLOCKED_BY_POLICY);
-    if (load.progress?.isStarted) {
-      load.progress.stop({
-        error: new Error("Enterprise MCP navigation cancelled"),
-      });
+    try {
+      if (load.channel) {
+        load.channel.cancel(Cr.NS_ERROR_BLOCKED_BY_POLICY);
+      } else {
+        load.browser.browsingContext?.stop(Ci.nsIWebNavigation.STOP_NETWORK);
+      }
+    } finally {
+      if (load.progress?.isStarted) {
+        load.progress.stop({
+          error: new Error("Enterprise MCP navigation cancelled"),
+        });
+      }
     }
   }
 
@@ -859,7 +866,6 @@ export const EnterpriseMCP = new (class {
       !url ||
       handle?.token !== request.tab ||
       !this.#checkedDocument(handle, "Navigation") ||
-      this.#cancelledLoads.has(handle.browser) ||
       client.attachedLoad ||
       !this.#foreground(handle.browser) ||
       handle.browser.hasAttribute("tabDialogShowing") ||
@@ -875,18 +881,11 @@ export const EnterpriseMCP = new (class {
       return null;
     }
     const { browser } = owner;
-    const { gBrowser } = browser.documentGlobal;
-    const tab = gBrowser.getTabForBrowser(browser);
     const context = browser.browsingContext;
     const principal = Services.scriptSecurityManager.createNullPrincipal(
       context.originAttributes
     );
     const load = { browser, principal, requestId: request.id };
-    const clearGuard = () => {
-      load.unguard();
-      this.#cancelledLoads.delete(browser);
-      tab.removeEventListener("TabClose", clearGuard);
-    };
     load.unguard = guardTab(
       context.browserId,
       channel => {
@@ -896,14 +895,10 @@ export const EnterpriseMCP = new (class {
           !load.cancelled &&
           !!this.#navigationURL(channel.URI.spec);
         load.blocked ||= !allowed;
-        if (load.cancelled) {
-          Services.tm.dispatchToMainThread(clearGuard);
-        }
         return allowed;
       },
       info => info.triggeringPrincipal?.equals(principal)
     );
-    tab.addEventListener("TabClose", clearGuard);
     client.attachedLoad = load;
     client.handle = null;
     owner.navigating = true;
@@ -932,11 +927,7 @@ export const EnterpriseMCP = new (class {
     } finally {
       owner.navigating = false;
       client.attachedLoad = null;
-      if (!load.cancelled || load.channel || !tab.isConnected) {
-        clearGuard();
-      } else {
-        this.#cancelledLoads.add(browser);
-      }
+      load.unguard();
       if (!completed && stillPending()) {
         this.#forget(clientId, true);
       }
@@ -967,9 +958,23 @@ export const EnterpriseMCP = new (class {
           !!this.#navigationURL(channel.URI.spec)
         );
       },
-      info =>
-        info.triggeringWindowId === effect.documentId &&
-        !info.hasValidUserGestureActivation
+      info => {
+        const context = global.browsingContext;
+        if (
+          info.hasValidUserGestureActivation ||
+          context.currentWindowGlobal !== global
+        ) {
+          return false;
+        }
+        const source = WindowGlobalParent.getByInnerWindowId(
+          info.triggeringWindowId
+        );
+        return (
+          source?.browsingContext?.top === context ||
+          (!source &&
+            info.triggeringPrincipal?.equals(global.documentPrincipal))
+        );
+      }
     );
     owner.effect = effect;
   }

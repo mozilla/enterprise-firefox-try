@@ -347,12 +347,32 @@ async function testExistingTab(mcp) {
       result.structuredContent?.dispatched,
       "The existing-tab action was dispatched"
     );
+    const framePopup = controls.structuredContent.elements.find(
+      element => element.text === "Frame popup"
+    );
+    Assert.ok(
+      (
+        await call("interact", {
+          tab,
+          element: framePopup.handle,
+          action: { type: "click" },
+        })
+      ).structuredContent?.dispatched,
+      "The action creating a same-origin frame was dispatched"
+    );
     await SpecialPowers.spawn(browser, [], async () => {
       Assert.ok(
         ["false", "blocked"].includes(
           content.document.querySelector("[data-opened]")?.dataset.opened
         ),
         "An existing-tab MCP action could not open a popup"
+      );
+      Assert.ok(
+        ["false", "blocked"].includes(
+          content.document.querySelector("[data-frame-popup]")?.dataset
+            .framePopup
+        ),
+        "A same-origin about:blank frame created during MCP control cannot open a popup"
       );
       const iframe = content.document.createElement("iframe");
       const loaded = ContentTaskUtils.waitForEvent(iframe, "load");

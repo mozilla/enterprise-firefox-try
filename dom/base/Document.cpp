@@ -7710,6 +7710,22 @@ void Document::SetDocumentCharacterSet(NotNull<const Encoding*> aEncoding) {
   }
 }
 
+uint32_t Document::GetEnterpriseMCPRestrictions() const {
+  if (mEnterpriseMCPRestrictions) {
+    return mEnterpriseMCPRestrictions;
+  }
+  const Document* top = GetTopLevelContentDocumentIfSameProcess();
+  return top && top->mEnterpriseMCPRestrictions &&
+                 NodePrincipal()->Equals(top->NodePrincipal())
+             ? top->mEnterpriseMCPRestrictions
+             : 0;
+}
+
+uint32_t Document::GetTriggeringSandboxFlags() const {
+  return GetSandboxFlags() |
+         (GetEnterpriseMCPRestrictions() & SANDBOXED_DOWNLOADS);
+}
+
 void Document::SetEnterpriseMCPRestrictions(bool aRestricted) {
   mEnterpriseMCPRestrictions =
       aRestricted ? SANDBOXED_AUXILIARY_NAVIGATION | SANDBOXED_MODALS |
