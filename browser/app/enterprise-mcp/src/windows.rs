@@ -185,7 +185,8 @@ impl Stream {
             if !is_read && Instant::now() >= end {
                 return Err(io::ErrorKind::TimedOut.into());
             }
-            thread::sleep(Duration::from_millis(10));
+            let retry_ms = if is_read { 100 } else { 10 };
+            thread::sleep(Duration::from_millis(retry_ms));
         }
         Err(io::ErrorKind::NotConnected.into())
     }
