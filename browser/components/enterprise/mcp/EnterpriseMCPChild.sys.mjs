@@ -144,8 +144,12 @@ function controlKind(document, element) {
       return "submit";
     }
     if (
-      element.type === "button" &&
+      (element.type === "button" ||
+        (element.localName === "button" &&
+          element.type === "submit" &&
+          !element.form)) &&
       !element.hasAttribute("commandfor") &&
+      !element.hasAttribute("popovertarget") &&
       !element.closest("label")
     ) {
       return "button";
