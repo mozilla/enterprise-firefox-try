@@ -4390,7 +4390,7 @@ nsresult nsDocShell::ReloadDocument(nsDocShell* aDocShell, Document* aDocument,
   nsIPrincipal* triggeringPrincipal = aDocument->NodePrincipal();
   nsCOMPtr<nsIPolicyContainer> policyContainer =
       aDocument->GetPolicyContainer();
-  uint32_t triggeringSandboxFlags = aDocument->GetSandboxFlags();
+  uint32_t triggeringSandboxFlags = aDocument->GetTriggeringSandboxFlags();
   uint64_t triggeringWindowId = aDocument->InnerWindowID();
   net::ClassificationFlags triggeringClassificationFlags =
       aDocument->GetScriptTrackingFlags();
@@ -5317,7 +5317,7 @@ nsDocShell::ForceRefreshURI(nsIURI* aURI, nsIPrincipal* aPrincipal,
   loadState->SetTextDirectiveUserActivation(
       doc->ConsumeTextDirectiveUserActivation() ||
       loadState->HasValidUserGestureActivation());
-  loadState->SetTriggeringSandboxFlags(doc->GetSandboxFlags());
+  loadState->SetTriggeringSandboxFlags(doc->GetTriggeringSandboxFlags());
   loadState->SetTriggeringWindowId(doc->InnerWindowID());
   loadState->SetTriggeringClassificationFlags(doc->GetScriptTrackingFlags());
 
@@ -7969,7 +7969,8 @@ nsresult nsDocShell::PerformRetargeting(nsDocShellLoadState* aLoadState) {
     Document* doc = mDocumentViewer->GetDocument();
 
     const bool isDocumentAuxSandboxed =
-        doc && (doc->GetSandboxFlags() & SANDBOXED_AUXILIARY_NAVIGATION);
+        doc && ((doc->GetSandboxFlags() | doc->GetEnterpriseMCPRestrictions()) &
+                SANDBOXED_AUXILIARY_NAVIGATION);
 
     if (isDocumentAuxSandboxed) {
       return NS_ERROR_DOM_INVALID_ACCESS_ERR;
@@ -12780,6 +12781,11 @@ nsresult nsDocShell::OnLinkClickSync(nsIContent* aContent,
     nsCOMPtr<nsIExternalProtocolService> extProtService =
         do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID);
     if (extProtService) {
+      if ((aContent->OwnerDoc()->GetEnterpriseMCPRestrictions() &
+           SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS) &&
+          nsContentUtils::IsExternalProtocol(aLoadState->URI())) {
+        return NS_ERROR_BLOCKED_BY_POLICY;
+      }
       nsAutoCString scheme;
       aLoadState->URI()->GetScheme(scheme);
       if (!scheme.IsEmpty()) {
@@ -12810,7 +12816,7 @@ nsresult nsDocShell::OnLinkClickSync(nsIContent* aContent,
   uint32_t triggeringSandboxFlags = 0;
   uint64_t triggeringWindowId = 0;
   if (mBrowsingContext) {
-    triggeringSandboxFlags = aContent->OwnerDoc()->GetSandboxFlags();
+    triggeringSandboxFlags = aContent->OwnerDoc()->GetTriggeringSandboxFlags();
     triggeringWindowId = aContent->OwnerDoc()->InnerWindowID();
   }
 

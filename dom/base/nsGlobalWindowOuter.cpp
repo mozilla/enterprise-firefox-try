@@ -2888,7 +2888,9 @@ bool nsGlobalWindowOuter::AreDialogsEnabled() {
   // just go ahead and check mDoc, since in everything except edge cases in
   // which a frame is allow-same-origin but not allow-scripts and is being poked
   // at by some other window this should be the right thing anyway.
-  if (!mDoc || (mDoc->GetSandboxFlags() & SANDBOXED_MODALS)) {
+  if (!mDoc ||
+      ((mDoc->GetSandboxFlags() | mDoc->GetEnterpriseMCPRestrictions()) &
+       SANDBOXED_MODALS)) {
     return false;
   }
 

@@ -2669,7 +2669,14 @@ BrowsingContext::CheckURLAndCreateLoadState(nsIURI* aURI,
     principal->CreateReferrerInfo(referrerPolicy, getter_AddRefs(referrerInfo));
   }
   loadState->SetTriggeringPrincipal(triggeringPrincipal);
-  loadState->SetTriggeringSandboxFlags(aSourceDocument->GetSandboxFlags());
+  if ((aSourceDocument->GetEnterpriseMCPRestrictions() &
+       SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS) &&
+      nsContentUtils::IsExternalProtocol(aURI)) {
+    aRv.Throw(NS_ERROR_BLOCKED_BY_POLICY);
+    return nullptr;
+  }
+  loadState->SetTriggeringSandboxFlags(
+      aSourceDocument->GetTriggeringSandboxFlags());
   loadState->SetPolicyContainer(aSourceDocument->GetPolicyContainer());
   if (referrerInfo) {
     loadState->SetReferrerInfo(referrerInfo);

@@ -1456,7 +1456,7 @@ nsresult nsObjectLoadingContent::OpenChannel() {
   nsLoadFlags loadFlags = nsIChannel::LOAD_CALL_CONTENT_SNIFFERS |
                           nsIChannel::LOAD_BYPASS_SERVICE_WORKER |
                           nsIRequest::LOAD_HTML_OBJECT_DATA;
-  uint32_t sandboxFlags = doc->GetSandboxFlagsForInheritance();
+  uint32_t sandboxFlags = doc->GetSandboxFlags();
 
   // For object loads we store the policyContainer that potentially needs to
   // be inherited, e.g. in case we are loading an opaque origin
@@ -1667,7 +1667,7 @@ nsObjectLoadingContent::ObjectType nsObjectLoadingContent::GetTypeOfContent(
        this, aMIMEType.get(), el));
   auto ret =
       static_cast<ObjectType>(nsContentUtils::HtmlObjectContentTypeForMIMEType(
-          aMIMEType, doc->GetSandboxFlagsForInheritance()));
+          aMIMEType, doc->GetSandboxFlags()));
   LOG(("OBJLC [%p]: called HtmlObjectContentTypeForMIMEType\n", this));
   return ret;
 }

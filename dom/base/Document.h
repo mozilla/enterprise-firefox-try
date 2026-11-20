@@ -1204,12 +1204,10 @@ class Document : public nsINode,
    * Get the sandbox flags for this document.
    * @see nsSandboxFlags.h for the possible flags
    */
-  uint32_t GetSandboxFlags() const {
-    return mSandboxFlags | mEnterpriseMCPRestrictions;
-  }
+  uint32_t GetSandboxFlags() const { return mSandboxFlags; }
 
-  // MCP restrictions apply only to actions on this document.
-  uint32_t GetSandboxFlagsForInheritance() const { return mSandboxFlags; }
+  uint32_t GetEnterpriseMCPRestrictions() const;
+  uint32_t GetTriggeringSandboxFlags() const;
 
   void SetEnterpriseMCPRestrictions(bool aRestricted);
 

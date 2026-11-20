@@ -103,7 +103,7 @@ WindowGlobalInit WindowGlobalActor::WindowInitializer(
   init.blockAllMixedContent() = doc->GetBlockAllMixedContent(false);
   init.upgradeInsecureRequests() = doc->GetUpgradeInsecureRequests(false);
   init.partitionStoragePrincipal() = !doc->UseRegularPrincipal();
-  init.sandboxFlags() = doc->GetSandboxFlagsForInheritance();
+  init.sandboxFlags() = doc->GetSandboxFlags();
   net::CookieJarSettings::Cast(doc->CookieJarSettings())
       ->Serialize(init.cookieJarSettings());
   init.httpsOnlyStatus() = doc->HttpsOnlyStatus();
