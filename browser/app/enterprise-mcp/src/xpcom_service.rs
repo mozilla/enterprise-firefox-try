@@ -8,7 +8,9 @@ use crate::{
     local::{BrowserListener, BrowserStream},
     Event, Request, MAX_REQUEST, MAX_RESPONSE,
 };
-use mio::{Events, Interest, Poll, Registry, Token, Waker};
+#[cfg(unix)]
+use mio::Interest;
+use mio::{Events, Poll, Registry, Token, Waker};
 use nserror::{nsresult, NS_ERROR_FAILURE, NS_ERROR_INVALID_ARG, NS_ERROR_NOT_AVAILABLE, NS_OK};
 use nsstring::{nsACString, nsCString};
 use serde::{Deserialize, Serialize};
