@@ -2,10 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import {
-  setInterval,
-  clearInterval,
-} from "resource://gre/modules/Timer.sys.mjs";
+import { setTimeout, clearTimeout } from "resource://gre/modules/Timer.sys.mjs";
 import { guardTab } from "./EnterpriseMCPNavigation.sys.mjs";
 import { sameDocumentRequest } from "./EnterpriseMCPNetwork.sys.mjs";
 import { compilePolicy } from "./EnterpriseMCPPolicy.sys.mjs";
@@ -22,6 +19,9 @@ const SANDBOXED_DOWNLOADS = 0x10000;
 const SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS = 0x40000;
 
 const AUTH_TIMEOUT_MS = 10000;
+const ACTIVE_POLL_MS = 100;
+const IDLE_POLL_MS = 1000;
+const MAX_START_RETRY_MS = 30000;
 const AUTHORIZE = "EnterpriseMCP:Authorize";
 const TRANSPORT = "@mozilla.org/enterprise-mcp/transport;1";
 const ACTOR_PATH = "moz-src:///browser/components/enterprise/mcp/";
@@ -99,6 +99,8 @@ export const EnterpriseMCP = new (class {
   #initialized = false;
   #listening = false;
   #capabilities = null;
+  #nextStart = 0;
+  #startRetry = IDLE_POLL_MS;
 
   apply(policy) {
     this.remove();
@@ -143,17 +145,19 @@ export const EnterpriseMCP = new (class {
     this.#transport = Cc[TRANSPORT].createInstance(
       Ci.nsIEnterpriseMCPTransport
     );
-    this.#timer = setInterval(() => this.#poll(), 100);
+    this.#schedulePoll(0);
   }
 
   remove() {
     this.#reset();
     if (this.#timer !== null) {
-      clearInterval(this.#timer);
+      clearTimeout(this.#timer);
       this.#timer = null;
     }
     this.#policy = null;
     this.#transport = null;
+    this.#nextStart = 0;
+    this.#startRetry = IDLE_POLL_MS;
     if (this.#initialized) {
       this.#initialized = false;
       Services.ppmm.removeMessageListener(AUTHORIZE, this);
@@ -169,7 +173,7 @@ export const EnterpriseMCP = new (class {
     if (topic === HTTP_STOP) {
       this.#recordRequest(subject);
     } else if (topic === "EnterprisePolicies:PolicyUpdatesApplied") {
-      this.#reset();
+      this.#poll();
     } else {
       this.remove();
     }
@@ -251,6 +255,16 @@ export const EnterpriseMCP = new (class {
     }
   }
 
+  #schedulePoll(delay) {
+    this.#timer = setTimeout(() => {
+      this.#timer = null;
+      this.#poll();
+      if (this.#transport) {
+        this.#schedulePoll(this.#clients.size ? ACTIVE_POLL_MS : IDLE_POLL_MS);
+      }
+    }, delay);
+  }
+
   #poll() {
     try {
       const managed =
@@ -284,6 +298,9 @@ export const EnterpriseMCP = new (class {
         this.#reset();
       }
       if (!this.#listening) {
+        if (ChromeUtils.now() < this.#nextStart) {
+          return;
+        }
         const settings = { capabilities };
         if (this.#policy.clientAccess === "AllowedApplications") {
           const executable = Services.dirsvc.get("XREExeF", Ci.nsIFile);
@@ -297,10 +314,23 @@ export const EnterpriseMCP = new (class {
             allowed: this.#policy.applications,
           };
         }
-        this.#transport.start(
-          JSON.stringify(settings),
-          this.#policy.clientAccess === "ApprovedClients"
-        );
+        try {
+          this.#transport.start(
+            JSON.stringify(settings),
+            this.#policy.clientAccess === "ApprovedClients"
+          );
+        } catch {
+          if (this.#startRetry === IDLE_POLL_MS) {
+            console.warn(
+              "Firefox Enterprise could not start the MCP listener."
+            );
+          }
+          this.#nextStart = ChromeUtils.now() + this.#startRetry;
+          this.#startRetry = Math.min(this.#startRetry * 2, MAX_START_RETRY_MS);
+          return;
+        }
+        this.#nextStart = 0;
+        this.#startRetry = IDLE_POLL_MS;
         this.#capabilities = capabilities;
         this.#listening = true;
       }
