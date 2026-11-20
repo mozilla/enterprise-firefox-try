@@ -70,7 +70,12 @@ impl Client {
                 }
                 return Ok(None);
             }
-            Request::ListTabs { id } | Request::ReadPage { id, .. } => {
+            Request::ListTabs { id }
+            | Request::ReadPage { id, .. }
+            | Request::OpenTab { id, .. }
+            | Request::NavigateTab { id, .. }
+            | Request::ListElements { id, .. }
+            | Request::Interact { id, .. } => {
                 if self.pending.is_some() || !self.output.is_empty() {
                     return Err(io::ErrorKind::InvalidData.into());
                 }
@@ -84,6 +89,7 @@ impl Client {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum Incoming {
+    Connected { client: u32 },
     Request { client: u32, request: Request },
     Disconnected { client: u32 },
 }
@@ -92,29 +98,33 @@ struct Server {
     listener: Listener,
     clients: BTreeMap<u32, Client>,
     last_client: u32,
+    ready: Vec<u8>,
 }
 
 impl Server {
     fn poll(&mut self) -> io::Result<Vec<Incoming>> {
-        if let Ok(stream) = self.listener.accept() {
-            if self.clients.len() < MAX_CONNECTIONS {
+        let mut incoming = Vec::new();
+        if self.clients.len() < MAX_CONNECTIONS {
+            if let Ok(stream) = self.listener.accept() {
                 self.last_client = self
                     .last_client
                     .checked_add(1)
                     .ok_or_else(|| io::Error::other("MCP identifier exhausted"))?;
+                incoming.push(Incoming::Connected {
+                    client: self.last_client,
+                });
                 self.clients.insert(
                     self.last_client,
                     Client {
                         stream,
                         input: Vec::new(),
-                        output: encode(&Event::Ready, MAX_RESPONSE)?,
+                        output: self.ready.clone(),
                         pending: None,
                     },
                 );
             }
         }
 
-        let mut incoming = Vec::new();
         self.clients.retain(|&client, connection| {
             match connection.flush().and_then(|()| connection.receive()) {
                 Ok(Some(request)) => incoming.push(Incoming::Request { client, request }),
@@ -137,14 +147,18 @@ struct EnterpriseMCPTransport {
 
 #[allow(non_snake_case)]
 impl EnterpriseMCPTransport {
-    xpcom_method!(start => Start());
-    fn start(&self) -> Result<(), nsresult> {
+    xpcom_method!(start => Start(capabilities: *const nsACString));
+    fn start(&self, capabilities: &nsACString) -> Result<(), nsresult> {
+        let capabilities =
+            serde_json::from_slice(capabilities).map_err(|_| NS_ERROR_INVALID_ARG)?;
         let mut server = self.server.borrow_mut();
         if server.is_none() {
             *server = Some(Server {
                 listener: Listener::bind().map_err(|_| NS_ERROR_FAILURE)?,
                 clients: BTreeMap::new(),
                 last_client: 0,
+                ready: encode(&Event::Ready { capabilities }, MAX_RESPONSE)
+                    .map_err(|_| NS_ERROR_FAILURE)?,
             });
         }
         Ok(())
@@ -173,8 +187,13 @@ impl EnterpriseMCPTransport {
     fn reply(&self, client: u32, payload: &nsACString) -> Result<(), nsresult> {
         let event: Event = serde_json::from_slice(payload).map_err(|_| NS_ERROR_INVALID_ARG)?;
         let id = match event {
-            Event::Ready => return Err(NS_ERROR_INVALID_ARG),
-            Event::Tabs { id, .. } | Event::Page { id, .. } | Event::Denied { id } => id,
+            Event::Ready { .. } => return Err(NS_ERROR_INVALID_ARG),
+            Event::Tabs { id, .. }
+            | Event::Page { id, .. }
+            | Event::TabOpened { id, .. }
+            | Event::Elements { id, .. }
+            | Event::Interacted { id }
+            | Event::Denied { id } => id,
         };
         let mut server = self.server.borrow_mut();
         let clients = &mut server.as_mut().ok_or(NS_ERROR_NOT_AVAILABLE)?.clients;

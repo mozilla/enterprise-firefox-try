@@ -19,20 +19,57 @@ mod xpcom_service;
 pub const MAX_REQUEST: usize = 16 * 1024;
 pub const MAX_RESPONSE: usize = 128 * 1024;
 
+#[derive(Clone, Copy, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Capabilities {
+    pub read_page: bool,
+    pub navigation: bool,
+    pub interact: bool,
+}
+
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Request {
-    ListTabs { id: u32 },
-    ReadPage { id: u32, tab: String },
-    Cancel { id: u32 },
+    ListTabs {
+        id: u32,
+    },
+    ReadPage {
+        id: u32,
+        tab: String,
+    },
+    OpenTab {
+        id: u32,
+        url: String,
+    },
+    NavigateTab {
+        id: u32,
+        tab: String,
+        url: String,
+    },
+    ListElements {
+        id: u32,
+        tab: String,
+    },
+    Interact {
+        id: u32,
+        tab: String,
+        element: String,
+        action: Action,
+    },
+    Cancel {
+        id: u32,
+    },
 }
 
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Event {
-    Ready,
+    Ready { capabilities: Capabilities },
     Tabs { id: u32, tabs: Vec<Tab> },
     Page { id: u32, page: Page },
+    TabOpened { id: u32, tab: Tab },
+    Elements { id: u32, elements: Vec<Control> },
+    Interacted { id: u32 },
     Denied { id: u32 },
 }
 
@@ -63,6 +100,35 @@ pub enum ElementKind {
     Button,
     Heading,
     Link,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum Action {
+    Click {},
+    Fill { value: String },
+    Select { index: u32 },
+    Scroll { x: i16, y: i16 },
+    Submit {},
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Control {
+    pub handle: String,
+    pub kind: ControlKind,
+    pub text: String,
+    pub options: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControlKind {
+    Button,
+    Input,
+    Select,
+    Submit,
+    Scroll,
 }
 
 pub fn read_line(reader: &mut impl BufRead, limit: usize) -> io::Result<Option<Vec<u8>>> {

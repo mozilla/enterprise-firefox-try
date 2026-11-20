@@ -15,6 +15,11 @@ fn ipc_rejects_unclassified_operations_and_parameters() {
         json!({"operation":"evaluate", "id": 1}),
         json!({"operation":"list_tabs", "id": 1, "method":"script.evaluate"}),
         json!({"operation":"read_page", "id": 1, "tab": 10}),
+        json!({"operation":"open_tab", "id": 1, "url":"https://example.com/", "headers":{}}),
+        json!({"operation":"navigate_tab", "id": 1, "url":"https://example.com/"}),
+        json!({"operation":"interact", "id":1, "tab":"a", "element":"b", "action":{"type":"click","selector":"button"}}),
+        json!({"operation":"interact", "id":1, "tab":"a", "element":"b", "action":{"type":"select","index":-1}}),
+        json!({"operation":"interact", "id":1, "tab":"a", "element":"b", "action":{"type":"script"}}),
     ] {
         assert!(serde_json::from_value::<Request>(json).is_err());
     }

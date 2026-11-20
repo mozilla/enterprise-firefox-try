@@ -8,6 +8,7 @@ run-if = [
   "os == 'mac'",
   "os == 'win'",
 ]
+support-files = ["enterprise_mcp_navigation.sjs"]
 
 ["browser_enterprise_mcp_read.js"]
 

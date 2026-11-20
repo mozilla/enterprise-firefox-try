@@ -1900,6 +1900,18 @@ export var Policies = {
     },
   },
 
+  EncryptedMediaExtensions: {
+    onBeforeAddons(manager, param) {
+      if ("Enabled" in param) {
+        lazy.PoliciesUtils.setDefaultPref(
+          "media.eme.enabled",
+          param.Enabled,
+          param.Locked
+        );
+      }
+    },
+  },
+
   EnterpriseMCP: {
     validate(param) {
       try {
@@ -1914,18 +1926,6 @@ export var Policies = {
     },
     onRemove() {
       lazy.EnterpriseMCP.remove();
-    },
-  },
-
-  EncryptedMediaExtensions: {
-    onBeforeAddons(manager, param) {
-      if ("Enabled" in param) {
-        lazy.PoliciesUtils.setDefaultPref(
-          "media.eme.enabled",
-          param.Enabled,
-          param.Locked
-        );
-      }
     },
   },
 
