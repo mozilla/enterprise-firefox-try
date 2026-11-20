@@ -10,6 +10,8 @@ import { compilePolicy } from "./EnterpriseMCPPolicy.sys.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
+  ConsoleClient:
+    "moz-src:///toolkit/components/enterprise/modules/ConsoleClient.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ProgressListener: "chrome://remote/content/shared/Navigate.sys.mjs",
 });
@@ -108,6 +110,7 @@ export const EnterpriseMCP = new (class {
   #initialized = false;
   #listening = false;
   #capabilities = null;
+  #refreshing = false;
   #nextStart = 0;
   #startRetry = IDLE_POLL_MS;
 
@@ -205,6 +208,7 @@ export const EnterpriseMCP = new (class {
 
   #reset() {
     this.#generation++;
+    this.#refreshing = false;
     this.#tickets.clear();
     this.#transport?.stop();
     this.#listening = false;
@@ -274,11 +278,43 @@ export const EnterpriseMCP = new (class {
     }, delay);
   }
 
+  async #waitForRefresh() {
+    if (this.#refreshing) {
+      return;
+    }
+    this.#refreshing = true;
+    const generation = this.#generation;
+    try {
+      await lazy.ConsoleClient.getAccessToken();
+    } catch {
+      if (generation === this.#generation) {
+        this.#reset();
+      }
+      return;
+    }
+    if (generation !== this.#generation) {
+      return;
+    }
+    this.#refreshing = false;
+    if (!currentConsole()) {
+      this.#reset();
+    } else {
+      this.#poll();
+    }
+  }
+
   #poll() {
     try {
-      const managed =
-        Services.policies.status === Ci.nsIEnterprisePolicies.ACTIVE &&
-        !!currentConsole();
+      const policyActive =
+        Services.policies.status === Ci.nsIEnterprisePolicies.ACTIVE;
+      const active = policyActive && !!currentConsole();
+      const refreshing =
+        policyActive &&
+        !active &&
+        this.#listening &&
+        this.#clients.size > 0 &&
+        Services.felt.canRefreshManagedSession();
+      const managed = active || refreshing;
       const navigation = managed && this.#policy.hasGrant("Navigation");
       const mayExport = managed && canExportPage();
       const capabilities = {
@@ -305,6 +341,12 @@ export const EnterpriseMCP = new (class {
         )
       ) {
         this.#reset();
+      }
+      if (!active || this.#refreshing) {
+        if (refreshing && this.#listening) {
+          this.#waitForRefresh();
+        }
+        return;
       }
       if (!this.#listening) {
         if (ChromeUtils.now() < this.#nextStart) {
@@ -386,7 +428,8 @@ export const EnterpriseMCP = new (class {
           this.#run(client, request, generation);
         }
       }
-    } catch {
+    } catch (error) {
+      console.error("Firefox Enterprise MCP polling failed", error);
       this.#reset();
     }
   }
@@ -1200,11 +1243,12 @@ export const EnterpriseMCP = new (class {
     client.pending = request;
     let response = { event: "denied", id };
     let origin = "";
-    const stillPending = () =>
+    const pending = () =>
       generation === this.#generation &&
       this.#clients.get(clientId) === client &&
-      client.pending === request &&
-      !!currentConsole();
+      client.pending === request;
+    const stillPending = () =>
+      pending() && !this.#refreshing && !!currentConsole();
     try {
       if (
         stillPending() &&
@@ -1305,7 +1349,10 @@ export const EnterpriseMCP = new (class {
       response = { event: "denied", id };
     }
     try {
-      if (stillPending()) {
+      if (pending()) {
+        if (!stillPending()) {
+          response = { event: "denied", id };
+        }
         recordOperation(
           client,
           operation,
