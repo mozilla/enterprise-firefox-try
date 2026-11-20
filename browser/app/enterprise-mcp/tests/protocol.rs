@@ -60,6 +60,7 @@ fn stdio_negotiates_protocol_and_validates_calls() {
             "capabilities":{}
         }}),
         json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        json!({"jsonrpc":"2.0","id":"unknown","result":{}}),
         json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
             "name":"read_page","arguments":{"tab":"1234","script":"invalid"}
         }}),

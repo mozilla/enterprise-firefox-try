@@ -502,6 +502,11 @@ impl Server {
                     }
                 }
             }
+            if value.get("id").is_some()
+                && (value.get("result").is_some() ^ value.get("error").is_some())
+            {
+                return Ok(());
+            }
         }
         let id = value.get("id");
         let method = value.get("method").and_then(Value::as_str);
