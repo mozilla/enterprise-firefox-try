@@ -540,6 +540,11 @@ partial interface Document {
 };
 
 
+// Temporarily restrict browser-initiated Enterprise MCP control.
+partial interface Document {
+  [ChromeOnly] undefined setEnterpriseMCPRestrictions(boolean restricted);
+};
+
 // Extension to give chrome JS the ability to get the underlying
 // sandbox flag attribute
 partial interface Document {

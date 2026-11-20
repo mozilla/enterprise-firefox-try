@@ -1204,7 +1204,11 @@ class Document : public nsINode,
    * Get the sandbox flags for this document.
    * @see nsSandboxFlags.h for the possible flags
    */
-  uint32_t GetSandboxFlags() const { return mSandboxFlags; }
+  uint32_t GetSandboxFlags() const {
+    return mSandboxFlags | mEnterpriseMCPRestrictions;
+  }
+
+  void SetEnterpriseMCPRestrictions(bool aRestricted);
 
   Maybe<nsILoadInfo::CrossOriginEmbedderPolicy> GetEmbedderPolicy() const {
     return mEmbedderPolicy;
@@ -5687,6 +5691,7 @@ class Document : public nsINode,
   // These are set at load time and are immutable - see nsSandboxFlags.h for the
   // possible flags.
   uint32_t mSandboxFlags;
+  uint32_t mEnterpriseMCPRestrictions = 0;
 
   // The embedder policy obtained from parsing the HTTP response header or from
   // our opener if this is the initial about:blank document.
