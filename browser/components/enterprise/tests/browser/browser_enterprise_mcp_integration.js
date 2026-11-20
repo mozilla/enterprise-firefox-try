@@ -25,9 +25,11 @@ const NAVIGATION_FIXTURE =
   "/browser/browser/components/enterprise/tests/browser/enterprise_mcp_navigation.sjs";
 const POLICY = {
   ClientAccess: "LocalUser",
+  DeniedSites: ["https://example.org"],
   Sites: [
     { Origin: ALLOWED, Tools: ["ReadPage", "Navigation", "Interact"] },
     { Origin: NAVIGATION_ONLY, Tools: ["Navigation"] },
+    { Origin: "https://example.org", Tools: ["Navigation"] },
     {
       Origin: DIAGNOSTICS_ONLY,
       Tools: ["NetworkMetadata", "ConsoleSummaries", "VisiblePageScreenshots"],
@@ -653,6 +655,14 @@ async function testSecurityLogging(mcp, updateLogging) {
       await mcp.waitForChange();
       await mcp.waitForChange();
       Assert.equal(sessionEvents().at(-1).extra.action, "admitted");
+      const { recordSession } = ChromeUtils.importESModule(
+        "moz-src:///browser/components/enterprise/mcp/EnterpriseMCPAudit.sys.mjs"
+      );
+      const sessionCount = sessionEvents().length;
+      recordSession(null, "AllowedApplications", "rejected");
+      recordSession(null, "AllowedApplications", "rejected");
+      Assert.equal(sessionEvents().length, sessionCount + 1);
+      Assert.equal(sessionEvents().at(-1).extra.action, "rejected");
       await SpecialPowers.pushPrefEnv({
         set: [
           [

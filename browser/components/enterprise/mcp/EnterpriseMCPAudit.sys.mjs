@@ -4,6 +4,8 @@
 
 const ENABLED = "browser.enterprise.mcp.securityLogging.enabled";
 const URL_LOGGING = "browser.enterprise.mcp.securityLogging.urlLogging";
+const REJECTION_INTERVAL_MS = 60_000;
+const lastRejection = new Map();
 
 function record(metric, client, extras, origin) {
   try {
@@ -12,6 +14,14 @@ function record(metric, client, extras, origin) {
       !Services.prefs.getBoolPref(ENABLED, false)
     ) {
       return;
+    }
+    if (extras.action === "rejected") {
+      const now = ChromeUtils.now();
+      const previous = lastRejection.get(extras.access_mode);
+      if (previous !== undefined && now - previous < REJECTION_INTERVAL_MS) {
+        return;
+      }
+      lastRejection.set(extras.access_mode, now);
     }
     if (origin && Services.prefs.prefIsLocked(URL_LOGGING)) {
       const level = Services.prefs.getCharPref(URL_LOGGING, "none");

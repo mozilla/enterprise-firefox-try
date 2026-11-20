@@ -26,18 +26,24 @@ export function parseOriginPattern(value) {
   };
 }
 
-function matches(pattern, url) {
+function matches(pattern, url, normalizeHostname = false) {
   if (pattern.protocol !== url.protocol || pattern.port !== url.port) {
     return false;
   }
-  const host = url.hostname;
+  const host = normalizeHostname
+    ? url.hostname.replace(/\.$/, "")
+    : url.hostname;
   return pattern.wildcard
     ? host.endsWith("." + pattern.hostname)
     : host === pattern.hostname;
 }
 
 export function compilePolicy(policy) {
-  const denied = (policy.DeniedSites ?? []).map(parseOriginPattern);
+  const denied = (policy.DeniedSites ?? []).map(value => {
+    const pattern = parseOriginPattern(value);
+    pattern.hostname = pattern.hostname.replace(/\.$/, "");
+    return pattern;
+  });
   const sites = (policy.Sites ?? []).map(({ Origin, Tools }) => ({
     pattern: parseOriginPattern(Origin),
     tools: new Set(Tools),
@@ -94,7 +100,7 @@ export function compilePolicy(policy) {
     grants(url, category) {
       return (
         (url.protocol === "http:" || url.protocol === "https:") &&
-        !denied.some(pattern => matches(pattern, url)) &&
+        !denied.some(pattern => matches(pattern, url, true)) &&
         (defaultTools.has(category) ||
           sites.some(
             ({ pattern, tools }) => tools.has(category) && matches(pattern, url)

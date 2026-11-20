@@ -37,11 +37,18 @@ add_task(function test_blocklist_with_default_tools() {
     ClientAccess: "LocalUser",
     SiteMode: "Blocklist",
     DefaultTools: ["ReadPage"],
-    DeniedSites: ["https://forbidden.example"],
+    DeniedSites: ["https://forbidden.example", "https://*.denied.example."],
     Sites: [{ Origin: "https://forbidden.example", Tools: ["ReadPage"] }],
   });
   Assert.ok(policy.grants(new URL("https://allowed.example"), "ReadPage"));
   Assert.ok(!policy.grants(new URL("https://forbidden.example"), "ReadPage"));
+  Assert.ok(!policy.grants(new URL("https://forbidden.example."), "ReadPage"));
+  Assert.ok(
+    !policy.grants(new URL("https://reports.denied.example"), "ReadPage")
+  );
+  Assert.ok(
+    !policy.grants(new URL("https://reports.denied.example."), "ReadPage")
+  );
   Assert.ok(!policy.grants(new URL("file:///tmp/report"), "ReadPage"));
   Assert.ok(!policy.grants(new URL("https://allowed.example"), "Interact"));
 });
