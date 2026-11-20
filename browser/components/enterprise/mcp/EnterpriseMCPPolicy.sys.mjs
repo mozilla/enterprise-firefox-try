@@ -45,7 +45,26 @@ export function compilePolicy(policy) {
   const defaultTools = new Set(
     policy.SiteMode === "Blocklist" ? policy.DefaultTools : []
   );
+  const approvedKeys = new Map();
+  if (policy.ClientAccess === "ApprovedClients") {
+    const publicKeys = new Set();
+    for (const { Id, PublicKey } of policy.ApprovedClients ?? []) {
+      if (
+        approvedKeys.has(Id) ||
+        publicKeys.has(PublicKey) ||
+        !/^[A-Za-z0-9_-]{1,64}$/.test(Id) ||
+        !PublicKey ||
+        PublicKey.length > 192 ||
+        btoa(atob(PublicKey)) !== PublicKey
+      ) {
+        throw new Error("Invalid MCP client enrollment");
+      }
+      publicKeys.add(PublicKey);
+      approvedKeys.set(Id, PublicKey);
+    }
+  }
   return {
+    approvedKeys,
     clientAccess: policy.ClientAccess,
     hasGrant(category) {
       return (

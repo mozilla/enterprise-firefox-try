@@ -68,3 +68,21 @@ add_task(function test_local_sources_cannot_grant_mcp() {
   provider.mergePolicies();
   Assert.ok(!Object.hasOwn(provider.policies, "EnterpriseMCP"));
 });
+
+add_task(function test_enrollment_requires_unique_identities() {
+  const approved = { Id: "installation-1", PublicKey: "YQ==" };
+  const compile = ApprovedClients =>
+    compilePolicy({ ClientAccess: "ApprovedClients", ApprovedClients });
+  Assert.equal(
+    compile([approved]).approvedKeys.get(approved.Id),
+    approved.PublicKey
+  );
+  Assert.throws(
+    () => compile([approved, approved]),
+    /Invalid MCP client enrollment/
+  );
+  Assert.throws(
+    () => compile([approved, { ...approved, Id: "installation-2" }]),
+    /Invalid MCP client enrollment/
+  );
+});

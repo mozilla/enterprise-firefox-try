@@ -57,6 +57,9 @@ enterprise_mcp:
       session:
         description: Random identifier for this browser connection.
         type: string
+      client_identity:
+        description: The enrolled client key identifier when proof was verified.
+        type: string
       category:
         description: The tool grant checked.
         type: string

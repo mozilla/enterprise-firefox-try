@@ -33,6 +33,10 @@ pub struct Capabilities {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Request {
+    Authenticate {
+        key_id: String,
+        signature: String,
+    },
     ListTabs {
         id: u32,
     },
@@ -79,6 +83,9 @@ pub enum Request {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Event {
+    Challenge {
+        payload: String,
+    },
     Ready {
         capabilities: Capabilities,
     },
