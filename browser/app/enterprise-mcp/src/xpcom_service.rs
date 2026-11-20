@@ -52,60 +52,67 @@ impl Client {
     }
 
     fn receive(&mut self) -> io::Result<Option<Request>> {
-        let mut bytes = [0; 4096];
-        match self.stream.read(&mut bytes) {
-            Ok(0) => return Err(io::ErrorKind::UnexpectedEof.into()),
-            Ok(count) => self.input.extend_from_slice(&bytes[..count]),
-            Err(error) if error.kind() == io::ErrorKind::WouldBlock => (),
-            Err(error) => return Err(error),
-        }
-
-        let Some(newline) = self.input.iter().position(|&byte| byte == b'\n') else {
-            if self.input.len() >= MAX_REQUEST {
+        if !self.input.contains(&b'\n') {
+            let mut bytes = [0; 4096];
+            let available = (MAX_REQUEST - self.input.len()).min(bytes.len());
+            if available == 0 {
                 return Err(io::ErrorKind::InvalidData.into());
             }
-            return Ok(None);
-        };
-        if newline >= MAX_REQUEST {
-            return Err(io::ErrorKind::InvalidData.into());
-        }
-        let request = serde_json::from_slice(&self.input[..newline])?;
-        self.input.drain(..=newline);
-
-        if self.admission == Admission::AwaitingProof && self.output.is_empty() {
-            if matches!(&request, Request::Authenticate { .. }) {
-                self.admission = Admission::Verifying;
-                return Ok(Some(request));
+            match self.stream.read(&mut bytes[..available]) {
+                Ok(0) => return Err(io::ErrorKind::UnexpectedEof.into()),
+                Ok(count) => self.input.extend_from_slice(&bytes[..count]),
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => (),
+                Err(error) => return Err(error),
             }
         }
-        if self.admission != Admission::Admitted {
-            return Err(io::ErrorKind::PermissionDenied.into());
-        }
-        match &request {
-            Request::Authenticate { .. } => return Err(io::ErrorKind::PermissionDenied.into()),
-            Request::Cancel { id } => {
-                if self.pending == Some(*id) {
-                    self.pending = None;
-                    return Ok(Some(request));
-                }
-                return Ok(None);
-            }
-            Request::ListTabs { id }
-            | Request::ReadPage { id, .. }
-            | Request::OpenTab { id, .. }
-            | Request::NavigateTab { id, .. }
-            | Request::ListElements { id, .. }
-            | Request::Interact { id, .. }
-            | Request::NetworkMetadata { id, .. }
-            | Request::ConsoleSummary { id, .. }
-            | Request::Screenshot { id, .. } => {
-                if self.pending.is_some() || !self.output.is_empty() {
+        loop {
+            let Some(newline) = self.input.iter().position(|&byte| byte == b'\n') else {
+                if self.input.len() >= MAX_REQUEST {
                     return Err(io::ErrorKind::InvalidData.into());
                 }
-                self.pending = Some(*id);
+                return Ok(None);
+            };
+            if newline >= MAX_REQUEST {
+                return Err(io::ErrorKind::InvalidData.into());
             }
+            let request = serde_json::from_slice(&self.input[..newline])?;
+            self.input.drain(..=newline);
+
+            if self.admission == Admission::AwaitingProof && self.output.is_empty() {
+                if matches!(&request, Request::Authenticate { .. }) {
+                    self.admission = Admission::Verifying;
+                    return Ok(Some(request));
+                }
+            }
+            if self.admission != Admission::Admitted {
+                return Err(io::ErrorKind::PermissionDenied.into());
+            }
+            match &request {
+                Request::Authenticate { .. } => return Err(io::ErrorKind::PermissionDenied.into()),
+                Request::Cancel { id } => {
+                    if self.pending == Some(*id) {
+                        self.pending = None;
+                        return Ok(Some(request));
+                    }
+                    continue;
+                }
+                Request::ListTabs { id }
+                | Request::ReadPage { id, .. }
+                | Request::OpenTab { id, .. }
+                | Request::NavigateTab { id, .. }
+                | Request::ListElements { id, .. }
+                | Request::Interact { id, .. }
+                | Request::NetworkMetadata { id, .. }
+                | Request::ConsoleSummary { id, .. }
+                | Request::Screenshot { id, .. } => {
+                    if self.pending.is_some() || !self.output.is_empty() {
+                        return Err(io::ErrorKind::InvalidData.into());
+                    }
+                    self.pending = Some(*id);
+                }
+            }
+            return Ok(Some(request));
         }
-        Ok(Some(request))
     }
 }
 
@@ -146,8 +153,11 @@ impl Server {
     fn poll(&mut self) -> io::Result<Vec<Incoming>> {
         let mut incoming = Vec::new();
         if self.clients.len() < MAX_CONNECTIONS {
-            if let Ok(stream) = self.listener.accept() {
-                let pid = stream.peer_pid()?;
+            if let Ok((pid, stream)) = self
+                .listener
+                .accept()
+                .and_then(|stream| Ok((stream.peer_pid()?, stream)))
+            {
                 let application = self
                     .applications
                     .as_ref()
