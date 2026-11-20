@@ -7710,6 +7710,14 @@ void Document::SetDocumentCharacterSet(NotNull<const Encoding*> aEncoding) {
   }
 }
 
+void Document::SetEnterpriseMCPRestrictions(bool aRestricted) {
+  mEnterpriseMCPRestrictions =
+      aRestricted ? SANDBOXED_AUXILIARY_NAVIGATION | SANDBOXED_MODALS |
+                        SANDBOXED_DOWNLOADS |
+                        SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS
+                  : 0;
+}
+
 void Document::GetSandboxFlagsAsString(nsAString& aFlags) {
   nsContentUtils::SandboxFlagsToString(mSandboxFlags, aFlags);
 }
