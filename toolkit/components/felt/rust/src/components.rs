@@ -715,15 +715,27 @@ impl FeltXPCOM {
 
     xpcom_method!(has_active_managed_session => HasActiveManagedSession() -> bool);
     fn has_active_managed_session(&self) -> Result<bool, nsresult> {
-        if !self.is_felt_browser
-            || self.managed_session_ending.load(Ordering::Relaxed)
-            || crate::is_managed_app_disconnected_from_felt()
-        {
+        if !self.managed_session_connected() {
             return Ok(false);
         }
         let tokens = TOKENS.read().map_err(|_| NS_ERROR_FAILURE)?;
         Ok(!tokens.access_token.is_empty()
             && tokens.expires_at > UtcDateTime::now().unix_timestamp())
+    }
+
+    xpcom_method!(can_refresh_managed_session => CanRefreshManagedSession() -> bool);
+    fn can_refresh_managed_session(&self) -> Result<bool, nsresult> {
+        if !self.managed_session_connected() {
+            return Ok(false);
+        }
+        let tokens = TOKENS.read().map_err(|_| NS_ERROR_FAILURE)?;
+        Ok(!tokens.access_token.is_empty())
+    }
+
+    fn managed_session_connected(&self) -> bool {
+        self.is_felt_browser
+            && !self.managed_session_ending.load(Ordering::Relaxed)
+            && !crate::is_managed_app_disconnected_from_felt()
     }
 
     xpcom_method!(is_felt_safe_mode => IsFeltSafeMode() -> bool);

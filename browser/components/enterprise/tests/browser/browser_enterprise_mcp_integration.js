@@ -710,6 +710,8 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
   let body = {
     policies: { DisableDeveloperTools: true, EnterpriseMCP: POLICY },
   };
+  let activeSession = true;
+  let sessionChecks = 0;
   const originalFelt = Services.felt;
   Object.defineProperty(Services, "felt", {
     configurable: true,
@@ -717,7 +719,11 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
       isFeltBrowser: () => true,
       isFeltUI: () => false,
       isManagedAppDisconnectedFromFelt: () => false,
-      hasActiveManagedSession: () => true,
+      hasActiveManagedSession() {
+        sessionChecks++;
+        return activeSession;
+      },
+      canRefreshManagedSession: () => true,
       getConsoleUrl: () => CONSOLE_ORIGIN,
     },
   });
@@ -767,6 +773,61 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
     await updated;
   };
   await testSecurityLogging(mcp, updateLogging);
+  await BrowserTestUtils.withNewTab(
+    ALLOWED + "/document-builder.sjs?html=Renewal",
+    async browser => {
+      await TestUtils.waitForCondition(
+        () => !browser.webProgress.isLoadingDocument
+      );
+      const call = (name, arguments_) =>
+        mcp.request("tools/call", { name, arguments: arguments_ });
+      const { tabs } = (await call("list_tabs", {})).structuredContent;
+      const read = () => call("read_page", { tab: tabs[0].handle });
+      Assert.equal((await read()).structuredContent.page.text, "Renewal");
+      const indicator =
+        gBrowser.getNotificationBox(browser).currentNotification;
+      const refresh = Promise.withResolvers();
+      const refreshStarted = Promise.withResolvers();
+      const getToken = sinon
+        .stub(ConsoleClient, "getAccessToken")
+        .callsFake(() => {
+          refreshStarted.resolve();
+          return refresh.promise;
+        });
+      try {
+        activeSession = false;
+        await refreshStarted.promise;
+        let replied = false;
+        const reading = read().then(reply => {
+          replied = true;
+          return reply;
+        });
+        const checksAtRead = sessionChecks;
+        await TestUtils.waitForCondition(
+          () => sessionChecks >= checksAtRead + 2
+        );
+        Assert.ok(!replied, "The read waits for the managed session refresh");
+        Assert.equal(
+          gBrowser.getNotificationBox(browser).currentNotification,
+          indicator
+        );
+        activeSession = true;
+        refresh.resolve("refreshed");
+        Assert.equal((await reading).structuredContent.page.text, "Renewal");
+        Assert.equal(
+          gBrowser.getNotificationBox(browser).currentNotification,
+          indicator
+        );
+        sinon.assert.calledOnce(getToken);
+      } finally {
+        activeSession = true;
+        refresh.resolve("refreshed");
+        getToken.restore();
+      }
+    }
+  );
+  await mcp.waitForChange();
+  await mcp.waitForChange();
   await testAgentTab(mcp);
   await testExistingTab(mcp);
   await testDiagnostics(mcp);
