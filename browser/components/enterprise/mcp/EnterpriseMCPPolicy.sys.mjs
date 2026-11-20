@@ -63,8 +63,27 @@ export function compilePolicy(policy) {
       approvedKeys.set(Id, PublicKey);
     }
   }
+  const applications = [];
+  if (policy.ClientAccess === "AllowedApplications") {
+    const ids = new Set();
+    const paths = new Set();
+    for (const { Id, ExecutablePath } of policy.AllowedApplications ?? []) {
+      if (
+        !/^[A-Za-z0-9_-]{1,64}$/.test(Id) ||
+        !PathUtils.isAbsolute(ExecutablePath) ||
+        ids.has(Id) ||
+        paths.has(ExecutablePath)
+      ) {
+        throw new Error("Invalid MCP application allowlist");
+      }
+      ids.add(Id);
+      paths.add(ExecutablePath);
+      applications.push({ id: Id, executable: ExecutablePath });
+    }
+  }
   return {
     approvedKeys,
+    applications,
     clientAccess: policy.ClientAccess,
     hasGrant(category) {
       return (

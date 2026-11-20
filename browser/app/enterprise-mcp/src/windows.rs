@@ -338,6 +338,40 @@ pub fn connect() -> io::Result<Stream> {
     Ok(Stream::new(handle, pid, true))
 }
 
+#[cfg(any(feature = "gecko", test))]
+pub(crate) fn process(pid: u32) -> io::Result<(std::path::PathBuf, u32)> {
+    use std::{ffi::OsString, os::windows::ffi::OsStringExt, path::PathBuf};
+    use windows_sys::Win32::System::{
+        Diagnostics::ToolHelp::{
+            CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+            TH32CS_SNAPPROCESS,
+        },
+        Threading::QueryFullProcessImageNameW,
+    };
+
+    let handle = owned(unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) })?;
+    let mut path = vec![0u16; 32768];
+    let mut length = path.len() as u32;
+    check(unsafe {
+        QueryFullProcessImageNameW(handle.as_raw_handle(), 0, path.as_mut_ptr(), &mut length)
+    })?;
+    let snapshot = owned(unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) })?;
+    let mut entry = PROCESSENTRY32W {
+        dwSize: size_of::<PROCESSENTRY32W>() as u32,
+        ..Default::default()
+    };
+    check(unsafe { Process32FirstW(snapshot.as_raw_handle(), &mut entry) })?;
+    loop {
+        if entry.th32ProcessID == pid && entry.th32ParentProcessID != 0 {
+            return Ok((
+                PathBuf::from(OsString::from_wide(&path[..length as usize])),
+                entry.th32ParentProcessID,
+            ));
+        }
+        check(unsafe { Process32NextW(snapshot.as_raw_handle(), &mut entry) })?;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

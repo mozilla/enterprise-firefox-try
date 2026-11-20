@@ -70,6 +70,44 @@ session ends. Private, privileged and management documents are excluded. Reads
 are limited to the top-level page and are refused when configured data loss
 prevention or content analysis applies.
 
+## Allow specific applications
+
+Use `AllowedApplications` mode to let selected desktop applications launch
+the standard connector. List the absolute path of each executable and an
+administrator-assigned identifier. For example, an organization could configure
+the following policy for a client installed under `/opt`.
+
+```json
+{
+  "EnterpriseMCP": {
+    "ClientAccess": "AllowedApplications",
+    "AllowedApplications": [
+      {
+        "Id": "reporting-client",
+        "ExecutablePath": "/opt/reporting-client/bin/reporting-client"
+      }
+    ],
+    "Sites": [
+      {
+        "Origin": "https://reports.example.com",
+        "Tools": ["ReadPage"]
+      }
+    ]
+  }
+}
+```
+
+Use the same stdio connector configuration as for `LocalUser`. Firefox checks
+the executable of the process that directly launches its installed connector.
+If a client uses a helper to launch subprocesses, the policy must identify
+that helper. Avoid allowlisting shells, interpreters, or general-purpose launchers.
+
+This best-effort filter compares executable paths and assumes the OS account,
+installation paths, and other software under that account are trusted.
+Firefox disconnects current clients when it applies an updated allowlist.
+If an application was missing when the allowance was applied, reload the
+policy or restart Firefox after installing it.
+
 ## Approve individual clients
 
 Set `ClientAccess` to `ApprovedClients` and include each installation's key
