@@ -15,6 +15,7 @@ MOZ_SRC_FILES += [
     "mcp/EnterpriseMCP.sys.mjs",
     "mcp/EnterpriseMCPChild.sys.mjs",
     "mcp/EnterpriseMCPNavigation.sys.mjs",
+    "mcp/EnterpriseMCPNetwork.sys.mjs",
     "mcp/EnterpriseMCPParent.sys.mjs",
     "mcp/EnterpriseMCPPolicy.sys.mjs",
 ]

@@ -75,7 +75,10 @@ impl Client {
             | Request::OpenTab { id, .. }
             | Request::NavigateTab { id, .. }
             | Request::ListElements { id, .. }
-            | Request::Interact { id, .. } => {
+            | Request::Interact { id, .. }
+            | Request::NetworkMetadata { id, .. }
+            | Request::ConsoleSummary { id, .. }
+            | Request::Screenshot { id, .. } => {
                 if self.pending.is_some() || !self.output.is_empty() {
                     return Err(io::ErrorKind::InvalidData.into());
                 }
@@ -193,6 +196,9 @@ impl EnterpriseMCPTransport {
             | Event::TabOpened { id, .. }
             | Event::Elements { id, .. }
             | Event::Interacted { id }
+            | Event::NetworkMetadata { id, .. }
+            | Event::ConsoleSummary { id, .. }
+            | Event::Screenshot { id, .. }
             | Event::Denied { id } => id,
         };
         let mut server = self.server.borrow_mut();

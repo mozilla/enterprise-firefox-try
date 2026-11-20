@@ -80,7 +80,13 @@ fn unavailable(output: &mut impl Write, id: Value) -> io::Result<()> {
 
 fn tools(capabilities: Capabilities) -> Vec<Value> {
     let mut tools = Vec::new();
-    if capabilities.read_page || capabilities.navigation || capabilities.interact {
+    if capabilities.read_page
+        || capabilities.navigation
+        || capabilities.interact
+        || capabilities.network_metadata
+        || capabilities.console_summary
+        || capabilities.screenshot
+    {
         tools.push(json!({
                 "name": "list_tabs",
                 "description": "Find eligible Firefox Enterprise tabs. Returns an origin and a temporary handle for the current document.",
@@ -160,6 +166,23 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
                 "annotations": {"destructiveHint": true, "openWorldHint": true}
             })
         ]);
+    }
+    for (enabled, name, description) in [
+        (capabilities.network_metadata, "network_metadata", "Return recent completed same-origin request methods, status codes and duration for the attached top-level document. The first call starts collection."),
+        (capabilities.console_summary, "console_summary", "Return severity counts for recent console API events from the attached top-level document. The first call starts the collection window."),
+        (capabilities.screenshot, "screenshot", "Capture the visible top-level web document. Firefox refuses capture when it cannot enforce its restrictions.")
+    ] {
+        if enabled {
+            tools.push(json!({
+                "name": name,
+                "description": description,
+                "inputSchema": {
+                    "type": "object", "additionalProperties": false,
+                    "properties": {"tab": {"type": "string"}}, "required": ["tab"]
+                },
+                "annotations": {"readOnlyHint": true}
+            }));
+        }
     }
     tools
 }
@@ -257,6 +280,17 @@ fn operation(params: &Value, id: u32) -> Option<Request> {
                 action,
             })
         }
+        "network_metadata" | "console_summary" | "screenshot" => {
+            let ReadPage { tab } = serde_json::from_value(call.arguments).ok()?;
+            if tab.len() != 36 {
+                return None;
+            }
+            Some(match call.name.as_str() {
+                "network_metadata" => Request::NetworkMetadata { id, tab },
+                "console_summary" => Request::ConsoleSummary { id, tab },
+                _ => Request::Screenshot { id, tab },
+            })
+        }
         _ => None,
     }
 }
@@ -350,6 +384,25 @@ impl Server {
             Event::TabOpened { id, tab } => (id, Some(json!({"tab": tab}))),
             Event::Elements { id, elements } => (id, Some(json!({"elements": elements}))),
             Event::Interacted { id } => (id, Some(json!({"dispatched": true}))),
+            Event::NetworkMetadata { id, requests } => (id, Some(json!({"requests": requests}))),
+            Event::ConsoleSummary { id, counts } => (id, Some(json!({"counts": counts}))),
+            Event::Screenshot { id, image } => {
+                if browser
+                    .pending
+                    .as_ref()
+                    .is_some_and(|(wire_id, _)| *wire_id == id)
+                {
+                    let (_, id) = browser.pending.take().unwrap();
+                    return result(
+                        output,
+                        id,
+                        json!({
+                            "content": [{"type": "image", "data": image, "mimeType": "image/jpeg"}]
+                        }),
+                    );
+                }
+                return Ok(());
+            }
             Event::Denied { id } => (id, None),
         };
         if browser
