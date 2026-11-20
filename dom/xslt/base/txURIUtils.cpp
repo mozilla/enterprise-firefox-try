@@ -70,7 +70,7 @@ void URIUtils::ResetWithSource(Document* aNewDoc, nsINode* aSourceNode) {
   aNewDoc->Reset(channel, loadGroup);
   aNewDoc->SetPrincipals(sourcePrincipal, sourcePartitionedPrincipal);
   aNewDoc->SetBaseURI(sourceDoc->GetDocBaseURI());
-  aNewDoc->SetSandboxFlags(sourceDoc->GetSandboxFlags());
+  aNewDoc->SetSandboxFlags(sourceDoc->GetSandboxFlagsForInheritance());
   aNewDoc->SetReferrerInfo(sourceDoc->GetReferrerInfo());
   aNewDoc->SetEmbedderPolicy(sourceDoc->GetEmbedderPolicy());
 

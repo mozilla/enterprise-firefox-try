@@ -345,12 +345,22 @@ async function testExistingTab(mcp) {
       result.structuredContent?.dispatched,
       "The existing-tab action was dispatched"
     );
-    await SpecialPowers.spawn(browser, [], () => {
+    await SpecialPowers.spawn(browser, [], async () => {
       Assert.ok(
         ["false", "blocked"].includes(
           content.document.querySelector("[data-opened]")?.dataset.opened
         ),
         "An existing-tab MCP action could not open a popup"
+      );
+      const iframe = content.document.createElement("iframe");
+      const loaded = ContentTaskUtils.waitForEvent(iframe, "load");
+      iframe.src = "about:blank";
+      content.document.body.append(iframe);
+      await loaded;
+      Assert.equal(
+        SpecialPowers.wrap(iframe.contentDocument).sandboxFlagsAsString,
+        SpecialPowers.wrap(content.document).sandboxFlagsAsString,
+        "An iframe created during MCP control inherits only the document sandbox"
       );
     });
     const blocked = await call("navigate_tab", {

@@ -3086,7 +3086,8 @@ void nsFrameLoader::ApplySandboxFlags(uint32_t sandboxFlags) {
     return;
   }
 
-  uint32_t parentSandboxFlags = mOwnerContent->OwnerDoc()->GetSandboxFlags();
+  uint32_t parentSandboxFlags =
+      mOwnerContent->OwnerDoc()->GetSandboxFlagsForInheritance();
 
   // The child can only add restrictions, never remove them.
   sandboxFlags |= parentSandboxFlags;

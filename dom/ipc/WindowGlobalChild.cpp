@@ -420,7 +420,7 @@ void WindowGlobalChild::OnNewDocument(Document* aDocument) {
 
   SendUpdateDocumentCspSettings(aDocument->GetBlockAllMixedContent(false),
                                 aDocument->GetUpgradeInsecureRequests(false));
-  SendUpdateSandboxFlags(aDocument->GetSandboxFlags());
+  SendUpdateSandboxFlags(aDocument->GetSandboxFlagsForInheritance());
 
   net::CookieJarSettingsArgs csArgs;
   net::CookieJarSettings::Cast(aDocument->CookieJarSettings())
