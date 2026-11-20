@@ -3,7 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use firefox_enterprise_mcp::{
-    encode, local, read_line, Action, Capabilities, Event, Request, MAX_REQUEST, MAX_RESPONSE,
+    encode, local, read_line, Action, Capabilities, Event, Request, MAX_FILL_LENGTH, MAX_REQUEST,
+    MAX_RESPONSE, MAX_SCROLL_DISTANCE, MAX_SELECT_INDEX, MAX_URL_LENGTH,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -116,7 +117,7 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
             "description": "Open a new Firefox Enterprise tab at a permitted HTTP(S) URL. The tab is closed when the session ends.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"url": {"type": "string", "maxLength": 4096}},
+                "properties": {"url": {"type": "string", "maxLength": MAX_URL_LENGTH}},
                 "required": ["url"],
                 "additionalProperties": false
             },
@@ -127,7 +128,7 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
             "description": "Navigate a permitted tab to a permitted HTTP(S) URL. Returns a new document handle.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"tab": {"type": "string"}, "url": {"type": "string", "maxLength": 4096}},
+                "properties": {"tab": {"type": "string"}, "url": {"type": "string", "maxLength": MAX_URL_LENGTH}},
                 "required": ["tab", "url"],
                 "additionalProperties": false
             },
@@ -157,9 +158,9 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
                             "type": "object",
                             "oneOf": [
                                 {"properties": {"type": {"const": "click"}}, "required": ["type"], "additionalProperties": false},
-                                {"properties": {"type": {"const": "fill"}, "value": {"type": "string", "maxLength": 1024}}, "required": ["type", "value"], "additionalProperties": false},
-                                {"properties": {"type": {"const": "select"}, "index": {"type": "integer", "minimum": 0, "maximum": 31}}, "required": ["type", "index"], "additionalProperties": false},
-                                {"properties": {"type": {"const": "scroll"}, "x": {"type": "integer", "minimum": -2048, "maximum": 2048}, "y": {"type": "integer", "minimum": -2048, "maximum": 2048}}, "required": ["type", "x", "y"], "additionalProperties": false},
+                                {"properties": {"type": {"const": "fill"}, "value": {"type": "string", "maxLength": MAX_FILL_LENGTH}}, "required": ["type", "value"], "additionalProperties": false},
+                                {"properties": {"type": {"const": "select"}, "index": {"type": "integer", "minimum": 0, "maximum": MAX_SELECT_INDEX}}, "required": ["type", "index"], "additionalProperties": false},
+                                {"properties": {"type": {"const": "scroll"}, "x": {"type": "integer", "minimum": -MAX_SCROLL_DISTANCE, "maximum": MAX_SCROLL_DISTANCE}, "y": {"type": "integer", "minimum": -MAX_SCROLL_DISTANCE, "maximum": MAX_SCROLL_DISTANCE}}, "required": ["type", "x", "y"], "additionalProperties": false},
                                 {"properties": {"type": {"const": "submit"}}, "required": ["type"], "additionalProperties": false}
                             ]
                         }
@@ -204,7 +205,7 @@ fn empty_object() -> Value {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ReadPage {
+struct TabArgument {
     tab: String,
 }
 
@@ -229,40 +230,29 @@ struct Interact {
     action: Action,
 }
 
-fn valid_url_argument(url: &str) -> bool {
-    !url.is_empty() && url.len() <= 4096
-}
-
 fn operation(params: &Value, id: u32) -> Option<Request> {
     let call: ToolCall = serde_json::from_value(params.clone()).ok()?;
-    match call.name.as_str() {
+    let request = match call.name.as_str() {
         "list_tabs" if call.arguments.as_object().is_some_and(|a| a.is_empty()) => {
-            Some(Request::ListTabs { id })
+            Request::ListTabs { id }
         }
-        "read_page" => {
-            let ReadPage { tab } = serde_json::from_value(call.arguments).ok()?;
-            if tab.len() != 36 {
-                return None;
+        "read_page" | "list_elements" | "network_metadata" | "console_summary" | "screenshot" => {
+            let TabArgument { tab } = serde_json::from_value(call.arguments).ok()?;
+            match call.name.as_str() {
+                "read_page" => Request::ReadPage { id, tab },
+                "list_elements" => Request::ListElements { id, tab },
+                "network_metadata" => Request::NetworkMetadata { id, tab },
+                "console_summary" => Request::ConsoleSummary { id, tab },
+                _ => Request::Screenshot { id, tab },
             }
-            Some(Request::ReadPage { id, tab })
         }
         "open_tab" => {
             let OpenTab { url } = serde_json::from_value(call.arguments).ok()?;
-            if !valid_url_argument(&url) {
-                return None;
-            }
-            Some(Request::OpenTab { id, url })
+            Request::OpenTab { id, url }
         }
         "navigate_tab" => {
             let NavigateTab { tab, url } = serde_json::from_value(call.arguments).ok()?;
-            if tab.len() != 36 || !valid_url_argument(&url) {
-                return None;
-            }
-            Some(Request::NavigateTab { id, tab, url })
-        }
-        "list_elements" => {
-            let ReadPage { tab } = serde_json::from_value(call.arguments).ok()?;
-            (tab.len() == 36).then_some(Request::ListElements { id, tab })
+            Request::NavigateTab { id, tab, url }
         }
         "interact" => {
             let Interact {
@@ -270,32 +260,16 @@ fn operation(params: &Value, id: u32) -> Option<Request> {
                 element,
                 action,
             } = serde_json::from_value(call.arguments).ok()?;
-            let within_bounds = match &action {
-                Action::Fill { value } => value.encode_utf16().count() <= 1024,
-                Action::Select { index } => *index < 32,
-                Action::Scroll { x, y } => x.unsigned_abs() <= 2048 && y.unsigned_abs() <= 2048,
-                _ => true,
-            };
-            (tab.len() == 36 && element.len() == 36 && within_bounds).then_some(Request::Interact {
+            Request::Interact {
                 id,
                 tab,
                 element,
                 action,
-            })
-        }
-        "network_metadata" | "console_summary" | "screenshot" => {
-            let ReadPage { tab } = serde_json::from_value(call.arguments).ok()?;
-            if tab.len() != 36 {
-                return None;
             }
-            Some(match call.name.as_str() {
-                "network_metadata" => Request::NetworkMetadata { id, tab },
-                "console_summary" => Request::ConsoleSummary { id, tab },
-                _ => Request::Screenshot { id, tab },
-            })
         }
-        _ => None,
-    }
+        _ => return None,
+    };
+    request.is_valid().then_some(request)
 }
 
 fn valid_challenge(payload: &str, peer_pid: u32) -> bool {
@@ -400,6 +374,12 @@ impl Server {
         let Some(browser) = self.browser.as_mut().filter(|b| b.connection == connection) else {
             return Ok(());
         };
+        let structured = |data: Value| {
+            json!({
+                "content": [{"type": "text", "text": data.to_string()}],
+                "structuredContent": data
+            })
+        };
         let (wire_id, data) = match event {
             Event::Challenge { payload } => {
                 if !self.external_signer
@@ -429,30 +409,25 @@ impl Server {
                 return self.notify_tools(output);
             }
             Event::Ready { .. } => return self.close_browser(output),
-            Event::Tabs { id, tabs } => (id, Some(json!({"tabs": tabs}))),
-            Event::Page { id, page } => (id, Some(json!({"page": page}))),
-            Event::TabOpened { id, tab } => (id, Some(json!({"tab": tab}))),
-            Event::Elements { id, elements } => (id, Some(json!({"elements": elements}))),
-            Event::Interacted { id } => (id, Some(json!({"dispatched": true}))),
-            Event::NetworkMetadata { id, requests } => (id, Some(json!({"requests": requests}))),
-            Event::ConsoleSummary { id, counts } => (id, Some(json!({"counts": counts}))),
-            Event::Screenshot { id, image } => {
-                if browser
-                    .pending
-                    .as_ref()
-                    .is_some_and(|(wire_id, _)| *wire_id == id)
-                {
-                    let (_, id) = browser.pending.take().unwrap();
-                    return result(
-                        output,
-                        id,
-                        json!({
-                            "content": [{"type": "image", "data": image, "mimeType": "image/jpeg"}]
-                        }),
-                    );
-                }
-                return Ok(());
+            Event::Tabs { id, tabs } => (id, Some(structured(json!({"tabs": tabs})))),
+            Event::Page { id, page } => (id, Some(structured(json!({"page": page})))),
+            Event::TabOpened { id, tab } => (id, Some(structured(json!({"tab": tab})))),
+            Event::Elements { id, elements } => {
+                (id, Some(structured(json!({"elements": elements}))))
             }
+            Event::Interacted { id } => (id, Some(structured(json!({"dispatched": true})))),
+            Event::NetworkMetadata { id, requests } => {
+                (id, Some(structured(json!({"requests": requests}))))
+            }
+            Event::ConsoleSummary { id, counts } => {
+                (id, Some(structured(json!({"counts": counts}))))
+            }
+            Event::Screenshot { id, image } => (
+                id,
+                Some(json!({
+                    "content": [{"type": "image", "data": image, "mimeType": "image/jpeg"}]
+                })),
+            ),
             Event::Denied { id } => (id, None),
         };
         if browser
@@ -461,17 +436,10 @@ impl Server {
             .is_some_and(|(id, _)| *id == wire_id)
         {
             let (_, id) = browser.pending.take().unwrap();
-            if let Some(data) = data {
-                return result(
-                    output,
-                    id,
-                    json!({
-                        "content": [{"type": "text", "text": data.to_string()}],
-                        "structuredContent": data
-                    }),
-                );
-            }
-            return unavailable(output, id);
+            return match data {
+                Some(data) => result(output, id, data),
+                None => unavailable(output, id),
+            };
         }
         Ok(())
     }
@@ -490,8 +458,8 @@ impl Server {
                             .cloned()
                             .and_then(|proof| serde_json::from_value::<Proof>(proof).ok());
                         if let Some(Proof { key_id, signature }) = proof {
-                            if key_id.len() <= 64 && signature.len() == 86 {
-                                let request = Request::Authenticate { key_id, signature };
+                            let request = Request::Authenticate { key_id, signature };
+                            if request.is_valid() {
                                 let frame = encode(&request, MAX_REQUEST)?;
                                 if browser.stream.write_all(&frame).is_ok() {
                                     return Ok(());

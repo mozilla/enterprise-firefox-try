@@ -418,15 +418,12 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
       control.kind !== kind ||
       document.hasValidTransientUserGestureActivation ||
       (type === "fill" &&
-        (action.value.length > 1024 ||
-          (element.maxLength >= 0 &&
-            action.value.length > element.maxLength))) ||
+        element.maxLength >= 0 &&
+        action.value.length > element.maxLength) ||
       (type === "select" &&
         (!element.options[action.index] ||
           element.options[action.index] !== control.options[action.index] ||
-          element.options[action.index].matches("[hidden], :disabled"))) ||
-      (type === "scroll" &&
-        (Math.abs(action.x) > 2048 || Math.abs(action.y) > 2048))
+          element.options[action.index].matches("[hidden], :disabled")))
     ) {
       return false;
     }
