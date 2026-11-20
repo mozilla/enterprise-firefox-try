@@ -1901,8 +1901,13 @@ reduced-protection-infobar-reload-button = Reload
 reduced-protection-infobar-never-show-button = Don’t show again
   .accesskey = D
 
-enterprise-mcp-active = A local agent can read this tab.
+## Firefox Enterprise MCP
+
+# An agent is a local application that can operate Firefox through MCP.
+enterprise-mcp-active = A local agent has access to this tab and may act on your behalf.
 enterprise-mcp-stop = Stop
+  .accesskey = S
 enterprise-mcp-stopped = Local agent access to this tab is stopped.
 enterprise-mcp-allow = Allow agent access
+  .accesskey = A
 enterprise-mcp-agent-tab = A local agent opened this tab. Stopping the agent will close it.

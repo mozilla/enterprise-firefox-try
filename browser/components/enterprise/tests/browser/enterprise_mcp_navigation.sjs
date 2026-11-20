@@ -41,7 +41,7 @@ function handleRequest(request, response) {
   response.write("<!doctype html><h1>Agent tab</h1>");
   if (query.has("controls")) {
     response.write(`
-      <button type="button" onclick="this.dataset.clicked = 'yes'">Apply</button>
+      <button onclick="this.dataset.clicked = 'yes'">Apply</button>
       <button type="button"
               onclick="try {
                 this.dataset.opened = Boolean(window.open('https://example.org/'));
