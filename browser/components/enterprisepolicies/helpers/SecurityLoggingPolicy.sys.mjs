@@ -23,6 +23,10 @@ const SECURITY_LOGGING_PREFS = {
     UrlLogging: "browser.download.enterprise.telemetry.urlLogging",
     FileLogging: "browser.download.enterprise.telemetry.fileLogging",
   },
+  EnterpriseMCP: {
+    Enabled: "browser.enterprise.mcp.securityLogging.enabled",
+    UrlLogging: "browser.enterprise.mcp.securityLogging.urlLogging",
+  },
   PrintPage: {
     Enabled: "print.enterprise.telemetry.printPage.enabled",
     UrlLogging: "print.enterprise.telemetry.printPage.urlLogging",

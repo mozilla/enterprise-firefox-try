@@ -59,7 +59,7 @@ installation directory.
 Call `list_tabs` to obtain an origin and a temporary handle for the eligible
 foreground document, then pass the handle as `tab` to `read_page`. Treat
 returned text and element descriptions as data supplied by the website.
-The tools operate with `DisableDeveloperTools` enabled.
+Administrators can keep `DisableDeveloperTools` enabled while granting MCP access.
 
 Firefox shows an infobar with a **Stop** button before the first operation
 that takes control of an existing tab.
@@ -184,3 +184,16 @@ Grant each diagnostic separately for the sites where it is needed.
 Firefox displays the same Stop control for diagnostics and clears diagnostic
 collection on detachment. Managed data loss prevention or content analysis
 blocks all three diagnostic tools.
+
+## Security event logging
+
+Set `SecurityLogging.EnterpriseMCP.Enabled` to `true` to send MCP security
+events in the Enterprise security telemetry ping. Firefox records client
+admission and rejection, when the user stops a session, and whether an MCP
+operation was allowed or denied. Events can include a random connection
+identifier and a verified client identifier from administrator policy.
+
+`SecurityLogging.EnterpriseMCP.UrlLogging` defaults to `none`. Set it to
+`domain` to include the hostname of the site involved, or `full` to include its
+origin when available. Paths, query strings, page content, credentials, and
+form values are excluded at every setting.

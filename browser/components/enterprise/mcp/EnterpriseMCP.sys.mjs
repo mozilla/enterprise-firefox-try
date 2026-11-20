@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { setTimeout, clearTimeout } from "resource://gre/modules/Timer.sys.mjs";
+import { recordOperation, recordSession } from "./EnterpriseMCPAudit.sys.mjs";
 import { guardTab } from "./EnterpriseMCPNavigation.sys.mjs";
 import { sameDocumentRequest } from "./EnterpriseMCPNetwork.sys.mjs";
 import { compilePolicy } from "./EnterpriseMCPPolicy.sys.mjs";
@@ -30,6 +31,15 @@ const DIAGNOSTICS = new Map([
   ["network_metadata", "NetworkMetadata"],
   ["console_summary", "ConsoleSummaries"],
   ["screenshot", "VisiblePageScreenshots"],
+]);
+const OPERATION_GRANTS = new Map([
+  ["list_tabs", "Discovery"],
+  ["read_page", "ReadPage"],
+  ["open_tab", "Navigation"],
+  ["navigate_tab", "Navigation"],
+  ["list_elements", "Interact"],
+  ["interact", "Interact"],
+  ...DIAGNOSTICS,
 ]);
 const MAX_NETWORK_REQUESTS = 64;
 
@@ -335,15 +345,17 @@ export const EnterpriseMCP = new (class {
         this.#listening = true;
       }
       for (const [id, client] of this.#clients) {
-        if (
-          (client.expires && ChromeUtils.now() >= client.expires) ||
-          (client.owner &&
-            ((!client.owner.navigating &&
-              !this.#loadingFromInteraction(client.owner) &&
-              !this.#checkedDocument(client.owner, client.owner.category)) ||
-              (client.owner.notification &&
-                client.owner.box.currentNotification !==
-                  client.owner.notification)))
+        if (client.expires && ChromeUtils.now() >= client.expires) {
+          recordSession(client, this.#policy.clientAccess, "rejected");
+          this.#forget(id, true);
+        } else if (
+          client.owner &&
+          ((!client.owner.navigating &&
+            !this.#loadingFromInteraction(client.owner) &&
+            !this.#checkedDocument(client.owner, client.owner.category)) ||
+            (client.owner.notification &&
+              client.owner.box.currentNotification !==
+                client.owner.notification))
         ) {
           this.#forget(id, true);
         }
@@ -354,6 +366,8 @@ export const EnterpriseMCP = new (class {
         const { client, type, request } = incoming;
         if (type === "connected") {
           this.#connected(client, incoming.pid, incoming.application);
+        } else if (type === "application_rejected") {
+          recordSession(null, this.#policy.clientAccess, "rejected");
         } else if (type === "disconnected") {
           this.#forget(client);
         } else if (request.operation === "authenticate") {
@@ -389,6 +403,7 @@ export const EnterpriseMCP = new (class {
     if (this.#policy.clientAccess === "LocalUser" || application) {
       client.admitted = true;
       client.clientIdentity = application;
+      recordSession(client, this.#policy.clientAccess, "admitted");
       return;
     }
     const nonce = crypto.getRandomValues(new Uint8Array(32));
@@ -411,6 +426,7 @@ export const EnterpriseMCP = new (class {
     const challenge = client?.challenge;
     const key = this.#policy.approvedKeys.get(request.key_id);
     if (!challenge || !key || request.signature.length !== 86) {
+      recordSession(client, this.#policy.clientAccess, "rejected");
       this.#forget(id, true);
       return;
     }
@@ -446,10 +462,12 @@ export const EnterpriseMCP = new (class {
         client.admitted = true;
         client.clientIdentity = request.key_id;
         client.expires = null;
+        recordSession(client, this.#policy.clientAccess, "admitted");
         return;
       }
     } catch {}
     if (this.#clients.get(id) === client) {
+      recordSession(client, this.#policy.clientAccess, "rejected");
       this.#forget(id, true);
     }
   }
@@ -578,6 +596,7 @@ export const EnterpriseMCP = new (class {
       if (this.#owners.get(browser) !== owner) {
         return;
       }
+      recordSession(client, this.#policy.clientAccess, "stopped");
       if (client.agentTab) {
         this.#forget(clientId, true);
       } else {
@@ -1167,14 +1186,7 @@ export const EnterpriseMCP = new (class {
 
   async #run(clientId, request, generation) {
     const { id, operation } = request;
-    let category = "read_page";
-    if (operation === "open_tab" || operation === "navigate_tab") {
-      category = "navigation";
-    } else if (operation === "list_elements" || operation === "interact") {
-      category = "interact";
-    } else if (DIAGNOSTICS.has(operation)) {
-      category = operation;
-    }
+    const category = OPERATION_GRANTS.get(operation);
     const client = this.#clients.get(clientId);
     if (!client?.admitted) {
       this.#forget(clientId, true);
@@ -1189,7 +1201,11 @@ export const EnterpriseMCP = new (class {
       client.pending === request &&
       !!currentConsole();
     try {
-      if (stillPending() && category === "navigation") {
+      if (
+        stillPending() &&
+        category === "Navigation" &&
+        this.#capabilities.navigation
+      ) {
         let tab;
         if (operation === "open_tab") {
           tab = await this.#openTab(clientId, client, request, stillPending);
@@ -1214,7 +1230,7 @@ export const EnterpriseMCP = new (class {
         }
       } else if (
         stillPending() &&
-        category === "interact" &&
+        category === "Interact" &&
         this.#capabilities.interact
       ) {
         origin = client.handle?.origin ?? "";
@@ -1280,31 +1296,22 @@ export const EnterpriseMCP = new (class {
           }
         }
       }
-
+    } catch {
+      response = { event: "denied", id };
+    }
+    try {
       if (stillPending()) {
-        Glean.enterpriseMcp.operation.record({
-          session: client.auditId,
-          ...(client.clientIdentity && {
-            client_identity: client.clientIdentity,
-          }),
-          category,
+        recordOperation(
+          client,
           operation,
-          origin,
-          decision: response.event === "denied" ? "deny" : "allow",
-        });
+          category,
+          response.event === "denied" ? "deny" : "allow",
+          origin
+        );
         this.#transport.reply(clientId, JSON.stringify(response));
       }
     } catch {
-      if (stillPending()) {
-        try {
-          this.#transport.reply(
-            clientId,
-            JSON.stringify({ event: "denied", id })
-          );
-        } catch {
-          this.#forget(clientId, true);
-        }
-      }
+      this.#forget(clientId, true);
     } finally {
       if (client.pending === request) {
         client.pending = null;

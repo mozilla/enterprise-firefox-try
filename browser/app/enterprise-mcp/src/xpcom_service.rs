@@ -128,6 +128,7 @@ enum Incoming {
         client: u32,
         request: Request,
     },
+    ApplicationRejected,
     Disconnected {
         client: u32,
     },
@@ -187,6 +188,8 @@ impl Server {
                             admission,
                         },
                     );
+                } else {
+                    incoming.push(Incoming::ApplicationRejected);
                 }
             }
         }

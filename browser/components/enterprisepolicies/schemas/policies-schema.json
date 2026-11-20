@@ -4676,6 +4676,18 @@
             }
           }
         },
+        "EnterpriseMCP": {
+          "type": "object",
+          "properties": {
+            "Enabled": { "type": "boolean" },
+            "UrlLogging": {
+              "type": "string",
+              "enum": ["none", "domain", "full"],
+              "default": "none",
+              "description": "Controls whether MCP security events include no site information, the hostname, or the origin (scheme, hostname and port)."
+            }
+          }
+        },
         "PrintPage": {
           "type": "object",
           "properties": {
