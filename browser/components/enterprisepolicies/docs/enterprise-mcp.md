@@ -70,6 +70,26 @@ session ends. Private, privileged and management documents are excluded. Reads
 are limited to the top-level page and are refused when configured data loss
 prevention or content analysis applies.
 
+## Approve individual clients
+
+Set `ClientAccess` to `ApprovedClients` and include each installation's key
+identifier and public key in `ApprovedClients`. Each entry uses an `Id` of up to
+64 ASCII letters, digits, underscores or hyphens and a `PublicKey` containing
+the base64-encoded ECDSA P-256 SubjectPublicKeyInfo. The client or its managed
+launcher keeps the private key. Remove a key from the policy to revoke its
+access. Firefox closes active MCP connections as soon as it applies the updated
+policy.
+
+Launch the connector with `--external-signer` in this mode. The MCP client or
+launcher handles the JSON-RPC request `firefoxEnterprise/signChallenge` and
+signs the exact UTF-8 bytes of `params.payload` with ECDSA P-256 and SHA-256.
+Reply with the same JSON-RPC request ID and a `result` that contains the
+`key_id` and `signature`. Encode the signature as 64 bytes (32-byte
+`r` followed by 32-byte `s`) in unpadded base64url. The connector checks that
+the challenge identifies its own process and its verified browser peer.
+Firefox accepts a proof once, within ten seconds, and advertises tools only
+after verification.
+
 ## Navigation access
 
 Add `Navigation` to a site's tool grants to let a local agent use `open_tab`.

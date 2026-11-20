@@ -19,11 +19,20 @@ use xpcom::{xpcom, xpcom_method};
 
 const MAX_CONNECTIONS: usize = 8;
 
+#[derive(PartialEq)]
+enum Admission {
+    AwaitingChallenge,
+    AwaitingProof,
+    Verifying,
+    Admitted,
+}
+
 struct Client {
     stream: Stream,
     input: Vec<u8>,
     output: Vec<u8>,
     pending: Option<u32>,
+    admission: Admission,
 }
 
 impl Client {
@@ -62,7 +71,17 @@ impl Client {
         let request = serde_json::from_slice(&self.input[..newline])?;
         self.input.drain(..=newline);
 
+        if self.admission == Admission::AwaitingProof && self.output.is_empty() {
+            if matches!(&request, Request::Authenticate { .. }) {
+                self.admission = Admission::Verifying;
+                return Ok(Some(request));
+            }
+        }
+        if self.admission != Admission::Admitted {
+            return Err(io::ErrorKind::PermissionDenied.into());
+        }
         match &request {
+            Request::Authenticate { .. } => return Err(io::ErrorKind::PermissionDenied.into()),
             Request::Cancel { id } => {
                 if self.pending == Some(*id) {
                     self.pending = None;
@@ -92,7 +111,7 @@ impl Client {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum Incoming {
-    Connected { client: u32 },
+    Connected { client: u32, pid: u32 },
     Request { client: u32, request: Request },
     Disconnected { client: u32 },
 }
@@ -102,6 +121,7 @@ struct Server {
     clients: BTreeMap<u32, Client>,
     last_client: u32,
     ready: Vec<u8>,
+    require_proof: bool,
 }
 
 impl Server {
@@ -109,20 +129,28 @@ impl Server {
         let mut incoming = Vec::new();
         if self.clients.len() < MAX_CONNECTIONS {
             if let Ok(stream) = self.listener.accept() {
+                let pid = stream.peer_pid()?;
                 self.last_client = self
                     .last_client
                     .checked_add(1)
                     .ok_or_else(|| io::Error::other("MCP identifier exhausted"))?;
+                let (admission, output) = if self.require_proof {
+                    (Admission::AwaitingChallenge, Vec::new())
+                } else {
+                    (Admission::Admitted, self.ready.clone())
+                };
                 incoming.push(Incoming::Connected {
                     client: self.last_client,
+                    pid,
                 });
                 self.clients.insert(
                     self.last_client,
                     Client {
                         stream,
                         input: Vec::new(),
-                        output: self.ready.clone(),
+                        output,
                         pending: None,
+                        admission,
                     },
                 );
             }
@@ -150,8 +178,8 @@ struct EnterpriseMCPTransport {
 
 #[allow(non_snake_case)]
 impl EnterpriseMCPTransport {
-    xpcom_method!(start => Start(capabilities: *const nsACString));
-    fn start(&self, capabilities: &nsACString) -> Result<(), nsresult> {
+    xpcom_method!(start => Start(capabilities: *const nsACString, require_proof: bool));
+    fn start(&self, capabilities: &nsACString, require_proof: bool) -> Result<(), nsresult> {
         let capabilities =
             serde_json::from_slice(capabilities).map_err(|_| NS_ERROR_INVALID_ARG)?;
         let mut server = self.server.borrow_mut();
@@ -160,10 +188,45 @@ impl EnterpriseMCPTransport {
                 listener: Listener::bind().map_err(|_| NS_ERROR_FAILURE)?,
                 clients: BTreeMap::new(),
                 last_client: 0,
+                require_proof,
                 ready: encode(&Event::Ready { capabilities }, MAX_RESPONSE)
                     .map_err(|_| NS_ERROR_FAILURE)?,
             });
         }
+        Ok(())
+    }
+
+    xpcom_method!(challenge => Challenge(client: u32, payload: *const nsACString));
+    fn challenge(&self, client: u32, payload: &nsACString) -> Result<(), nsresult> {
+        let payload = std::str::from_utf8(payload).map_err(|_| NS_ERROR_INVALID_ARG)?;
+        let mut server = self.server.borrow_mut();
+        let connection = server
+            .as_mut()
+            .and_then(|server| server.clients.get_mut(&client))
+            .filter(|connection| connection.admission == Admission::AwaitingChallenge)
+            .ok_or(NS_ERROR_NOT_AVAILABLE)?;
+        connection.output = encode(
+            &Event::Challenge {
+                payload: payload.to_owned(),
+            },
+            MAX_RESPONSE,
+        )
+        .map_err(|_| NS_ERROR_INVALID_ARG)?;
+        connection.admission = Admission::AwaitingProof;
+        Ok(())
+    }
+
+    xpcom_method!(admit => Admit(client: u32));
+    fn admit(&self, client: u32) -> Result<(), nsresult> {
+        let mut server = self.server.borrow_mut();
+        let server = server.as_mut().ok_or(NS_ERROR_NOT_AVAILABLE)?;
+        let connection = server
+            .clients
+            .get_mut(&client)
+            .filter(|connection| connection.admission == Admission::Verifying)
+            .ok_or(NS_ERROR_NOT_AVAILABLE)?;
+        connection.output = server.ready.clone();
+        connection.admission = Admission::Admitted;
         Ok(())
     }
 
@@ -190,7 +253,7 @@ impl EnterpriseMCPTransport {
     fn reply(&self, client: u32, payload: &nsACString) -> Result<(), nsresult> {
         let event: Event = serde_json::from_slice(payload).map_err(|_| NS_ERROR_INVALID_ARG)?;
         let id = match event {
-            Event::Ready { .. } => return Err(NS_ERROR_INVALID_ARG),
+            Event::Ready { .. } | Event::Challenge { .. } => return Err(NS_ERROR_INVALID_ARG),
             Event::Tabs { id, .. }
             | Event::Page { id, .. }
             | Event::TabOpened { id, .. }

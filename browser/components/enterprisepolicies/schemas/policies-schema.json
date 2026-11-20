@@ -2420,7 +2420,22 @@
       "properties": {
         "ClientAccess": {
           "type": "string",
-          "enum": ["Disabled", "LocalUser"]
+          "enum": ["Disabled", "LocalUser", "ApprovedClients"]
+        },
+        "ApprovedClients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["Id", "PublicKey"],
+            "properties": {
+              "Id": { "type": "string" },
+              "PublicKey": {
+                "type": "string",
+                "description": "Base64-encoded ECDSA P-256 SubjectPublicKeyInfo for the enrolled client-installation key."
+              }
+            }
+          }
         },
         "SiteMode": {
           "type": "string",

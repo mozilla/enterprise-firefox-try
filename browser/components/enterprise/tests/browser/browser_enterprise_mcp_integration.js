@@ -35,7 +35,7 @@ const POLICY = {
   ],
 };
 
-async function connect() {
+async function connect(externalSigner) {
   const firefox = Services.dirsvc.get("XREExeF", Ci.nsIFile);
   const process = await Subprocess.call({
     command: PathUtils.join(
@@ -44,6 +44,7 @@ async function connect() {
         ? "firefox-enterprise-mcp.exe"
         : "firefox-enterprise-mcp"
     ),
+    arguments: externalSigner ? ["--external-signer"] : [],
   });
   let buffered = "";
   let nextId = 0;
@@ -81,6 +82,19 @@ async function connect() {
       return response.result;
     },
     sendNotification: send,
+    async signChallenge(sign) {
+      const challenge = await receive();
+      Assert.equal(challenge.method, "firefoxEnterprise/signChallenge");
+      const proof = await sign(challenge.params.payload);
+      await process.stdin.write(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: challenge.id,
+          result: proof,
+        }) + "\n"
+      );
+      return proof;
+    },
     async waitForChange() {
       Assert.equal(
         (await receive()).method,
@@ -94,8 +108,11 @@ async function connect() {
   };
 }
 
-async function initializeMCP({ waitForTools = true } = {}) {
-  const mcp = await connect();
+async function initializeMCP({
+  externalSigner = false,
+  waitForTools = true,
+} = {}) {
+  const mcp = await connect(externalSigner);
   registerCleanupFunction(() => mcp.close());
   const initial = await mcp.request("initialize", {
     protocolVersion: "2025-11-25",
@@ -752,4 +769,106 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
       tool + " is denied when called directly under DLP"
     );
   }
+
+  const algorithm = { name: "ECDSA", namedCurve: "P-256" };
+  const keys = await crypto.subtle.generateKey(algorithm, true, [
+    "sign",
+    "verify",
+  ]);
+  const publicKey = new Uint8Array(
+    await crypto.subtle.exportKey("spki", keys.publicKey)
+  );
+  const key_id = "managed-client-a";
+  const approved = {
+    ...POLICY,
+    ClientAccess: "ApprovedClients",
+    ApprovedClients: [
+      { Id: key_id, PublicKey: btoa(String.fromCharCode(...publicKey)) },
+    ],
+  };
+  const enrollment = EnterprisePolicyTesting.awaitNextPolicyUpdate();
+  body = { policies: { DisableDeveloperTools: true, EnterpriseMCP: approved } };
+  await enrollment;
+
+  const standard = await initializeMCP({ waitForTools: false });
+  Assert.deepEqual((await standard.request("tools/list")).tools, []);
+  const signed = await initializeMCP({
+    externalSigner: true,
+    waitForTools: false,
+  });
+  const proof = await signed.signChallenge(async payload => {
+    const signature = await crypto.subtle.sign(
+      { name: "ECDSA", hash: "SHA-256" },
+      keys.privateKey,
+      new TextEncoder().encode(payload)
+    );
+    return {
+      key_id,
+      signature: ChromeUtils.base64URLEncode(new Uint8Array(signature), {
+        pad: false,
+      }),
+    };
+  });
+  await signed.waitForChange();
+  Assert.ok(
+    (await signed.request("tools/list")).tools.some(
+      tool => tool.name === "read_page"
+    )
+  );
+
+  const replay = await initializeMCP({
+    externalSigner: true,
+    waitForTools: false,
+  });
+  let replayed;
+  await replay.signChallenge(payload => {
+    replayed = payload;
+    return proof;
+  });
+  await replay.signChallenge(payload => {
+    Assert.notEqual(
+      payload,
+      replayed,
+      "A replay was refused and the new connection has a fresh challenge"
+    );
+    return proof;
+  });
+  Assert.deepEqual((await replay.request("tools/list")).tools, []);
+
+  const reportURL =
+    ALLOWED + "/document-builder.sjs?html=%3Ch1%3EApproved%20report%3C%2Fh1%3E";
+  await BrowserTestUtils.withNewTab(reportURL, async browser => {
+    await TestUtils.waitForCondition(
+      () => !browser.webProgress.isLoadingDocument
+    );
+    const { tabs } = (await signed.request("tools/call", { name: "list_tabs" }))
+      .structuredContent;
+    const read = () =>
+      signed.request("tools/call", {
+        name: "read_page",
+        arguments: { tab: tabs[0].handle },
+      });
+    Assert.equal((await read()).structuredContent.page.text, "Approved report");
+
+    const revocation = EnterprisePolicyTesting.awaitNextPolicyUpdate();
+    body = {
+      policies: {
+        DisableDeveloperTools: true,
+        EnterpriseMCP: { ...approved, ApprovedClients: [] },
+      },
+    };
+    await revocation;
+    await signed.waitForChange();
+    Assert.deepEqual((await signed.request("tools/list")).tools, []);
+    Assert.ok(
+      (await read()).isError,
+      "The revoked client lost its existing document handle"
+    );
+    Assert.equal(
+      gBrowser
+        .getNotificationBox(browser)
+        .getNotificationWithValue("enterprise-mcp-active"),
+      null
+    );
+  });
 });

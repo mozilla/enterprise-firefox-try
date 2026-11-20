@@ -21,6 +21,7 @@ const SANDBOXED_MODALS = 0x800;
 const SANDBOXED_DOWNLOADS = 0x10000;
 const SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS = 0x40000;
 
+const AUTH_TIMEOUT_MS = 10000;
 const AUTHORIZE = "EnterpriseMCP:Authorize";
 const TRANSPORT = "@mozilla.org/enterprise-mcp/transport;1";
 const ACTOR_PATH = "moz-src:///browser/components/enterprise/mcp/";
@@ -108,7 +109,11 @@ export const EnterpriseMCP = new (class {
       return;
     }
     if (
-      compiled.clientAccess !== "LocalUser" ||
+      !(
+        compiled.clientAccess === "LocalUser" ||
+        (compiled.clientAccess === "ApprovedClients" &&
+          compiled.approvedKeys.size)
+      ) ||
       !["ReadPage", "Navigation", "Interact", ...DIAGNOSTICS.values()].some(
         category => compiled.hasGrant(category)
       ) ||
@@ -277,19 +282,23 @@ export const EnterpriseMCP = new (class {
         this.#reset();
       }
       if (!this.#listening) {
-        this.#transport.start(JSON.stringify(capabilities));
+        this.#transport.start(
+          JSON.stringify(capabilities),
+          this.#policy.clientAccess === "ApprovedClients"
+        );
         this.#capabilities = capabilities;
         this.#listening = true;
       }
       for (const [id, client] of this.#clients) {
         if (
-          client.owner &&
-          ((!client.owner.navigating &&
-            !this.#loadingFromInteraction(client.owner) &&
-            !this.#checkedDocument(client.owner, client.owner.category)) ||
-            (client.owner.notification &&
-              client.owner.box.currentNotification !==
-                client.owner.notification))
+          (client.expires && ChromeUtils.now() >= client.expires) ||
+          (client.owner &&
+            ((!client.owner.navigating &&
+              !this.#loadingFromInteraction(client.owner) &&
+              !this.#checkedDocument(client.owner, client.owner.category)) ||
+              (client.owner.notification &&
+                client.owner.box.currentNotification !==
+                  client.owner.notification)))
         ) {
           this.#forget(id, true);
         }
@@ -299,9 +308,11 @@ export const EnterpriseMCP = new (class {
       for (const incoming of JSON.parse(this.#transport.poll())) {
         const { client, type, request } = incoming;
         if (type === "connected") {
-          this.#connected(client);
+          this.#connected(client, incoming.pid);
         } else if (type === "disconnected") {
           this.#forget(client);
+        } else if (request.operation === "authenticate") {
+          this.#authenticate(client, request, generation);
         } else if (request.operation === "cancel") {
           const state = this.#clients.get(client);
           if (state?.pending?.id === request.id) {
@@ -322,13 +333,79 @@ export const EnterpriseMCP = new (class {
     }
   }
 
-  #connected(id) {
-    this.#clients.set(id, {
+  #connected(id, pid) {
+    const client = {
       auditId: uuid(),
       handle: null,
       pending: null,
       owner: null,
-    });
+    };
+    this.#clients.set(id, client);
+    if (this.#policy.clientAccess === "LocalUser") {
+      client.admitted = true;
+      return;
+    }
+    const nonce = crypto.getRandomValues(new Uint8Array(32));
+    client.challenge = JSON.stringify([
+      "firefox-enterprise-mcp:v1",
+      ChromeUtils.base64URLEncode(nonce, { pad: false }),
+      Services.appinfo.processID,
+      pid,
+    ]);
+    client.expires = ChromeUtils.now() + AUTH_TIMEOUT_MS;
+    try {
+      this.#transport.challenge(id, client.challenge);
+    } catch {
+      this.#forget(id, true);
+    }
+  }
+
+  async #authenticate(id, request, generation) {
+    const client = this.#clients.get(id);
+    const challenge = client?.challenge;
+    const key = this.#policy.approvedKeys.get(request.key_id);
+    if (!challenge || !key || request.signature.length !== 86) {
+      this.#forget(id, true);
+      return;
+    }
+    client.challenge = null;
+    try {
+      const spki = Uint8Array.from(atob(key), byte => byte.charCodeAt(0));
+      const publicKey = await crypto.subtle.importKey(
+        "spki",
+        spki,
+        { name: "ECDSA", namedCurve: "P-256" },
+        false,
+        ["verify"]
+      );
+      const signature = ChromeUtils.base64URLDecode(request.signature, {
+        padding: "reject",
+      });
+      const verified = await crypto.subtle.verify(
+        { name: "ECDSA", hash: "SHA-256" },
+        publicKey,
+        signature,
+        new TextEncoder().encode(challenge)
+      );
+      if (generation !== this.#generation || this.#clients.get(id) !== client) {
+        return;
+      }
+      if (
+        verified &&
+        ChromeUtils.now() < client.expires &&
+        Services.policies.status === Ci.nsIEnterprisePolicies.ACTIVE &&
+        currentConsole()
+      ) {
+        this.#transport.admit(id);
+        client.admitted = true;
+        client.clientIdentity = request.key_id;
+        client.expires = null;
+        return;
+      }
+    } catch {}
+    if (this.#clients.get(id) === client) {
+      this.#forget(id, true);
+    }
   }
 
   #documentFor(browser, category = "ReadPage") {
@@ -1053,7 +1130,7 @@ export const EnterpriseMCP = new (class {
       category = operation;
     }
     const client = this.#clients.get(clientId);
-    if (!client) {
+    if (!client?.admitted) {
       this.#forget(clientId, true);
       return;
     }
@@ -1161,6 +1238,9 @@ export const EnterpriseMCP = new (class {
       if (stillPending()) {
         Glean.enterpriseMcp.operation.record({
           session: client.auditId,
+          ...(client.clientIdentity && {
+            client_identity: client.clientIdentity,
+          }),
           category,
           operation,
           origin,

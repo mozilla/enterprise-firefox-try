@@ -37,9 +37,12 @@ struct Browser {
     capabilities: Option<Capabilities>,
     deadline: Instant,
     pending: Option<(u32, Value)>,
+    auth_request: Option<String>,
+    challenged: bool,
 }
 
 struct Server {
+    external_signer: bool,
     initialization: Initialization,
     browser: Option<Browser>,
     last_connection: u32,
@@ -295,6 +298,28 @@ fn operation(params: &Value, id: u32) -> Option<Request> {
     }
 }
 
+fn valid_challenge(payload: &str, peer_pid: u32) -> bool {
+    let Ok((domain, nonce, server, client)) =
+        serde_json::from_str::<(String, String, u32, u32)>(payload)
+    else {
+        return false;
+    };
+    domain == "firefox-enterprise-mcp:v1"
+        && nonce.len() == 43
+        && nonce
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"-_".contains(&byte))
+        && server == peer_pid
+        && client == std::process::id()
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Proof {
+    key_id: String,
+    signature: String,
+}
+
 impl Server {
     fn capabilities(&self) -> Capabilities {
         self.browser
@@ -360,6 +385,8 @@ impl Server {
             capabilities: None,
             deadline: now + Duration::from_secs(10),
             pending: None,
+            auth_request: None,
+            challenged: false,
         });
         Ok(())
     }
@@ -374,7 +401,30 @@ impl Server {
             return Ok(());
         };
         let (wire_id, data) = match event {
-            Event::Ready { capabilities } if browser.capabilities.is_none() => {
+            Event::Challenge { payload } => {
+                if !self.external_signer
+                    || browser.capabilities.is_some()
+                    || browser.challenged
+                    || !valid_challenge(&payload, browser.stream.peer_pid()?)
+                {
+                    return self.close_browser(output);
+                }
+                browser.challenged = true;
+                let id = format!("firefox-auth-{connection}");
+                browser.auth_request = Some(id.clone());
+                return emit(
+                    output,
+                    json!({
+                        "jsonrpc": "2.0", "id": id, "method": "firefoxEnterprise/signChallenge",
+                        "params": {"payload": payload}
+                    }),
+                );
+            }
+            Event::Ready { capabilities }
+                if browser.capabilities.is_none()
+                    && browser.auth_request.is_none()
+                    && (!self.external_signer || browser.challenged) =>
+            {
                 browser.capabilities = Some(capabilities);
                 return self.notify_tools(output);
             }
@@ -430,6 +480,29 @@ impl Server {
         let Ok(value) = serde_json::from_slice::<Value>(bytes) else {
             return error(output, Value::Null, -32700, "Parse error");
         };
+        if value.get("jsonrpc") == Some(&json!("2.0")) && value.get("method").is_none() {
+            if let Some(browser) = &mut self.browser {
+                if let Some(expected) = &browser.auth_request {
+                    if value.get("id").and_then(Value::as_str) == Some(expected) {
+                        browser.auth_request = None;
+                        let proof = value
+                            .get("result")
+                            .cloned()
+                            .and_then(|proof| serde_json::from_value::<Proof>(proof).ok());
+                        if let Some(Proof { key_id, signature }) = proof {
+                            if key_id.len() <= 64 && signature.len() == 86 {
+                                let request = Request::Authenticate { key_id, signature };
+                                let frame = encode(&request, MAX_REQUEST)?;
+                                if browser.stream.write_all(&frame).is_ok() {
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        return self.close_browser(output);
+                    }
+                }
+            }
+        }
         let id = value.get("id");
         let method = value.get("method").and_then(Value::as_str);
         if value.get("jsonrpc") != Some(&json!("2.0"))
@@ -525,7 +598,7 @@ impl Server {
     }
 }
 
-pub fn run() -> io::Result<()> {
+pub fn run(external_signer: bool) -> io::Result<()> {
     let (sender, receiver) = mpsc::sync_channel(16);
     let stdin_sender = sender.clone();
     thread::spawn(move || {
@@ -541,6 +614,7 @@ pub fn run() -> io::Result<()> {
 
     let mut output = io::stdout().lock();
     let mut server = Server {
+        external_signer,
         initialization: Initialization::New,
         browser: None,
         last_connection: 0,
@@ -574,5 +648,21 @@ pub fn run() -> io::Result<()> {
         }) {
             server.close_browser(&mut output)?;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn challenge_requires_both_attested_process_ids() {
+        let client = std::process::id();
+        let payload = |server, client| {
+            json!(["firefox-enterprise-mcp:v1", "A".repeat(43), server, client]).to_string()
+        };
+        assert!(valid_challenge(&payload(42, client), 42));
+        assert!(!valid_challenge(&payload(43, client), 42));
+        assert!(!valid_challenge(&payload(42, 0), 42));
     }
 }
