@@ -37,7 +37,8 @@ Origin patterns include the scheme and port. For example,
 `https://*.example.com:8443` covers its subdomains on HTTPS port 8443. Add the
 parent origin separately when it also needs a grant. `DeniedSites` overrides
 every matching grant. For `Blocklist` mode, set `DefaultTools` explicitly to
-grant a tool to every eligible origin outside `DeniedSites`.
+grant a tool to every eligible origin outside `DeniedSites`. A trailing
+DNS root dot has no effect when matching `DeniedSites`.
 
 ## Connect a client
 
@@ -45,6 +46,10 @@ Configure the MCP client to launch the installed executable over stdio.
 Substitute the installation path, such as the `.app/Contents/MacOS` directory
 on macOS. On Windows, use `firefox-enterprise-mcp.exe` in the Firefox
 installation directory.
+
+Use an installation where Firefox and the connector share the operating
+system's IPC and process namespaces. Snap and Flatpak deployments have not
+been validated for MCP.
 
 ```json
 {
@@ -65,10 +70,13 @@ Firefox shows an infobar with a **Stop** button before the first operation
 that takes control of an existing tab.
 **Stop** terminates that client connection and blocks reattachment until
 the user selects **Allow agent access**. Navigation invalidates the handle.
-Firefox withdraws access when the console removes the grant or the managed
-session ends. Private, privileged and management documents are excluded. Reads
-are limited to the top-level page and are refused when configured data loss
-prevention or content analysis applies.
+Firefox pauses new requests during Felt token renewal. A successful renewal
+keeps the connection and tab handles valid subject to the current policy and
+document. Firefox withdraws access when the console removes the grant or the
+managed session ends. Another notification taking the infobar's place also
+ends the connection. Private, privileged and management documents are
+excluded. Reads are limited to the top-level page, skip shadow DOM, and are
+refused when configured data loss prevention or content analysis applies.
 
 ## Allow specific applications
 
@@ -102,8 +110,10 @@ the executable of the process that directly launches its installed connector.
 If a client uses a helper to launch subprocesses, the policy must identify
 that helper. Avoid allowlisting shells, interpreters, or general-purpose launchers.
 
-This best-effort filter compares executable paths and assumes the OS account,
-installation paths, and other software under that account are trusted.
+Both `LocalUser` and `AllowedApplications` assume that code running under the
+same OS account is trusted. The executable path check in `AllowedApplications`
+is a best-effort administrative filter. Code running under the same account
+can act with that account's authority.
 Firefox disconnects current clients when it applies an updated allowlist.
 If an application was missing when the allowance was applied, reload the
 policy or restart Firefox after installing it.
@@ -131,9 +141,11 @@ after verification.
 ## Navigation access
 
 Add `Navigation` to a site's tool grants to let a local agent use `open_tab`.
-Pass an absolute HTTP(S) URL as `url`. Firefox checks the destination and any
-redirects against the navigation grant. The result contains the loaded origin
-and a temporary document handle. Use `navigate_tab` with the current
+Pass an absolute HTTP(S) URL as `url`. Firefox checks that URL and its
+network redirects against the navigation grant. A page can initiate
+non-HTTP(S) document loads outside the network guard. Firefox refuses
+further MCP access to the resulting document. A successful result contains
+the loaded origin and a temporary document handle. Use `navigate_tab` with the current
 `tab` handle and a new `url` to navigate the selected eligible tab in place. The result
 replaces the previous handle. Reading a document requires its own
 `ReadPage` grant.
@@ -151,7 +163,7 @@ the ability to trigger transactions by clicking a button or submitting a form.
 The client needs `Navigation` to open the tab.
 
 Use `list_elements` with the current tab handle to get handles for supported
-visible controls. Use `interact` with the tab handle, an element handle and a
+visible controls outside shadow DOM. Use `interact` with the tab handle, an element handle and a
 typed action. Firefox supports button clicks, filling supported text inputs,
 selecting a listed option, scrolling and activating same-origin form
 submission. Firefox excludes protected controls such as password, file,
@@ -160,9 +172,11 @@ loss prevention or content analysis applies. Document replacement or another
 call to `list_elements` invalidates previous element handles. Check the
 website's state before retrying a transaction after an interruption.
 
-When acting on an existing tab, Firefox temporarily blocks popups, downloads,
-page-issued modal dialogs and external protocol launches from that document.
-The same restrictions apply throughout the lifetime of an agent-owned tab.
+When acting on an existing tab, Firefox temporarily restricts popups,
+downloads, dialogs and external protocol launches from the top-level document
+and its same-origin, in-process frames. These restrictions do not isolate
+scripts or cover cross-origin frames. Firefox applies sandbox flags throughout
+the lifetime of an agent-owned tab.
 
 ## Diagnostics access
 
@@ -179,7 +193,8 @@ Grant each diagnostic separately for the sites where it is needed.
   text and events from other frames and workers.
 - `VisiblePageScreenshots` enables `screenshot`. Firefox returns a bounded
   JPEG of the visible document area. It refuses captures with embedded
-  documents, protected controls, or active Enterprise watermark requirements.
+  documents, form controls or editable content, or active Enterprise watermark
+  requirements. Pages with more than 2,000 elements also exceed the capture limit.
 
 Firefox displays the same Stop control for diagnostics and clears diagnostic
 collection on detachment. Managed data loss prevention or content analysis
@@ -192,6 +207,7 @@ events in the Enterprise security telemetry ping. Firefox records client
 admission and rejection, when the user stops a session, and whether an MCP
 operation was allowed or denied. Events can include a random connection
 identifier and a verified client identifier from administrator policy.
+Firefox reports at most one rejection per minute for each client access mode.
 
 `SecurityLogging.EnterpriseMCP.UrlLogging` defaults to `none`. Set it to
 `domain` to include the hostname of the site involved, or `full` to include its
