@@ -1,0 +1,17 @@
+{
+    "parameters": {
+        "base_rev": "d3e9e2f72a947dab36a4199d6814ace0e6ccdec9",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"browser/components/enterprise/tests/browser/browser_enterprise_mcp_integration.js\"]}",
+                "MOZ_ENTERPRISE_CONSOLE_URL": "https://console.example.com",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*"
+            ]
+        }
+    },
+    "version": 2
+}
