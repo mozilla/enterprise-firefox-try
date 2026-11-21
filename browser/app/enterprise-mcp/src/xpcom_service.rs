@@ -387,7 +387,7 @@ impl Server {
 
     fn run(
         mut self,
-        mut poll: Poll,
+        poll: &mut Poll,
         commands: Receiver<Command>,
         stopping: &AtomicBool,
         mut publish: impl FnMut(Vec<Incoming>) -> io::Result<()>,
@@ -472,7 +472,7 @@ impl EnterpriseMCPTransport {
         let ready =
             encode(&Event::Ready { capabilities }, MAX_RESPONSE).map_err(|_| NS_ERROR_FAILURE)?;
         let main = moz_task::get_main_thread()?;
-        let poll = Poll::new().map_err(|_| NS_ERROR_FAILURE)?;
+        let mut poll = Poll::new().map_err(|_| NS_ERROR_FAILURE)?;
         let wake = Arc::new(Waker::new(poll.registry(), WAKE).map_err(|_| NS_ERROR_FAILURE)?);
         let worker_wake = wake.clone();
         let stopping = Arc::new(AtomicBool::new(false));
@@ -499,7 +499,8 @@ impl EnterpriseMCPTransport {
                         require_proof,
                         applications,
                     };
-                    server.run(poll, receiver, &worker_stopping, publish)
+                    // Drop the Windows pipes before the poller drains their IOCP completions.
+                    server.run(&mut poll, receiver, &worker_stopping, publish)
                 })();
                 if let Err(failure) = result {
                     let _ = publish(vec![failure]);
