@@ -140,10 +140,22 @@ enum Incoming {
         request: Request,
     },
     ApplicationRejected,
-    Failed,
+    Failed {
+        operation: &'static str,
+        error: String,
+    },
     Disconnected {
         client: u32,
     },
+}
+
+impl Incoming {
+    fn failed(operation: &'static str, error: io::Error) -> Self {
+        Self::Failed {
+            operation,
+            error: error.to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -199,7 +211,10 @@ fn publish(
     let overflow = queue.len() + incoming.len() > MAX_QUEUED;
     if overflow {
         queue.clear();
-        queue.push(Incoming::Failed);
+        queue.push(Incoming::Failed {
+            operation: "queue browser events",
+            error: "Transport event queue is full".into(),
+        });
     } else {
         queue.extend(incoming);
     }
@@ -376,7 +391,7 @@ impl Server {
         commands: Receiver<Command>,
         stopping: &AtomicBool,
         mut publish: impl FnMut(Vec<Incoming>) -> io::Result<()>,
-    ) -> io::Result<()> {
+    ) -> Result<(), Incoming> {
         let mut events = Events::with_capacity(MAX_CONNECTIONS * 2 + 2);
         let mut more_work = false;
         let mut more_connections = false;
@@ -386,7 +401,7 @@ impl Server {
                 if error.kind() == io::ErrorKind::Interrupted {
                     continue;
                 }
-                return Err(error);
+                return Err(Incoming::failed("poll listener", error));
             }
             if stopping.load(Ordering::Acquire) {
                 return Ok(());
@@ -414,9 +429,11 @@ impl Server {
                 }
             }
             if more_connections || events.iter().any(|event| event.token() == LISTENER) {
-                more_connections = self.accept(registry, &mut incoming)?;
+                more_connections = self
+                    .accept(registry, &mut incoming)
+                    .map_err(|error| Incoming::failed("accept connection", error))?;
             }
-            publish(incoming)?;
+            publish(incoming).map_err(|error| Incoming::failed("publish browser events", error))?;
         }
     }
 }
@@ -471,9 +488,11 @@ impl EnterpriseMCPTransport {
                 let result = (|| {
                     let applications = application_policy
                         .map(ApplicationAllowlist::new)
-                        .transpose()?;
+                        .transpose()
+                        .map_err(|error| Incoming::failed("load allowed applications", error))?;
                     let server = Server {
-                        listener: BrowserListener::bind(poll.registry(), LISTENER)?,
+                        listener: BrowserListener::bind(poll.registry(), LISTENER)
+                            .map_err(|error| Incoming::failed("bind listener", error))?,
                         clients: BTreeMap::new(),
                         last_client: 0,
                         ready,
@@ -482,8 +501,8 @@ impl EnterpriseMCPTransport {
                     };
                     server.run(poll, receiver, &worker_stopping, publish)
                 })();
-                if result.is_err() {
-                    let _ = publish(vec![Incoming::Failed]);
+                if let Err(failure) = result {
+                    let _ = publish(vec![failure]);
                 }
             })
             .map_err(|_| NS_ERROR_FAILURE)?;

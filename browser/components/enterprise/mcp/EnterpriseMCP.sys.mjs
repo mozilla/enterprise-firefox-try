@@ -114,6 +114,7 @@ export const EnterpriseMCP = new (class {
   #refreshing = false;
   #nextStart = 0;
   #startRetry = IDLE_CHECK_MS;
+  #lastStartFailure = null;
 
   apply(policy) {
     this.remove();
@@ -170,6 +171,7 @@ export const EnterpriseMCP = new (class {
     this.#transport = null;
     this.#nextStart = 0;
     this.#startRetry = IDLE_CHECK_MS;
+    this.#lastStartFailure = null;
     if (this.#initialized) {
       this.#initialized = false;
       Services.obs.removeObserver(this, HTTP_STOP);
@@ -304,11 +306,11 @@ export const EnterpriseMCP = new (class {
     }
   }
 
-  #startFailed() {
-    if (this.#startRetry === IDLE_CHECK_MS) {
-      console.warn(
-        "Firefox Enterprise could not start or run the MCP listener."
-      );
+  #startFailed(operation, error) {
+    const failure = `${operation}: ${error}`;
+    if (this.#lastStartFailure !== failure) {
+      console.warn("Firefox Enterprise MCP listener failed to " + failure);
+      this.#lastStartFailure = failure;
     }
     this.#nextStart = ChromeUtils.now() + this.#startRetry;
     this.#startRetry = Math.min(this.#startRetry * 2, MAX_START_RETRY_MS);
@@ -382,8 +384,8 @@ export const EnterpriseMCP = new (class {
             this.#policy.clientAccess === "ApprovedClients",
             this.#generation
           );
-        } catch {
-          this.#startFailed();
+        } catch (error) {
+          this.#startFailed("start worker", error);
           return;
         }
         this.#capabilities = capabilities;
@@ -414,13 +416,15 @@ export const EnterpriseMCP = new (class {
   #receiveTransport() {
     try {
       const events = JSON.parse(this.#transport.drain());
-      if (events.some(({ type }) => type === "failed")) {
+      const failure = events.find(({ type }) => type === "failed");
+      if (failure) {
         this.#reset();
-        this.#startFailed();
+        this.#startFailed(failure.operation, failure.error);
         return;
       }
       this.#nextStart = 0;
       this.#startRetry = IDLE_CHECK_MS;
+      this.#lastStartFailure = null;
       const generation = this.#generation;
       this.#updateSession();
       for (const { client, type, pid, application, request } of events) {
