@@ -49,6 +49,12 @@ pub enum Request {
         id: u32,
         tab: String,
     },
+    Wait {
+        id: u32,
+        tab: String,
+        text: String,
+        timeout_ms: u32,
+    },
     OpenTab {
         id: u32,
         url: String,
@@ -87,6 +93,8 @@ pub enum Request {
 
 pub const MAX_URL_LENGTH: usize = 4096;
 pub const MAX_FILL_LENGTH: usize = 1024;
+pub const MAX_WAIT_TEXT_LENGTH: usize = 256;
+pub const MAX_WAIT_MS: u32 = 10_000;
 pub const MAX_SELECT_INDEX: u32 = 31;
 pub const MAX_SCROLL_DISTANCE: i16 = 2048;
 
@@ -103,6 +111,17 @@ impl Request {
             | Self::NetworkMetadata { tab, .. }
             | Self::ConsoleSummary { tab, .. }
             | Self::Screenshot { tab, .. } => tab.len() == 36,
+            Self::Wait {
+                tab,
+                text,
+                timeout_ms,
+                ..
+            } => {
+                tab.len() == 36
+                    && !text.trim().is_empty()
+                    && text.encode_utf16().count() <= MAX_WAIT_TEXT_LENGTH
+                    && (1..=MAX_WAIT_MS).contains(timeout_ms)
+            }
             Self::OpenTab { url, .. } => valid_url(url),
             Self::NavigateTab { tab, url, .. } => tab.len() == 36 && valid_url(url),
             Self::Interact {
@@ -143,6 +162,10 @@ pub enum Event {
     Page {
         id: u32,
         page: Page,
+    },
+    Waited {
+        id: u32,
+        matched: bool,
     },
     TabOpened {
         id: u32,

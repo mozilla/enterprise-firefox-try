@@ -4,7 +4,8 @@
 
 use firefox_enterprise_mcp::{
     encode, local, read_line, Action, Capabilities, Event, Request, MAX_FILL_LENGTH, MAX_REQUEST,
-    MAX_RESPONSE, MAX_SCROLL_DISTANCE, MAX_SELECT_INDEX, MAX_URL_LENGTH,
+    MAX_RESPONSE, MAX_SCROLL_DISTANCE, MAX_SELECT_INDEX, MAX_URL_LENGTH, MAX_WAIT_MS,
+    MAX_WAIT_TEXT_LENGTH,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -17,6 +18,7 @@ use std::{
 
 const PROTOCOL_VERSION: &str = "2025-11-25";
 const RECONNECT_INTERVAL: Duration = Duration::from_secs(1);
+const DEFAULT_WAIT_MS: u32 = 5_000;
 
 enum Message {
     Stdin(Vec<u8>),
@@ -109,6 +111,21 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
                     "additionalProperties": false
                 },
                 "annotations": {"readOnlyHint": true}
+        }));
+        tools.push(json!({
+            "name": "wait",
+            "description": "Wait for a case-sensitive substring in the visible text of the current document. Returns matched: false on timeout. Use a fresh tab handle after navigation.",
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "tab": {"type": "string"},
+                    "text": {"type": "string", "minLength": 1, "maxLength": MAX_WAIT_TEXT_LENGTH},
+                    "timeout_ms": {"type": "integer", "minimum": 1, "maximum": MAX_WAIT_MS, "default": DEFAULT_WAIT_MS}
+                },
+                "required": ["tab", "text"]
+            },
+            "annotations": {"readOnlyHint": true}
         }));
     }
     if capabilities.navigation {
@@ -211,6 +228,19 @@ struct TabArgument {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct WaitArgument {
+    tab: String,
+    text: String,
+    #[serde(default = "default_wait_ms")]
+    timeout_ms: u32,
+}
+
+fn default_wait_ms() -> u32 {
+    DEFAULT_WAIT_MS
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct OpenTab {
     url: String,
 }
@@ -249,6 +279,19 @@ fn operation(params: &Value, id: u32) -> Option<Request> {
         "open_tab" => {
             let OpenTab { url } = serde_json::from_value(call.arguments).ok()?;
             Request::OpenTab { id, url }
+        }
+        "wait" => {
+            let WaitArgument {
+                tab,
+                text,
+                timeout_ms,
+            } = serde_json::from_value(call.arguments).ok()?;
+            Request::Wait {
+                id,
+                tab,
+                text,
+                timeout_ms,
+            }
         }
         "navigate_tab" => {
             let NavigateTab { tab, url } = serde_json::from_value(call.arguments).ok()?;
@@ -411,6 +454,7 @@ impl Server {
             Event::Ready { .. } => return self.close_browser(output),
             Event::Tabs { id, tabs } => (id, Some(structured(json!({"tabs": tabs})))),
             Event::Page { id, page } => (id, Some(structured(json!({"page": page})))),
+            Event::Waited { id, matched } => (id, Some(structured(json!({"matched": matched})))),
             Event::TabOpened { id, tab } => (id, Some(structured(json!({"tab": tab})))),
             Event::Elements { id, elements } => {
                 (id, Some(structured(json!({"elements": elements}))))

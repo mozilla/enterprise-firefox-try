@@ -24,6 +24,7 @@ const SANDBOXED_TOPLEVEL_NAVIGATION_CUSTOM_PROTOCOLS = 0x40000;
 const AUTH_TIMEOUT_MS = 10000;
 const ACTIVE_CHECK_MS = 100;
 const IDLE_CHECK_MS = 1000;
+const WAIT_CHECK_MS = 250;
 const MAX_START_RETRY_MS = 30000;
 const TRANSPORT_READY = "enterprise-mcp-transport-ready";
 const TRANSPORT = "@mozilla.org/enterprise-mcp/transport;1";
@@ -37,6 +38,7 @@ const DIAGNOSTICS = new Map([
 const OPERATION_GRANTS = new Map([
   ["list_tabs", "Discovery"],
   ["read_page", "ReadPage"],
+  ["wait", "ReadPage"],
   ["open_tab", "Navigation"],
   ["navigate_tab", "Navigation"],
   ["list_elements", "Interact"],
@@ -1259,6 +1261,55 @@ export const EnterpriseMCP = new (class {
       : null;
   }
 
+  async #observePage(clientId, client, request, stillPending) {
+    const document = client.handle;
+    if (
+      document?.token !== request.tab ||
+      !this.#checkedDocument(document) ||
+      !(await this.#indicate(clientId, client, document))
+    ) {
+      return null;
+    }
+    const owner = client.owner;
+    const check = () =>
+      stillPending() &&
+      this.#checkedDocument(document) &&
+      owner.box.currentNotification === owner.notification;
+    if (!check()) {
+      return null;
+    }
+
+    const actor = document.global.getActor("EnterpriseMCP");
+    const scope = {
+      origin: document.origin,
+      documentId: document.global.innerWindowId,
+    };
+    const { id } = request;
+    if (request.operation === "read_page") {
+      const page = await actor.sendQuery("EnterpriseMCP:Read", scope);
+      return page && check() ? { event: "page", id, page } : null;
+    }
+
+    const deadline = ChromeUtils.now() + request.timeout_ms;
+    while (check()) {
+      const matched = await actor.sendQuery("EnterpriseMCP:MatchText", {
+        ...scope,
+        text: request.text,
+      });
+      if (typeof matched !== "boolean" || !check()) {
+        return null;
+      }
+      const remaining = deadline - ChromeUtils.now();
+      if (matched || remaining <= 0) {
+        return { event: "waited", id, matched };
+      }
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.min(WAIT_CHECK_MS, Math.ceil(remaining)))
+      );
+    }
+    return null;
+  }
+
   async #run(clientId, request, generation) {
     const { id, operation } = request;
     const category = OPERATION_GRANTS.get(operation);
@@ -1342,34 +1393,14 @@ export const EnterpriseMCP = new (class {
         response = { event: "tabs", id, tabs };
       } else if (
         stillPending() &&
-        operation === "read_page" &&
+        category === "ReadPage" &&
         this.#capabilities.read_page
       ) {
-        const document = client.handle;
-        if (
-          document?.token === request.tab &&
-          this.#checkedDocument(document)
-        ) {
-          origin = document.origin;
-          if (
-            (await this.#indicate(clientId, client, document)) &&
-            stillPending() &&
-            this.#checkedDocument(document)
-          ) {
-            const actor = document.global.getActor("EnterpriseMCP");
-            const page = await actor.sendQuery("EnterpriseMCP:Read", {
-              origin,
-              documentId: document.global.innerWindowId,
-            });
-            if (
-              page &&
-              stillPending() &&
-              this.#checkedDocument(document) &&
-              client.owner.box.currentNotification === client.owner.notification
-            ) {
-              response = { event: "page", id, page };
-            }
-          }
+        if (client.handle?.token === request.tab) {
+          origin = client.handle.origin;
+          response =
+            (await this.#observePage(clientId, client, request, stillPending)) ??
+            response;
         }
       }
     } catch {

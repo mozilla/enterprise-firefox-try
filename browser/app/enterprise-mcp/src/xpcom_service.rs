@@ -108,6 +108,7 @@ impl Client {
                 }
                 Request::ListTabs { id }
                 | Request::ReadPage { id, .. }
+                | Request::Wait { id, .. }
                 | Request::OpenTab { id, .. }
                 | Request::NavigateTab { id, .. }
                 | Request::ListElements { id, .. }
@@ -564,6 +565,7 @@ impl EnterpriseMCPTransport {
             Event::Ready { .. } | Event::Challenge { .. } => return Err(NS_ERROR_INVALID_ARG),
             Event::Tabs { id, .. }
             | Event::Page { id, .. }
+            | Event::Waited { id, .. }
             | Event::TabOpened { id, .. }
             | Event::Elements { id, .. }
             | Event::Interacted { id, .. }

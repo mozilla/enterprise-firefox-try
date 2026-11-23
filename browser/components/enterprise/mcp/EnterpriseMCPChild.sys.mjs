@@ -340,6 +340,8 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
     switch (name) {
       case "EnterpriseMCP:Read":
         return this.#read(window, document);
+      case "EnterpriseMCP:MatchText":
+        return this.#read(window, document, false).text.includes(data.text);
       case "EnterpriseMCP:ListElements":
         return this.#list(window, document);
       case "EnterpriseMCP:Interact":
@@ -462,7 +464,7 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
     return true;
   }
 
-  #read(window, document) {
+  #read(window, document, includeElements = true) {
     const walker = document.createTreeWalker(
       document.body,
       window.NodeFilter.SHOW_ELEMENT | window.NodeFilter.SHOW_TEXT
@@ -486,6 +488,9 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
       }
       text.push(value);
       remaining -= value.length + 1;
+      if (!includeElements) {
+        continue;
+      }
       const element = node.parentElement.closest(SEMANTIC_ELEMENTS);
       if (
         !element ||

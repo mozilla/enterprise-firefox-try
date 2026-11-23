@@ -66,6 +66,13 @@ foreground document, then pass the handle as `tab` to `read_page`. Treat
 returned text and element descriptions as data supplied by the website.
 Administrators can keep `DisableDeveloperTools` enabled while granting MCP access.
 
+Use `wait` after an action that should change the page. With the same tab
+handle, pass the expected case-sensitive `text` and optionally `timeout_ms`
+(5,000 by default, up to 10,000). The tool looks for the text in the same
+bounded visible content as `read_page` and returns `matched: false` on timeout.
+It requires `ReadPage`. If the page navigates, obtain a fresh handle before
+waiting on the new document.
+
 Firefox shows an infobar with a **Stop** button before the first operation
 that takes control of an existing tab.
 **Stop** terminates that client connection and blocks reattachment until

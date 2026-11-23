@@ -862,6 +862,17 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
         arguments: { tab: tabs[0].handle },
       });
       Assert.equal(response.structuredContent.page.text, "Managed report");
+      const wait = (text, timeout_ms) =>
+        mcp.request("tools/call", {
+          name: "wait",
+          arguments: { tab: tabs[0].handle, text, timeout_ms },
+        });
+      Assert.deepEqual((await wait("Managed report")).structuredContent, {
+        matched: true,
+      });
+      Assert.deepEqual((await wait("missing", 25)).structuredContent, {
+        matched: false,
+      });
       const box = gBrowser.getNotificationBox(browser);
       Assert.equal(
         box.currentNotification.getAttribute("value"),
@@ -869,9 +880,32 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
         "The user's Stop control is shown during the session"
       );
 
-      box.currentNotification.buttonContainer
-        .querySelector(".notification-button")
-        .click();
+      const actor =
+        browser.browsingContext.currentWindowGlobal.getActor("EnterpriseMCP");
+      const query = sinon.spy(actor, "sendQuery");
+      try {
+        const waiting = wait("Report ready", 5000);
+        await TestUtils.waitForCondition(() =>
+          query.calledWith("EnterpriseMCP:MatchText")
+        );
+        Assert.equal(await query.firstCall.returnValue, false);
+        await SpecialPowers.spawn(browser, [], () => {
+          content.document.querySelector("h1").textContent = "Report ready";
+        });
+        Assert.deepEqual((await waiting).structuredContent, { matched: true });
+
+        query.resetHistory();
+        const stopping = wait("Never shown", 10000);
+        await TestUtils.waitForCondition(() =>
+          query.calledWith("EnterpriseMCP:MatchText")
+        );
+        box.currentNotification.buttonContainer
+          .querySelector(".notification-button")
+          .click();
+        Assert.ok((await stopping).isError, "Stop ends the wait");
+      } finally {
+        query.restore();
+      }
       await mcp.waitForChange();
       await mcp.waitForChange();
 
@@ -888,7 +922,7 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
         name: "read_page",
         arguments: { tab: handle },
       });
-      Assert.equal(permitted.structuredContent.page.text, "Managed report");
+      Assert.equal(permitted.structuredContent.page.text, "Report ready");
 
       const updated = EnterprisePolicyTesting.awaitNextPolicyUpdate();
       body = { policies: { DisableDeveloperTools: true } };
