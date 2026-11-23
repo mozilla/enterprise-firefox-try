@@ -21,6 +21,8 @@ const POLICIES_URL = CONSOLE_ORIGIN + "/api/browser/policies";
 const ALLOWED = "https://example.com";
 const NAVIGATION_ONLY = "https://test1.example.com";
 const DIAGNOSTICS_ONLY = "https://test2.example.com";
+const READ_ONLY = "https://www.example.com";
+const INTERACT_ONLY = "https://test1.example.org";
 const NAVIGATION_FIXTURE =
   "/browser/browser/components/enterprise/tests/browser/enterprise_mcp_navigation.sjs";
 const POLICY = {
@@ -29,6 +31,8 @@ const POLICY = {
   Sites: [
     { Origin: ALLOWED, Tools: ["ReadPage", "Navigation", "Interact"] },
     { Origin: NAVIGATION_ONLY, Tools: ["Navigation"] },
+    { Origin: READ_ONLY, Tools: ["Navigation", "ReadPage"] },
+    { Origin: INTERACT_ONLY, Tools: ["Navigation", "Interact"] },
     { Origin: "https://example.org", Tools: ["Navigation"] },
     {
       Origin: DIAGNOSTICS_ONLY,
@@ -139,9 +143,12 @@ async function testControls(mcp, handle) {
   const call = (name, arguments_) =>
     mcp.request("tools/call", { name, arguments: arguments_ });
   const list = () => call("list_elements", { tab: handle });
+  const snapshot = () => call("snapshot", { tab: handle });
   const interact = (element, action) =>
     call("interact", { tab: handle, element, action });
-  const { elements } = (await list()).structuredContent;
+  const { page, controls: elements } = (await snapshot()).structuredContent
+    .snapshot;
+  Assert.ok(page.text.includes("Apply"), "Snapshot includes visible page text");
   const byLabel = new Map(elements.map(element => [element.text, element]));
   for (const protectedLabel of ["Password", "File", "Code", "Hidden", "Pay"]) {
     Assert.ok(!byLabel.has(protectedLabel), protectedLabel + " is protected");
@@ -327,7 +334,41 @@ async function testAgentTab(mcp) {
     arguments: { tab: newHandle },
   });
   Assert.ok(deniedControls.isError, "Navigation alone cannot expose controls");
+  const deniedSnapshot = await mcp.request("tools/call", {
+    name: "snapshot",
+    arguments: { tab: newHandle },
+  });
+  Assert.ok(
+    deniedSnapshot.isError,
+    "Navigation alone cannot expose a snapshot"
+  );
   await stopAgentTab();
+
+  for (const [origin, readPage] of [
+    [READ_ONLY, true],
+    [INTERACT_ONLY, false],
+  ]) {
+    const scopedTab = await openTab(
+      approved.replace(ALLOWED, origin) + "&controls"
+    );
+    const { structuredContent } = await mcp.request("tools/call", {
+      name: "snapshot",
+      arguments: { tab: scopedTab.structuredContent.tab.handle },
+    });
+    const { page: snapshotPage, controls: entries } =
+      structuredContent.snapshot;
+    if (readPage) {
+      Assert.ok(
+        snapshotPage.text.includes("Apply"),
+        "ReadPage supplies the page text"
+      );
+      Assert.equal(entries, null, "ReadPage grants no control handles");
+    } else {
+      Assert.ok(entries.some(entry => entry.text === "Apply"));
+      Assert.equal(snapshotPage, null, "Interact grants no page text");
+    }
+    await stopAgentTab();
+  }
 }
 
 async function testExistingTab(mcp) {
@@ -1020,6 +1061,7 @@ add_task(async function test_managed_mcp_stdio_with_developer_tools_disabled() {
   const tab = opened.structuredContent.tab.handle;
   for (const tool of [
     "read_page",
+    "snapshot",
     "list_elements",
     "network_metadata",
     "console_summary",

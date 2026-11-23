@@ -38,6 +38,7 @@ const DIAGNOSTICS = new Map([
 const OPERATION_GRANTS = new Map([
   ["list_tabs", "Discovery"],
   ["read_page", "ReadPage"],
+  ["snapshot", "Snapshot"],
   ["wait", "ReadPage"],
   ["open_tab", "Navigation"],
   ["navigate_tab", "Navigation"],
@@ -1263,17 +1264,30 @@ export const EnterpriseMCP = new (class {
 
   async #observePage(clientId, client, request, stillPending) {
     const document = client.handle;
-    if (
-      document?.token !== request.tab ||
-      !this.#checkedDocument(document) ||
-      !(await this.#indicate(clientId, client, document))
-    ) {
+    if (document?.token !== request.tab) {
+      return null;
+    }
+
+    const { id, operation } = request;
+    const readPage = this.#checkedDocument(document, "ReadPage");
+    const listControls =
+      operation === "snapshot" &&
+      this.#checkedDocument(document, "Interact") &&
+      !document.browser.hasAttribute("tabDialogShowing");
+    if (!readPage && !listControls) {
+      return null;
+    }
+    const category = readPage ? "ReadPage" : "Interact";
+    if (!(await this.#indicate(clientId, client, document, category))) {
       return null;
     }
     const owner = client.owner;
     const check = () =>
       stillPending() &&
-      this.#checkedDocument(document) &&
+      (!readPage || this.#checkedDocument(document, "ReadPage")) &&
+      (!listControls ||
+        (this.#checkedDocument(document, "Interact") &&
+          !document.browser.hasAttribute("tabDialogShowing"))) &&
       owner.box.currentNotification === owner.notification;
     if (!check()) {
       return null;
@@ -1284,10 +1298,26 @@ export const EnterpriseMCP = new (class {
       origin: document.origin,
       documentId: document.global.innerWindowId,
     };
-    const { id } = request;
-    if (request.operation === "read_page") {
+    if (operation === "read_page") {
       const page = await actor.sendQuery("EnterpriseMCP:Read", scope);
       return page && check() ? { event: "page", id, page } : null;
+    }
+    if (operation === "snapshot") {
+      client.controls = null;
+      const snapshot = await actor.sendQuery("EnterpriseMCP:Snapshot", {
+        ...scope,
+        readPage,
+        listControls,
+      });
+      if (!snapshot || !check()) {
+        return null;
+      }
+      if (snapshot.controls) {
+        client.controls = new Set(
+          snapshot.controls.map(control => control.handle)
+        );
+      }
+      return { event: "snapshot", id, snapshot };
     }
 
     const deadline = ChromeUtils.now() + request.timeout_ms;
@@ -1393,14 +1423,19 @@ export const EnterpriseMCP = new (class {
         response = { event: "tabs", id, tabs };
       } else if (
         stillPending() &&
-        category === "ReadPage" &&
-        this.#capabilities.read_page
+        ((category === "ReadPage" && this.#capabilities.read_page) ||
+          (operation === "snapshot" &&
+            (this.#capabilities.read_page || this.#capabilities.interact)))
       ) {
         if (client.handle?.token === request.tab) {
           origin = client.handle.origin;
           response =
-            (await this.#observePage(clientId, client, request, stillPending)) ??
-            response;
+            (await this.#observePage(
+              clientId,
+              client,
+              request,
+              stillPending
+            )) ?? response;
         }
       }
     } catch {

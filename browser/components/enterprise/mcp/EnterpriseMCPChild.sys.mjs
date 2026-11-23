@@ -13,6 +13,7 @@ const MAX_IMAGE_DIMENSION = 480;
 const MAX_NODES = 2000;
 const MAX_TEXT = 8000;
 const MAX_ELEMENTS = 64;
+const MAX_DOCUMENT_RESPONSE = 127 * 1024;
 const PROTECTED =
   "input, textarea, select, [contenteditable], [hidden], [inert]";
 const SEMANTIC_ELEMENTS =
@@ -340,6 +341,16 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
     switch (name) {
       case "EnterpriseMCP:Read":
         return this.#read(window, document);
+      case "EnterpriseMCP:Snapshot": {
+        const page = data.readPage ? this.#read(window, document) : null;
+        const budget =
+          MAX_DOCUMENT_RESPONSE -
+          new TextEncoder().encode(JSON.stringify(page)).length;
+        const controls = data.listControls
+          ? this.#list(window, document, budget)
+          : null;
+        return { page, controls };
+      }
       case "EnterpriseMCP:MatchText":
         return this.#read(window, document, false).text.includes(data.text);
       case "EnterpriseMCP:ListElements":
@@ -355,9 +366,10 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
     }
   }
 
-  #list(window, document) {
+  #list(window, document, budget = MAX_DOCUMENT_RESPONSE) {
     this.#controls.clear();
     const controls = [];
+    const encoder = new TextEncoder();
     const add = element => {
       const kind = controlKind(document, element);
       if (!kind) {
@@ -365,15 +377,20 @@ export class EnterpriseMCPChild extends JSWindowActorChild {
       }
       const handle = Services.uuid.generateUUID().toString().slice(1, -1);
       const options = kind === "select" ? Array.from(element.options) : [];
-      this.#controls.set(handle, { element, kind, options });
-      controls.push({
+      const control = {
         handle,
         kind,
         text: controlLabel(window, document, element),
         options: options.map(option =>
           option.hidden ? "" : shortLabel(option.label)
         ),
-      });
+      };
+      const bytes = encoder.encode(JSON.stringify(control)).length + 1;
+      if (bytes <= budget) {
+        budget -= bytes;
+        this.#controls.set(handle, { element, kind, options });
+        controls.push(control);
+      }
     };
 
     if (document.scrollingElement) {

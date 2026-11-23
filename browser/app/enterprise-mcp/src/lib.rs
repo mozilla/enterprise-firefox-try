@@ -49,6 +49,10 @@ pub enum Request {
         id: u32,
         tab: String,
     },
+    Snapshot {
+        id: u32,
+        tab: String,
+    },
     Wait {
         id: u32,
         tab: String,
@@ -107,6 +111,7 @@ impl Request {
             }
             Self::ListTabs { .. } | Self::Cancel { .. } => true,
             Self::ReadPage { tab, .. }
+            | Self::Snapshot { tab, .. }
             | Self::ListElements { tab, .. }
             | Self::NetworkMetadata { tab, .. }
             | Self::ConsoleSummary { tab, .. }
@@ -163,6 +168,10 @@ pub enum Event {
         id: u32,
         page: Page,
     },
+    Snapshot {
+        id: u32,
+        snapshot: Snapshot,
+    },
     Waited {
         id: u32,
         matched: bool,
@@ -207,6 +216,13 @@ pub struct Tab {
 pub struct Page {
     pub text: String,
     pub elements: Vec<Element>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Snapshot {
+    pub page: Option<Page>,
+    pub controls: Option<Vec<Control>>,
 }
 
 #[derive(Deserialize, Serialize)]
