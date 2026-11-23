@@ -101,19 +101,6 @@ def setup_worker(config, tasks):
 
 
 @task_transforms.add
-def add_scopes_and_proxy(config, tasks):
-    """
-    `make_job_description` resets `scopes` to [], so the kind cannot carry them
-    """
-    for task in tasks:
-        task.setdefault("worker", {})["taskcluster-proxy"] = True
-        task.setdefault("scopes", []).append(
-            "secrets:get:project/enterprise/level-{level}/enterprise-console-backend-apitoken"
-        )
-        yield task
-
-
-@task_transforms.add
 def add_upstream_tasks(config, tasks):
     for task in tasks:
         task["worker"].setdefault("env", {})["UPSTREAM_TASKIDS"] = {

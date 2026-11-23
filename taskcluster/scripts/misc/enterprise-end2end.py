@@ -6,9 +6,9 @@
 """Dispatch the enterprise-console end-to-end workflow against the upstream
 Firefox build, wait for it to finish and replay its logs.
 
-The API token is read from $GITHUB_TOKEN, which enterprise-end2end.sh populates
-from the Taskcluster secrets service, and the build task handed to the workflow
-from $UPSTREAM_TASKIDS.
+The API token is read from $GITHUB_TOKEN, which run-task mints for the
+enterprise-console repository from the task's `secrets`, and the build task
+handed to the workflow from $UPSTREAM_TASKIDS.
 """
 
 import argparse
@@ -239,7 +239,7 @@ def main():
 
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        parser.error("GITHUB_TOKEN is unset, run this through enterprise-end2end.sh")
+        parser.error("GITHUB_TOKEN is unset, it is only minted on git pushes")
 
     build_task = os.environ.get("UPSTREAM_TASKIDS")
     if not build_task:

@@ -230,6 +230,7 @@ def handle_keyed_by(config, tasks):
         "mozharness.requires-signed-builds",
         "build-signing-label",
         "dependencies",
+        "secrets",
     ]
     for task in tasks:
         for field in fields:
@@ -239,6 +240,7 @@ def handle_keyed_by(config, tasks):
                 item_name=task["test-name"],
                 enforce_single_match=False,
                 project=config.params["project"],
+                repository_type=config.params["repository_type"],
                 variant=task["attributes"].get("unittest_variant"),
             )
         yield task

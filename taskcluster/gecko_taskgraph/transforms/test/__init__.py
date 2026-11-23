@@ -400,6 +400,15 @@ class TestDescriptionSchema(Schema, kw_only=True):
     ] = None
     # Fetch uv binary and add it to PATH
     use_uv: TOptional[bool] = None
+    # Secrets for run-task to fetch before running the task, see taskgraph's
+    # `use_secrets` transform. Only run-task-git (git checkouts) honors them.
+    secrets: TOptional[  # type: ignore
+        optionally_keyed_by(
+            "repository_type",
+            JobDescriptionSchema.__annotations__["secrets"],
+            use_msgspec=True,
+        )
+    ] = None
     # Cache mounts / volumes to set up
     use_caches: TOptional[  # type: ignore
         optionally_keyed_by(
@@ -746,6 +755,9 @@ def make_job_description(config, tasks):
 
         if "workdir" in task:
             run["workdir"] = task.pop("workdir")
+
+        if task.get("secrets"):
+            jobdesc["secrets"] = task.pop("secrets")
 
         jobdesc["worker-type"] = task.pop("worker-type")
 

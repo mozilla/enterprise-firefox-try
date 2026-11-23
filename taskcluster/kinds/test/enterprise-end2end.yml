@@ -27,6 +27,20 @@ task-defaults:
         poll-interval: 30
         # Short enough to still collect the run's logs before max-run-time.
         timeout: 5400
+    # Mints the token the driver uses to dispatch and follow the console
+    # workflow. Only run-task-git fetches secrets, hence git pushes only.
+    secrets:
+        by-repository_type:
+            git:
+                - type: github-repo-token
+                  app: action
+                  repo: https://github.com/mozilla/enterprise-console
+                  permissions:
+                      # Dispatch the workflow, poll its run and fetch its logs.
+                      actions: write
+                      # Resolve the `current` ref from the latest release.
+                      contents: read
+            default: []
     # This suite has no manifests, but a test task with none is dropped by
     # `filter_tests_without_manifests`, so claim a placeholder one and opt out
     # of the manifest-driven `test` optimization it would otherwise get.
