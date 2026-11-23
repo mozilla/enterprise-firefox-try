@@ -1,0 +1,24 @@
+{
+    "parameters": {
+        "base_rev": "d3e9e2f72a947dab36a4199d6814ace0e6ccdec9",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"browser/components/enterprise/tests/browser/browser_enterprise_mcp_integration.js\", \"browser/components/enterprise/tests/browser/browser_enterprise_mcp_read.js\"], \"xpcshell\": [\"browser/components/enterprise/tests/xpcshell/test_enterprise_mcp_policy.js\", \"browser/components/enterprisepolicies/tests/xpcshell/test_security_logging.js\"]}",
+                "MOZ_ENTERPRISE_CONSOLE_URL": "https://console.example.com",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2404-64-enterprise/debug-mochitest-browser-chrome-*",
+                "test-linux2404-64-enterprise/debug-xpcshell-*",
+                "test-linux2404-64-enterprise/opt-mochitest-browser-chrome-*",
+                "test-linux2404-64-enterprise/opt-xpcshell-*",
+                "test-macosx1500-aarch64-enterprise/opt-mochitest-browser-chrome-*",
+                "test-macosx1500-aarch64-enterprise/opt-xpcshell-*",
+                "test-windows11-64-25h2-enterprise/opt-mochitest-browser-chrome-*",
+                "test-windows11-64-25h2-enterprise/opt-xpcshell-*"
+            ]
+        }
+    },
+    "version": 2
+}
