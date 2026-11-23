@@ -176,15 +176,18 @@ that origin. This gives the client the user's signed-in authority, including
 the ability to trigger transactions by clicking a button or submitting a form.
 The client needs `Navigation` to open the tab.
 
-Use `list_elements` with the current tab handle to get handles for supported
-visible controls outside shadow DOM. Use `interact` with the tab handle, an element handle and a
-typed action. Firefox supports button clicks, filling supported text inputs,
-selecting a listed option, scrolling and activating same-origin form
-submission. Firefox excludes protected controls such as password, file,
+Use `snapshot` or `list_elements` with the current tab handle to get handles
+for supported visible controls outside shadow DOM. Use `click` with the tab
+and element handles to click a supported button. Use `fill` with those
+handles and a `value` to replace the text in a supported input. The
+`interact` tool also accepts typed actions for clicking, filling, selecting a
+listed option, scrolling, or activating same-origin form submission.
+Firefox excludes protected controls such as password, file,
 one-time code and payment inputs. It refuses interaction when managed data
 loss prevention or content analysis applies. Document replacement or another
-call to `list_elements` invalidates previous element handles. Check the
-website's state before retrying a transaction after an interruption.
+call to `snapshot` or `list_elements` invalidates previous element handles.
+Use `wait` when the site's next state is known, and verify that state before
+retrying a transaction after an interruption.
 
 When acting on an existing tab, Firefox temporarily restricts popups,
 downloads, dialogs and external protocol launches from the top-level document

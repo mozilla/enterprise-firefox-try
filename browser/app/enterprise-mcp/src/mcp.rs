@@ -168,6 +168,32 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
     if capabilities.interact {
         tools.extend([
             json!({
+                "name": "click",
+                "description": "Click a supported button from snapshot or list_elements. May have effects under the managed user's signed-in authority.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {"tab": {"type": "string"}, "element": {"type": "string"}},
+                    "required": ["tab", "element"]
+                },
+                "annotations": {"destructiveHint": true, "openWorldHint": true}
+            }),
+            json!({
+                "name": "fill",
+                "description": "Replace the text in a supported input from snapshot or list_elements. The page can react to the input event.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "tab": {"type": "string"},
+                        "element": {"type": "string"},
+                        "value": {"type": "string", "maxLength": MAX_FILL_LENGTH}
+                    },
+                    "required": ["tab", "element", "value"]
+                },
+                "annotations": {"destructiveHint": true, "openWorldHint": true}
+            }),
+            json!({
                 "name": "list_elements",
                 "description": "Find visible controls in a permitted tab without reading their current values. Returns temporary handles and select option labels.",
                 "inputSchema": {
@@ -178,7 +204,7 @@ fn tools(capabilities: Capabilities) -> Vec<Value> {
             }),
             json!({
                 "name": "interact",
-                "description": "Act with the managed user's signed-in authority, including transactions initiated by a click or submit. Use handles from list_elements.",
+                "description": "Act with the managed user's signed-in authority, including transactions initiated by a click or submit. Use handles from snapshot or list_elements.",
                 "inputSchema": {
                     "type": "object", "additionalProperties": false,
                     "properties": {
@@ -267,6 +293,21 @@ struct NavigateTab {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct Click {
+    tab: String,
+    element: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Fill {
+    tab: String,
+    element: String,
+    value: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Interact {
     tab: String,
     element: String,
@@ -311,6 +352,23 @@ fn operation(params: &Value, id: u32) -> Option<Request> {
         "navigate_tab" => {
             let NavigateTab { tab, url } = serde_json::from_value(call.arguments).ok()?;
             Request::NavigateTab { id, tab, url }
+        }
+        "click" => {
+            let Click { tab, element } = serde_json::from_value(call.arguments).ok()?;
+            Request::Click { id, tab, element }
+        }
+        "fill" => {
+            let Fill {
+                tab,
+                element,
+                value,
+            } = serde_json::from_value(call.arguments).ok()?;
+            Request::Fill {
+                id,
+                tab,
+                element,
+                value,
+            }
         }
         "interact" => {
             let Interact {

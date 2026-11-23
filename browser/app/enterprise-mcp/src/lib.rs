@@ -72,6 +72,17 @@ pub enum Request {
         id: u32,
         tab: String,
     },
+    Click {
+        id: u32,
+        tab: String,
+        element: String,
+    },
+    Fill {
+        id: u32,
+        tab: String,
+        element: String,
+        value: String,
+    },
     Interact {
         id: u32,
         tab: String,
@@ -105,6 +116,8 @@ pub const MAX_SCROLL_DISTANCE: i16 = 2048;
 impl Request {
     pub fn is_valid(&self) -> bool {
         let valid_url = |url: &str| !url.is_empty() && url.len() <= MAX_URL_LENGTH;
+        let valid_target = |tab: &str, element: &str| tab.len() == 36 && element.len() == 36;
+        let valid_fill = |value: &str| value.encode_utf16().count() <= MAX_FILL_LENGTH;
         match self {
             Self::Authenticate { key_id, signature } => {
                 !key_id.is_empty() && key_id.len() <= 64 && signature.len() == 86
@@ -129,16 +142,22 @@ impl Request {
             }
             Self::OpenTab { url, .. } => valid_url(url),
             Self::NavigateTab { tab, url, .. } => tab.len() == 36 && valid_url(url),
+            Self::Click { tab, element, .. } => valid_target(tab, element),
+            Self::Fill {
+                tab,
+                element,
+                value,
+                ..
+            } => valid_target(tab, element) && valid_fill(value),
             Self::Interact {
                 tab,
                 element,
                 action,
                 ..
             } => {
-                tab.len() == 36
-                    && element.len() == 36
+                valid_target(tab, element)
                     && match action {
-                        Action::Fill { value } => value.encode_utf16().count() <= MAX_FILL_LENGTH,
+                        Action::Fill { value } => valid_fill(value),
                         Action::Select { index } => *index <= MAX_SELECT_INDEX,
                         Action::Scroll { x, y } => {
                             (-MAX_SCROLL_DISTANCE..=MAX_SCROLL_DISTANCE).contains(x)

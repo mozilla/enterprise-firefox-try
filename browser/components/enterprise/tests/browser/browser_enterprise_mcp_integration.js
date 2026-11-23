@@ -144,6 +144,9 @@ async function testControls(mcp, handle) {
     mcp.request("tools/call", { name, arguments: arguments_ });
   const list = () => call("list_elements", { tab: handle });
   const snapshot = () => call("snapshot", { tab: handle });
+  const clickControl = element => call("click", { tab: handle, element });
+  const fillControl = (element, value) =>
+    call("fill", { tab: handle, element, value });
   const interact = (element, action) =>
     call("interact", { tab: handle, element, action });
   const { page, controls: elements } = (await snapshot()).structuredContent
@@ -162,14 +165,17 @@ async function testControls(mcp, handle) {
     "Disabled options cannot be selected"
   );
   Assert.ok(
-    (await interact(byLabel.get("Subject").handle, click)).isError,
+    (await clickControl(byLabel.get("Subject").handle)).isError,
     "Handles cannot be used with a different action"
+  );
+  Assert.ok((await clickControl(apply)).structuredContent?.dispatched);
+  Assert.ok(
+    (await fillControl(byLabel.get("Subject").handle, "MCP test"))
+      .structuredContent?.dispatched
   );
 
   for (const [label, action] of [
-    ["Apply", click],
     ["Popup", click],
-    ["Subject", { type: "fill", value: "MCP test" }],
     ["Priority", { type: "select", index: 1 }],
     ["Log", { type: "scroll", x: 0, y: 64 }],
     ["Save", { type: "submit" }],
@@ -200,17 +206,12 @@ async function testControls(mcp, handle) {
     doc.getElementById("subject").type = "text";
   });
   Assert.ok(
-    (
-      await interact(byLabel.get("Subject").handle, {
-        type: "fill",
-        value: "denied",
-      })
-    ).isError,
+    (await fillControl(byLabel.get("Subject").handle, "denied")).isError,
     "An existing handle cannot fill an input that became protected"
   );
   await list();
   Assert.ok(
-    (await interact(apply, click)).isError,
+    (await clickControl(apply)).isError,
     "Relisting invalidates old handles"
   );
   return (await list()).structuredContent.elements.find(e => e.text === "Apply")
@@ -229,6 +230,8 @@ async function testAgentTab(mcp) {
   Assert.ok(tools.some(tool => tool.name === "open_tab"));
   Assert.ok(tools.some(tool => tool.name === "navigate_tab"));
   Assert.ok(tools.some(tool => tool.name === "interact"));
+  Assert.ok(tools.some(tool => tool.name === "click"));
+  Assert.ok(tools.some(tool => tool.name === "fill"));
   const initialTabCount = gBrowser.tabs.length;
 
   const fixture = await fetch(forbidden + "&count");
@@ -691,6 +694,12 @@ async function testSecurityLogging(mcp, updateLogging) {
       });
       const bad = Services.uuid.generateUUID().toString().slice(1, -1);
       Assert.ok((await call("read_page", { tab: bad })).isError);
+      Assert.equal(operations().at(-1).extra.decision, "deny");
+      Assert.ok(
+        (await call("click", { tab: tabs[0].handle, element: bad })).isError
+      );
+      Assert.equal(operations().at(-1).extra.operation, "click");
+      Assert.equal(operations().at(-1).extra.category, "Interact");
       Assert.equal(operations().at(-1).extra.decision, "deny");
 
       await updateLogging({ Enabled: true, UrlLogging: "full" });

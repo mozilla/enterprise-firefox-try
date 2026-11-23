@@ -113,6 +113,8 @@ impl Client {
                 | Request::OpenTab { id, .. }
                 | Request::NavigateTab { id, .. }
                 | Request::ListElements { id, .. }
+                | Request::Click { id, .. }
+                | Request::Fill { id, .. }
                 | Request::Interact { id, .. }
                 | Request::NetworkMetadata { id, .. }
                 | Request::ConsoleSummary { id, .. }

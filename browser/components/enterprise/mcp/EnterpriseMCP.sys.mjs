@@ -43,6 +43,8 @@ const OPERATION_GRANTS = new Map([
   ["open_tab", "Navigation"],
   ["navigate_tab", "Navigation"],
   ["list_elements", "Interact"],
+  ["click", "Interact"],
+  ["fill", "Interact"],
   ["interact", "Interact"],
   ...DIAGNOSTICS,
 ]);
@@ -1141,11 +1143,17 @@ export const EnterpriseMCP = new (class {
     if (existingTab) {
       this.#restrictInteraction(owner);
     }
+    let { action } = request;
+    if (request.operation === "click") {
+      action = { type: "click" };
+    } else if (request.operation === "fill") {
+      action = { type: "fill", value: request.value };
+    }
     const acted = await actor.sendQuery("EnterpriseMCP:Interact", {
       ...scope,
       existingTab,
       element: request.element,
-      action: request.action,
+      action,
     });
     if (acted && check()) {
       return { event: "interacted", id };
