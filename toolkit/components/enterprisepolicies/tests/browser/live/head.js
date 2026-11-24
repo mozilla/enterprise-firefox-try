@@ -12,6 +12,16 @@ const { EnterprisePolicyTesting, PoliciesPrefTracker } =
 const { Policies } = ChromeUtils.importESModule(
   "resource:///modules/policies/Policies.sys.mjs"
 );
+const { PromiseTestUtils } = ChromeUtils.importESModule(
+  "resource://testing-common/PromiseTestUtils.sys.mjs"
+);
+
+// about:debugging, opened by browser_live_policy_DisableDeveloperTools.js, can
+// still dispatch actions after its tab is closed. The rejection can surface in
+// whichever test runs at that moment.
+PromiseTestUtils.allowMatchingRejectionsGlobally(
+  /REDUX_MIDDLEWARE_IGNORED_REDUX_ACTION/
+);
 
 EnterprisePolicyTesting.pathResolver = getTestFilePath;
 
