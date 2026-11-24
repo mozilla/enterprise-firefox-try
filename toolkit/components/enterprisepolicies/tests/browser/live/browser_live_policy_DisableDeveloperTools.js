@@ -17,15 +17,32 @@ const PREF_DEVTOOLS_DISABLED = "devtools.policy.disabled";
 const PREF_REMOTE_DISABLED = "remote.policy.disabled";
 
 // The about: pages that DisableDeveloperTools blocks via the content policy.
-// about:debugging is loaded at the route it redirects to on load.
 const DEVTOOLS_ABOUT_PAGES = [
-  "about:debugging#/setup",
+  "about:debugging",
   "about:devtools-toolbox",
   "about:profiling",
 ];
 
+// about:debugging leaks its window if it is closed before it finishes
+// initializing, so wait for its Connect page before closing it.
+async function checkAboutDebuggingAllowed() {
+  const tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    "about:debugging"
+  );
+  await TestUtils.waitForCondition(
+    () => tab.linkedBrowser.contentDocument.querySelector(".qa-connect-page"),
+    "about:debugging finished initializing"
+  );
+  BrowserTestUtils.removeTab(tab);
+}
+
 async function checkDevToolsAboutPages(blocked) {
   for (const page of DEVTOOLS_ABOUT_PAGES) {
+    if (page == "about:debugging" && !blocked) {
+      await checkAboutDebuggingAllowed();
+      continue;
+    }
     await EnterprisePolicyTesting.checkBlockedPage(page, blocked);
   }
 }
