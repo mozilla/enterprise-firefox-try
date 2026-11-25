@@ -1,0 +1,34 @@
+{
+    "parameters": {
+        "base_rev": "1db0b113a779d7a7c0043eaca4b1d005f0d4ba88",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "build-linux64-aarch64-enterprise/debug",
+                "build-linux64-aarch64-enterprise/opt",
+                "build-linux64-enterprise-rusttests/opt",
+                "build-linux64-enterprise/debug",
+                "build-linux64-enterprise/opt",
+                "build-mac-signing-macosx64-aarch64-enterprise/debug",
+                "build-mac-signing-macosx64-aarch64-enterprise/opt",
+                "build-mac-signing-macosx64-enterprise/debug",
+                "build-mac-signing-macosx64-enterprise/opt",
+                "build-macosx64-aarch64-enterprise/debug",
+                "build-macosx64-aarch64-enterprise/opt",
+                "build-macosx64-enterprise/debug",
+                "build-macosx64-enterprise/opt",
+                "build-signing-linux64-aarch64-enterprise/opt",
+                "build-signing-win64-enterprise/debug",
+                "build-signing-win64-enterprise/opt",
+                "build-win64-aarch64-enterprise/debug",
+                "build-win64-aarch64-enterprise/opt",
+                "build-win64-enterprise/debug",
+                "build-win64-enterprise/opt"
+            ]
+        }
+    },
+    "version": 2
+}
