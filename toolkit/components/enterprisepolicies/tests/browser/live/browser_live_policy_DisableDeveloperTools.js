@@ -16,25 +16,21 @@
 const PREF_DEVTOOLS_DISABLED = "devtools.policy.disabled";
 const PREF_REMOTE_DISABLED = "remote.policy.disabled";
 
-const { PromiseTestUtils } = ChromeUtils.importESModule(
-  "resource://testing-common/PromiseTestUtils.sys.mjs"
-);
-
-// about:debugging can still dispatch actions while its tab is being closed.
-PromiseTestUtils.allowMatchingRejectionsGlobally(
-  /REDUX_MIDDLEWARE_IGNORED_REDUX_ACTION/
-);
-
 // The about: pages that DisableDeveloperTools blocks via the content policy.
-// about:debugging is loaded at the route it redirects to on load.
 const DEVTOOLS_ABOUT_PAGES = [
-  "about:debugging#/setup",
+  "about:debugging",
   "about:devtools-toolbox",
   "about:profiling",
 ];
 
 async function checkDevToolsAboutPages(blocked) {
   for (const page of DEVTOOLS_ABOUT_PAGES) {
+    // Loading about:debugging outside of the DevTools harness leaks its window
+    // (see browser_aboutURLs.js). The policy unblocks it together with the
+    // other pages, so checking those covers the unblocking.
+    if (page == "about:debugging" && !blocked) {
+      continue;
+    }
     await EnterprisePolicyTesting.checkBlockedPage(page, blocked);
   }
 }
