@@ -1,0 +1,16 @@
+{
+    "parameters": {
+        "base_rev": "e4e5347ae82cfe54de454233efd0f5c275d430f2",
+        "optimize_target_tasks": false,
+        "try_task_config": {
+            "env": {
+                "MOZHARNESS_TEST_PATHS": "{\"mochitest-browser-chrome\": [\"services/fxaccounts/tests\"], \"mochitest-chrome\": [\"services/fxaccounts/tests\"], \"xpcshell\": [\"services/fxaccounts/tests\"]}",
+                "TRY_SELECTOR": "fuzzy"
+            },
+            "tasks": [
+                "test-linux2204-64-wayland/debug-mochitest-chrome-gpu-1proc"
+            ]
+        }
+    },
+    "version": 2
+}
