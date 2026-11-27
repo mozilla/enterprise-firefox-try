@@ -23,12 +23,24 @@ const DEVTOOLS_ABOUT_PAGES = [
   "about:profiling",
 ];
 
+// Closing about:debugging before it finishes initializing appears to leak its
+// window, so wait for its Connect page, which it renders once initialized.
+async function checkAboutDebuggingAllowed() {
+  const tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    "about:debugging"
+  );
+  await TestUtils.waitForCondition(
+    () => tab.linkedBrowser.contentDocument.querySelector(".qa-connect-page"),
+    "about:debugging finished initializing"
+  );
+  BrowserTestUtils.removeTab(tab);
+}
+
 async function checkDevToolsAboutPages(blocked) {
   for (const page of DEVTOOLS_ABOUT_PAGES) {
-    // Loading about:debugging outside of the DevTools harness leaks its window
-    // (see browser_aboutURLs.js). The policy unblocks it together with the
-    // other pages, so checking those covers the unblocking.
     if (page == "about:debugging" && !blocked) {
+      await checkAboutDebuggingAllowed();
       continue;
     }
     await EnterprisePolicyTesting.checkBlockedPage(page, blocked);
